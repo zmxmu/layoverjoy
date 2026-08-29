@@ -14,9 +14,12 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        // 默认连接本机 Docker 后端（127.0.0.1）；模拟器需改为 http://10.0.2.2:8080；
-        // 真机调试改为局域网地址或 Daytona 部署地址（均可在应用内「服务器地址」处修改）
+        // 默认连接本机 Docker 后端（127.0.0.1）；普通用户不可见服务器设置，
+        // 「我的」页双击标题进入隐藏开发页可在本机/远程正式服务器间切换。
         buildConfigField("String", "DEFAULT_BASE_URL", "\"http://127.0.0.1:8080\"")
+        // 远程正式服务器：Daytona 部署的 Preview URL；私有预览 Token 不打包进 APK，运行时在隐藏开发页手填。
+        buildConfigField("String", "DEFAULT_REMOTE_URL", "\"https://8080-8d6aeed3-d78e-4aea-a0c9-88b5bc4415f5.daytonaproxy01.net\"")
+        buildConfigField("String", "DEFAULT_PREVIEW_TOKEN", "\"\"")
     }
 
     buildTypes {

@@ -6,6 +6,7 @@ import { HUB_CATALOG } from '../airports/catalog';
 import { AppError } from '../common/errors';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 价格监控检查间隔 30 分钟
+const TRIGGER_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 同一规则触发后 12 小时内不重复打扰
 
 export interface MonitorRuleInput {
   planId: string;
@@ -116,11 +117,22 @@ export class MonitorsService {
     return triggered;
   }
 
-  /** 重新搜索两段并比较当前票价。只读搜索缓存，不产生订单动作。 */
+  /** 重新搜索两段并比较当前票价；JoyScore 按已保存方案确定性评估。只读搜索缓存，不产生订单动作。 */
   private async checkRule(rule: any): Promise<{ reason: string } | null> {
+    // 冷却去重：避免同一条件每 30 分钟重复打扰用户。
+    if (rule.lastTriggeredAt && Date.now() - new Date(rule.lastTriggeredAt).getTime() < TRIGGER_COOLDOWN_MS) {
+      return null;
+    }
+
     const plan = await this.prisma.stopoverPlan.findUnique({ where: { id: rule.planId } });
     const run = await this.prisma.searchRun.findUnique({ where: { id: rule.searchRunId } });
     if (!plan || !run) return null;
+
+    // JoyScore 条件：方案创建时已确定性计算，直接对比，不伪装成实时监测。
+    if (rule.minJoyScore !== null && plan.joyScore >= rule.minJoyScore) {
+      await this.sendAlert(rule, plan, `方案 JoyScore ${plan.joyScore} 达到你设置的 ${rule.minJoyScore}，可查看详情并预订。`, '体验分目标已达成');
+      return { reason: `JOY_SCORE_REACHED:${plan.joyScore}` };
+    }
 
     const legs = await this.prisma.flightOfferSnapshot.findMany({
       where: { id: { in: (plan.legOfferIdsJson as string[]) ?? [] } },
@@ -147,21 +159,31 @@ export class MonitorsService {
     const priceHit = rule.targetAirfare !== null && currentTotal <= rule.targetAirfare;
     if (priceHit) {
       const city = HUB_CATALOG.find((c) => c.cityId === plan.stopoverCityId);
-      const reason = `PRICE_TARGET_REACHED:${currentTotal}`;
-      await this.notifications.notify({
-        userId: rule.userId,
-        kind: 'PRICE_ALERT',
-        title: '好价提醒：目标票价已到达',
-        body: `${rule.routeLabel} 当前两段合计约 ${currentTotal} ${plan.currency}（Atlas Sandbox 模拟报价），达到你设置的目标价 ${rule.targetAirfare} ${plan.currency}。价格随时可能变化，不会产生真实出票或扣款。`,
-        deepLink: `layoverjoy://plans/${plan.id}`,
-        planId: plan.id,
-        monitorId: rule.id,
-        isSimulated: true,
-        sendEmail: rule.notifyEmail,
-      });
+      await this.sendAlert(
+        rule,
+        plan,
+        `${rule.routeLabel} 当前两段合计约 ${currentTotal} ${plan.currency}，达到你设置的目标价 ${rule.targetAirfare} ${plan.currency}。价格随时可能变化，以验价结果为准。`,
+        '好价提醒：目标票价已到达',
+      );
       this.logger.log(`monitor ${rule.id} triggered for ${city?.cityNameZh ?? plan.stopoverCityId}: ${currentTotal}`);
-      return { reason };
+      return { reason: `PRICE_TARGET_REACHED:${currentTotal}` };
     }
     return null;
+  }
+
+  /** 按用户渠道开关投递提醒（关闭的渠道不发送，不产生假状态）。 */
+  private async sendAlert(rule: any, plan: any, body: string, title: string) {
+    await this.notifications.notify({
+      userId: rule.userId,
+      kind: 'PRICE_ALERT',
+      title,
+      body,
+      deepLink: `layoverjoy://plans/${plan.id}`,
+      planId: plan.id,
+      monitorId: rule.id,
+      isSimulated: true,
+      sendEmail: rule.notifyEmail,
+      sendApp: rule.notifyApp,
+    });
   }
 }

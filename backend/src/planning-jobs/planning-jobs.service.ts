@@ -186,7 +186,8 @@ export class PlanningJobsService {
           },
           visas: (request.visas ?? []).map((v) => ({ country: v.country, validUntil: v.validUntil })),
           destinationCountry: hub.countryCode,
-          onwardTicketConfirmed: true,
+          // 候选规划属搜索期初筛：第二段尚未 Verify，不得谎报已确认；硬判定在预订期复核。
+          mode: 'SEARCH_SCREEN',
         });
         if (eligibility.status !== 'ELIGIBLE') {
           return {

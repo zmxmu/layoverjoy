@@ -282,6 +282,8 @@ async function main() {
   );
 
   // 运行时 .env（密钥 + 覆盖项；后置覆盖生效）
+  // 注意：实测 Daytona Sandbox 无法出网到 sandbox.atriptech.com（ATLAS_TIMEOUT），
+  // 因此 Atlas 搜索/验价降为 MOCK（UI 会诚实展示 provider 标签）；真实 Atlas 链路在本地/可出网环境验证。
   const envLines = [
     ...Object.entries(secrets).map(([k, v]) => `${k}="${v.replace(/"/g, '\\"')}"`),
     `DATABASE_URL="${DATABASE_URL}"`,
@@ -289,6 +291,10 @@ async function main() {
     'NODE_ENV="production"',
     'RUNTIME_TARGET="daytona"',
     'PORT="8080"',
+    'ATLAS_SEARCH_PROVIDER="mock"',
+    'ATLAS_VERIFY_PROVIDER="mock"',
+    // 沙箱无出网：SMTP 外发会挂起并拖死支付/退款响应（代理会提前断开），改用 console 只记日志。
+    'MAIL_PROVIDER="console"',
   ].join('\n');
   await sandbox.fs.uploadFile(Buffer.from(envContentSafe(envLines)), `${BACKEND}/.env`);
 
@@ -310,10 +316,12 @@ async function main() {
     60,
   );
   await run(sandbox, 'set -a; . ./.env; set +a; node dist/seed.js >>/tmp/seed.log 2>&1 && echo SEED_OK', 300, BACKEND);
-  await run(sandbox, 'nohup ./start.sh api >/tmp/api.log 2>&1 & sleep 1; echo API_STARTED', 60, BACKEND);
+  // 重启场景：先停掉旧的 api/worker 进程，避免新进程 EADDRINUSE 静默失败（旧代码继续占着端口）。
+  await run(sandbox, "pkill -f 'node dist/(main|worker)\\.js' 2>/dev/null; sleep 1; echo OLD_STOPPED", 60, BACKEND);
+  await run(sandbox, 'nohup ./start.sh main >/tmp/api.log 2>&1 & sleep 1; echo API_STARTED', 60, BACKEND);
   await run(sandbox, 'nohup ./start.sh worker >/tmp/worker.log 2>&1 & sleep 1; echo WORKER_STARTED', 60, BACKEND);
 
-  // 7) 等待健康并输出 Preview URL
+  // 7) 等待健康并输出 Preview URL；额外校验新进程确实在监听（防止旧进程占端口的假健康）
   console.log('[7/7] 等待 /v1/health 就绪…');
   let healthy = false;
   for (let i = 0; i < 30; i++) {
@@ -327,6 +335,15 @@ async function main() {
   if (!healthy) {
     const log = await sandbox.process.executeCommand('tail -n 40 /tmp/api.log', DEFAULT_CWD, {}, 30);
     throw new Error(`API 未在 150 秒内就绪。/tmp/api.log 末尾：\n${log.result ?? ''}`);
+  }
+  // 新进程校验：当前监听 8080 的必须是刚启动的进程（日志无 EADDRINUSE）
+  const guard = await sandbox.process.executeCommand(
+    'grep -q EADDRINUSE /tmp/api.log && echo ADDR_CONFLICT || echo ADDR_OK',
+    DEFAULT_CWD, {}, 30,
+  );
+  if ((guard.result ?? '').includes('ADDR_CONFLICT')) {
+    const log = await sandbox.process.executeCommand('tail -n 20 /tmp/api.log', DEFAULT_CWD, {}, 30);
+    throw new Error(`新 API 进程未成功接管 8080（EADDRINUSE）。/tmp/api.log 末尾：\n${log.result ?? ''}`);
   }
 
   const preview = await sandbox.getPreviewLink(8080);

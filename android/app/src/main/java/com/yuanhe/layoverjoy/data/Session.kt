@@ -22,12 +22,14 @@ class SessionStore(private val context: Context) {
         val accessToken = stringPreferencesKey("access_token")
         val refreshToken = stringPreferencesKey("refresh_token")
         val baseUrl = stringPreferencesKey("base_url")
+        val previewToken = stringPreferencesKey("preview_token")
         val userEmail = stringPreferencesKey("user_email")
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val localPassportCountry = stringPreferencesKey("local_passport_country")
         val localPassportType = stringPreferencesKey("local_passport_type")
         val localPassportExpiry = stringPreferencesKey("local_passport_expiry")
         val localVisaCountries = stringPreferencesKey("local_visa_countries") // 逗号分隔
+        val paySimFail = booleanPreferencesKey("pay_sim_fail")
     }
 
     val accessToken: Flow<String?> = context.dataStore.data.map { it[Keys.accessToken] }
@@ -41,8 +43,10 @@ class SessionStore(private val context: Context) {
             accessToken = p[Keys.accessToken],
             refreshToken = p[Keys.refreshToken],
             baseUrl = p[Keys.baseUrl],
+            previewToken = p[Keys.previewToken],
             userEmail = p[Keys.userEmail],
             onboardingDone = p[Keys.onboardingDone] ?: false,
+            paySimFail = p[Keys.paySimFail] ?: false,
         )
     }
 
@@ -58,6 +62,15 @@ class SessionStore(private val context: Context) {
     suspend fun setEmail(email: String) = context.dataStore.edit { it[Keys.userEmail] = email }
 
     suspend fun setBaseUrl(url: String) = context.dataStore.edit { it[Keys.baseUrl] = url }
+
+    /** 保存私有预览 token（传 null/空串表示清除）。 */
+    suspend fun setPreviewToken(token: String?) = context.dataStore.edit {
+        val t = token?.trim()?.ifBlank { null }
+        if (t == null) it.remove(Keys.previewToken) else it[Keys.previewToken] = t
+    }
+
+    /** 开发页支付失败模拟开关（仅本地缓存）。 */
+    suspend fun setPaySimFail(enabled: Boolean) = context.dataStore.edit { it[Keys.paySimFail] = enabled }
 
     suspend fun setOnboardingDone(done: Boolean, passportCountry: String?, passportType: String?, visaCountries: List<String>) {
         context.dataStore.edit {
@@ -89,6 +102,8 @@ data class SessionSnapshot(
     val accessToken: String?,
     val refreshToken: String?,
     val baseUrl: String?,
+    val previewToken: String?,
     val userEmail: String?,
     val onboardingDone: Boolean,
+    val paySimFail: Boolean = false,
 )

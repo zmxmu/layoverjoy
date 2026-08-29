@@ -42,8 +42,14 @@ export interface EligibilityInput {
   /** 近窗口内累计停留天数；MVP 默认 0 且视为已知 */
   cumulativeStayDaysInWindow?: number;
   cumulativeKnown?: boolean;
-  /** 续程票是否已确认（第二段已 Verify） */
+  /** 续程票是否已确认（第二段已 Verify）；缺失/未确认按未确认处理，绝不默认放行 */
   onwardTicketConfirmed?: boolean;
+  /**
+   * 判定阶段：SEARCH_SCREEN 为搜索期初筛（续程票尚未 Verify，不作为阻断项，
+   * 但结果标记 provisional 并附 ONWARD_TICKET_PENDING_VERIFY）；
+   * BOOKING（默认）为预订期硬判定，缺确认即 NEEDS_INFO，fail-closed。
+   */
+  mode?: 'SEARCH_SCREEN' | 'BOOKING';
   /** 判定时刻，默认 now */
   now?: string;
 }
@@ -57,6 +63,8 @@ export interface EligibilityResult {
   sourceUrl?: string;
   verifiedAt?: string;
   disclaimerRequired: boolean;
+  /** 搜索期初筛结果：续程票尚未 Verify，不得展示为 booking-ready */
+  provisional?: boolean;
 }
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -126,29 +134,42 @@ export function evaluateEligibility(
     }
   }
 
-  // 5. E_VISA_REQUIRED 且没有对应有效签证 -> NEEDS_INFO
+  // 5. E_VISA_REQUIRED 的签证核验：缺有效期→NEEDS_INFO；已过期→INELIGIBLE；均不得默认放行。
   if (rule.entryMode === 'E_VISA_REQUIRED') {
-    const visa = (input.visas || []).find(
-      (v) => v.country === rule.transitCountry && (!v.validUntil || new Date(v.validUntil) >= travelDate),
-    );
-    if (!visa) {
+    const visasForCountry = (input.visas || []).filter((v) => v.country === rule.transitCountry);
+    if (!visasForCountry.length) {
       return { ...base, ...meta, status: 'NEEDS_INFO', reasonCodes: ['E_VISA_REQUIRED'] };
+    }
+    const validVisa = visasForCountry.find((v) => v.validUntil && new Date(v.validUntil) >= travelDate);
+    if (!validVisa) {
+      const allExpired = visasForCountry.every((v) => v.validUntil && new Date(v.validUntil) < travelDate);
+      const anyMissingExpiry = visasForCountry.some((v) => !v.validUntil);
+      if (anyMissingExpiry && !allExpired) {
+        return { ...base, ...meta, status: 'NEEDS_INFO', reasonCodes: ['VISA_EXPIRY_MISSING'] };
+      }
+      return { ...base, ...meta, status: 'INELIGIBLE', reasonCodes: ['VISA_EXPIRED'] };
     }
   }
 
-  // 6. 需要续程票但第二段尚未 Verify -> NEEDS_INFO
-  if (rule.requiredEvidence.includes('CONFIRMED_ONWARD_TICKET') && input.onwardTicketConfirmed === false) {
-    return { ...base, ...meta, status: 'NEEDS_INFO', reasonCodes: ['ONWARD_TICKET_UNCONFIRMED'] };
+  // 6. 需要续程票：只有第二段真正 Verify 过（=== true）才算确认；undefined/false 一律不放行。
+  if (rule.requiredEvidence.includes('CONFIRMED_ONWARD_TICKET') && input.onwardTicketConfirmed !== true) {
+    if (input.mode !== 'SEARCH_SCREEN') {
+      return { ...base, ...meta, status: 'NEEDS_INFO', reasonCodes: ['ONWARD_TICKET_UNCONFIRMED'] };
+    }
+    // 搜索期：不阻断候选，但标记为初筛，禁止展示为可预订。
   }
 
-  // 7. 所有条件满足 -> ELIGIBLE
+  // 7. 所有条件满足 -> ELIGIBLE（搜索期标记 provisional）
+  const searchScreen = input.mode === 'SEARCH_SCREEN';
   return {
     ...base,
     ...meta,
     status: 'ELIGIBLE',
+    provisional: searchScreen && input.onwardTicketConfirmed !== true ? true : undefined,
     reasonCodes: [
       rule.entryMode === 'VISA_FREE' ? 'VISA_EXEMPT' : rule.entryMode === 'TRANSIT_PERMISSION' ? 'TRANSIT_PERMISSION' : 'E_VISA_HELD',
       'STAY_WITHIN_LIMIT',
+      ...(searchScreen && input.onwardTicketConfirmed !== true ? ['ONWARD_TICKET_PENDING_VERIFY'] : []),
     ],
   };
 }

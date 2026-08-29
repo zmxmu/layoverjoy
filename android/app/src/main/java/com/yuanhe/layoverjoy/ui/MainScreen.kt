@@ -31,6 +31,7 @@ import androidx.navigation.navArgument
 import com.yuanhe.layoverjoy.ui.i18n.L10n
 import com.yuanhe.layoverjoy.ui.screens.AuthScreen
 import com.yuanhe.layoverjoy.ui.screens.BookingFlowScreen
+import com.yuanhe.layoverjoy.ui.screens.DevSettingsScreen
 import com.yuanhe.layoverjoy.ui.screens.DocumentsScreen
 import com.yuanhe.layoverjoy.ui.screens.HomeScreen
 import com.yuanhe.layoverjoy.ui.screens.MonitorSetupScreen
@@ -55,6 +56,7 @@ object Routes {
     const val BOOKING = "booking/{planId}"
     const val NOTIFICATIONS = "notifications"
     const val DOCUMENTS = "documents"
+    const val DEV_SETTINGS = "dev_settings"
 
     fun results(runId: String) = "results/$runId"
     fun planDetail(planId: String) = "plan/$planId"
@@ -93,12 +95,15 @@ fun MainScreen(appState: AppStateViewModel) {
     val showBottomBar = currentRoute in TABS.map { it.route }
 
     // 登录（必要时含引导）完成后回到主界面时，自动跳回此前被拦截的目标页；
-    // 以 gate+isLoggedIn 为键：引导期间旧组合不会提前消费 authReturnRoute。
+    // 以 gate+isLoggedIn 为键：引导期间旧组合不会提前消费 authReturnRoute；
+    // 回跳前确认导航已就绪，避免在 NavHost 初始化前 navigate 破坏返回栈（tab 无法点击）。
     androidx.compose.runtime.LaunchedEffect(appState.gate, appState.isLoggedIn) {
         if (appState.gate == AppStateViewModel.Gate.Main && appState.isLoggedIn) {
             appState.authReturnRoute?.let { target ->
-                appState.markAuthReturn(null)
-                nav.navigate(target) { launchSingleTop = true }
+                if (nav.currentDestination != null) {
+                    appState.markAuthReturn(null)
+                    nav.navigate(target) { launchSingleTop = true }
+                }
             }
         }
     }
@@ -169,6 +174,7 @@ fun MainScreen(appState: AppStateViewModel) {
             }
             composable(Routes.NOTIFICATIONS) { NotificationsScreen(nav) }
             composable(Routes.DOCUMENTS) { DocumentsScreen(nav) }
+            composable(Routes.DEV_SETTINGS) { DevSettingsScreen(nav) }
         }
     }
 }

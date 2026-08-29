@@ -39,6 +39,7 @@ import com.yuanhe.layoverjoy.data.DocumentInput
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
+import com.yuanhe.layoverjoy.ui.DateField
 import com.yuanhe.layoverjoy.ui.EmptyBlock
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.InfoBanner
@@ -179,7 +180,7 @@ private fun AddPassportForm(onDone: () -> Unit) {
                 }
             }
         }
-        LabeledField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
+        DateField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
         Spacer(Modifier.height(8.dp))
         ErrorBanner(err)
         Spacer(Modifier.height(8.dp))
@@ -224,7 +225,7 @@ private fun AddVisaForm(onDone: () -> Unit) {
                 }
             }
         }
-        LabeledField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2027-06-30")
+        DateField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2027-06-30")
         Spacer(Modifier.height(8.dp))
         ErrorBanner(err)
         Spacer(Modifier.height(8.dp))

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.yuanhe.layoverjoy.BuildConfig
 import com.yuanhe.layoverjoy.LayoverJoyApp
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.Net
@@ -36,13 +34,13 @@ import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.LabeledField
 import com.yuanhe.layoverjoy.ui.PrimaryButton
 import com.yuanhe.layoverjoy.ui.i18n.L10n
-import com.yuanhe.layoverjoy.ui.theme.BrandAccent
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
 import kotlinx.coroutines.launch
 
 /** 登录 / 注册页（不实现演示账户，按契约全部使用真实注册）。
- * 游客优先模式下作为主界面内路由弹出：[onClose] 非空时显示返回按钮，登录成功回调 [onSuccess]。 */
+ * 游客优先模式下作为主界面内路由弹出：[onClose] 非空时显示返回按钮，登录成功回调 [onSuccess]。
+ * 服务器地址不在本页展示（隐藏开发设置页管理）。 */
 @Composable
 fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuccess: (() -> Unit)? = null) {
     val scope = rememberCoroutineScope()
@@ -52,8 +50,6 @@ fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuc
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
-    var showServerConfig by remember { mutableStateOf(false) }
-    var baseUrl by remember { mutableStateOf(Net.client.currentBaseUrl().removeSuffix("/")) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -106,11 +102,6 @@ fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuc
                 error = null
                 loading = true
                 scope.launch {
-                    // 先应用用户配置的服务器地址
-                    if (baseUrl.isNotBlank()) {
-                        session.setBaseUrl(baseUrl)
-                        Net.client.switchBaseUrl(baseUrl)
-                    }
                     val result = if (isRegister) {
                         apiCall { Net.api.register(RegisterRequest(email, password, nickname.ifBlank { null })) }
                     } else {
@@ -129,24 +120,5 @@ fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuc
                 }
             },
         )
-        Spacer(Modifier.height(16.dp))
-
-        TextButton(onClick = { showServerConfig = !showServerConfig }) {
-            Text(L10n.t("auth.server_settings"), style = MaterialTheme.typography.labelMedium, color = BrandAccent)
-        }
-        if (showServerConfig) {
-            LabeledField(
-                L10n.t("auth.backend_url"),
-                baseUrl,
-                { baseUrl = it.trim() },
-                placeholder = BuildConfig.DEFAULT_BASE_URL,
-                keyboardType = KeyboardType.Uri,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                L10n.t("auth.server_hint", BuildConfig.DEFAULT_BASE_URL),
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
     }
 }

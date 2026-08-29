@@ -35,7 +35,9 @@ const EnvSchema = z.object({
   NOSANA_API_KEY: z.string().optional().default(''),
   NOSANA_OPENAI_BASE_URL: z.string().optional().default(''),
   NOSANA_MODEL: z.string().default('qwen3.5:9b'),
-  NOSANA_TIMEOUT_MS: z.coerce.number().default(20000),
+  // 实测 qwen3.5:9b 单次推理可达 60s，默认超时须覆盖最坏情况，否则全部降级模板。
+  NOSANA_TIMEOUT_MS: z.coerce.number().default(90000),
+  NOSANA_DEPLOYMENT_ID: z.string().optional().default(''),
   INFERENCE_PROVIDER: z.enum(['mock', 'nosana']).default('nosana'),
 
   DAYTONA_MODE: z.enum(['mock', 'local-runner', 'live']).default('local-runner'),
@@ -64,6 +66,12 @@ const EnvSchema = z.object({
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
+
+/** 检测脱敏占位符（页面复制的 ••• 或 REPLACE_ME 等），避免把无效 Secret 当有效配置。 */
+export function isMaskedSecret(value: string | undefined | null): boolean {
+  if (!value) return true;
+  return /[•●*]{3,}/.test(value) || /REPLACE_ME|CHANGEME/i.test(value);
+}
 
 let cached: AppEnv | null = null;
 

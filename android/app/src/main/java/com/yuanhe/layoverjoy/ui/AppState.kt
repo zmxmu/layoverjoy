@@ -51,7 +51,14 @@ class AppStateViewModel(val session: SessionStore) : ViewModel() {
     suspend fun onAuthDone(email: String) {
         userEmail = email
         isLoggedIn = true
-        gate = if (session.snapshot().onboardingDone) Gate.Main else Gate.Onboarding
+        if (session.snapshot().onboardingDone) {
+            gate = Gate.Main
+        } else {
+            // 首次登录走引导流程：引导结束后统一落在首页，不再回跳拦截前的页面，
+            // 避免引导完成瞬间在导航尚未就绪时执行回跳导致返回栈异常。
+            authReturnRoute = null
+            gate = Gate.Onboarding
+        }
     }
 
     fun onOnboardingDone() {

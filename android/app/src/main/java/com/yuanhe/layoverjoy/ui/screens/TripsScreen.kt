@@ -156,14 +156,6 @@ private fun BookingCard(b: BookingDto) {
             }
             Text(fmtPrice(b.acceptedTotal, b.currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(6.dp))
-        Row {
-            Badge(b.sourceEnvironment, color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
-            if (b.isSimulated) {
-                Spacer(Modifier.padding(start = 6.dp))
-                Badge(L10n.t("trips.simulated_trade"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
-            }
-        }
         if (expanded) {
             Spacer(Modifier.height(10.dp))
             b.orders.forEach { o ->

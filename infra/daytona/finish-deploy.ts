@@ -42,7 +42,7 @@ async function main() {
   await exec("pkill -f 'node dist/' || true", BACKEND, 30);
   await exec(
     `export PRISMA_QUERY_ENGINE_LIBRARY=${ENGINES}/libquery_engine.so.node; ` +
-      'nohup ./start.sh api >/tmp/api.log 2>&1 & sleep 1; echo API_STARTED',
+      'nohup ./start.sh main >/tmp/api.log 2>&1 & sleep 1; echo API_STARTED',
     BACKEND, 60,
   );
   await exec(

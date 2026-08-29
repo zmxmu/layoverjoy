@@ -246,7 +246,8 @@ export class SearchOrchestrator {
     const outcome: CandidateOutcome = { city, status: 'FAILED', reasonCodes: [] };
     outcomes.push(outcome);
 
-    // 1) 资格硬过滤（在调用 Atlas 之前）
+    // 1) 资格硬过滤（在调用 Atlas 之前）。搜索期只做初筛：此时第二段尚未 Verify，
+    // 不得谎报 onwardTicketConfirmed；硬判定在预订期（BOOKING 模式）复核。
     const eligibility = await this.rules.evaluate({
       travelDate: this.isoDate(run.departureDate),
       purpose: 'TOURISM',
@@ -254,7 +255,7 @@ export class SearchOrchestrator {
       passport: profile.passport,
       visas: profile.visas,
       destinationCountry: city.countryCode,
-      onwardTicketConfirmed: true, // 方案包含已确认第二段
+      mode: 'SEARCH_SCREEN',
     });
     outcome.ruleId = eligibility.ruleId;
     if (eligibility.status !== 'ELIGIBLE') {
@@ -356,6 +357,8 @@ export class SearchOrchestrator {
 
         const leg1SnapId = await this.saveOffer(run.id, 1, 'LEG_1', city.cityId, leg1Best, leg1.label);
         const leg2SnapId = await this.saveOffer(run.id, 2, 'LEG_2', city.cityId, leg2Best, leg2.label);
+        // 两段来源可能不同（如一段真实一段回退）：按腿聚合，不一致时诚实标记 MIXED。
+        const aggregatedProvider = leg1.label === leg2.label ? leg1.label : 'MIXED';
 
         await this.prisma.stopoverPlan.create({
           data: {
@@ -377,7 +380,7 @@ export class SearchOrchestrator {
             riskLevel: stayDays >= 3 ? 'LOW' : 'MEDIUM',
             riskFlagsJson: ['SEPARATE_TICKETS', 'RECHECK_BAGGAGE'] as any,
             eligibilitySnapshotId: outcome.eligibilitySnapshotId,
-            sourceProvider: leg1.label,
+            sourceProvider: aggregatedProvider,
             isSimulated: true,
           },
         });

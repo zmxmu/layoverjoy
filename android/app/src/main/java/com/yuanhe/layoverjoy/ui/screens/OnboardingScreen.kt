@@ -37,6 +37,7 @@ import com.yuanhe.layoverjoy.data.DocumentInput
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
+import com.yuanhe.layoverjoy.ui.DateField
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
@@ -78,6 +79,28 @@ fun OnboardingScreen(appState: AppStateViewModel) {
     var interests by remember { mutableStateOf(setOf<String>()) }
     var acceptRedEye by remember { mutableStateOf(true) }
     var submitting by remember { mutableStateOf(false) }
+    var uploadError by remember { mutableStateOf<String?>(null) }
+
+    /** 将最小证件信息（国家/类型/有效期）同步到后端资格引擎；失败时明示错误，不静默通过。 */
+    fun finishOnboarding(country: String, passportType: String, visas: List<String>) {
+        submitting = true
+        scope.launch {
+            val r = runCatching {
+                apiCall {
+                    Net.api.addDocument(
+                        DocumentInput(kind = "PASSPORT", countryCode = country, passportType = passportType, expiresOn = expiry, isPrimary = true),
+                    )
+                }
+            }.getOrNull()
+            submitting = false
+            if (r is ApiResult.Err && r.code != "DUPLICATE_PASSPORT") {
+                uploadError = r.message
+                return@launch
+            }
+            session.setOnboardingDone(true, country, passportType, visas)
+            appState.onOnboardingDone()
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -100,7 +123,7 @@ fun OnboardingScreen(appState: AppStateViewModel) {
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    LabeledField(L10n.t("ob.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
+                    DateField(L10n.t("ob.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
                 }
                 Spacer(Modifier.height(12.dp))
                 InfoBanner(L10n.t("ob.security_banner"))
@@ -151,26 +174,30 @@ fun OnboardingScreen(appState: AppStateViewModel) {
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                PrimaryButton(
-                    text = L10n.t("ob.start"),
-                    loading = submitting,
-                    onClick = {
-                        submitting = true
+                // 证件同步失败不得静默通过：资格引擎缺数据会 fail-closed，必须明示并允许重试。
+                if (uploadError != null) {
+                    InfoBanner(uploadError!!)
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { uploadError = null; finishOnboarding(country, passportType, visas.toList()) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(L10n.t("ob.retry_upload"))
+                    }
+                    TextButton(onClick = {
+                        // 用户主动选择先跳过：本地完成引导，证件可稍后在「我的-证件」补录。
+                        uploadError = null
                         scope.launch {
-                            // 将最小证件信息（国家/类型/有效期）同步到后端资格引擎；失败不阻塞本地完成
-                            runCatching {
-                                val r = apiCall {
-                                    Net.api.addDocument(
-                                        DocumentInput(kind = "PASSPORT", countryCode = country, passportType = passportType, expiresOn = expiry, isPrimary = true),
-                                    )
-                                }
-                                if (r is ApiResult.Err && r.code == "DUPLICATE_PASSPORT") { /* 已有护照，忽略 */ }
-                            }
                             session.setOnboardingDone(true, country, passportType, visas.toList())
                             appState.onOnboardingDone()
                         }
-                    },
-                )
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(L10n.t("ob.skip_upload"))
+                    }
+                } else {
+                    PrimaryButton(
+                        text = L10n.t("ob.start"),
+                        loading = submitting,
+                        onClick = { finishOnboarding(country, passportType, visas.toList()) },
+                    )
+                }
             }
         }
     }

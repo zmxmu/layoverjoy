@@ -40,15 +40,10 @@ fun HomeScreen(nav: NavController) {
         item {
             Spacer(Modifier.height(20.dp))
             Text(L10n.t("home.title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                L10n.t("home.demo_note"),
-                style = MaterialTheme.typography.labelSmall,
-            )
             Spacer(Modifier.height(16.dp))
         }
 
-        item { SectionTitle(L10n.t("home.cities"), trailing = L10n.t("home.local_data")) }
+        item { SectionTitle(L10n.t("home.cities")) }
         items(LocalDemoData.cities) { city ->
             JoyCard(modifier = Modifier.padding(vertical = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

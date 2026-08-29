@@ -14,6 +14,8 @@ export interface NotifyInput {
   monitorId?: string;
   isSimulated?: boolean;
   sendEmail?: boolean;
+  /** false 时不写入 App 内通知箱（渠道开关必须被尊重，不能强制双发）。 */
+  sendApp?: boolean;
 }
 
 /**
@@ -43,6 +45,11 @@ export class NotificationsService {
 
   /** 创建通知并按配置投递邮件。邮件失败不阻塞业务，只记录投递状态。 */
   async notify(input: NotifyInput) {
+    const sendApp = input.sendApp !== false;
+    const sendEmail = input.sendEmail !== false;
+    // 两个渠道都关闭：不产生任何通知记录，避免假状态。
+    if (!sendApp && !sendEmail) return { notificationId: null, skipped: true };
+
     const notification = await this.prisma.notification.create({
       data: {
         userId: input.userId,
@@ -56,12 +63,14 @@ export class NotificationsService {
       },
     });
 
-    // App 本地通知渠道：客户端轮询时可见
-    await this.prisma.notificationDelivery.create({
-      data: { notificationId: notification.id, channel: 'APP', status: 'SENT', attempts: 1, sentAt: new Date() },
-    });
+    // App 本地通知渠道：客户端轮询时可见（渠道关闭时不写入）
+    if (sendApp) {
+      await this.prisma.notificationDelivery.create({
+        data: { notificationId: notification.id, channel: 'APP', status: 'SENT', attempts: 1, sentAt: new Date() },
+      });
+    }
 
-    if (input.sendEmail !== false) {
+    if (sendEmail) {
       await this.deliverEmail(notification.id, input.userId, input.title, input.body);
     }
     return { notificationId: notification.id };

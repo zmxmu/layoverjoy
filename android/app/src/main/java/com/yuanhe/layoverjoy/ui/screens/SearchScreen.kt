@@ -145,9 +145,6 @@ fun SearchScreen(nav: NavController) {
             SwitchRow(L10n.t("search.demo_fallback"), L10n.t("search.demo_fallback_sub"), demoFixture) { demoFixture = it }
         }
         Spacer(Modifier.height(12.dp))
-
-        InfoBanner(L10n.t("search.sandbox_note"))
-        Spacer(Modifier.height(12.dp))
         ErrorBanner(error)
         if (error != null) Spacer(Modifier.height(10.dp))
 

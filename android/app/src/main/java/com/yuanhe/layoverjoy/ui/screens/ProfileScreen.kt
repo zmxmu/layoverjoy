@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -48,20 +47,23 @@ import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
 import kotlinx.coroutines.launch
 
-/** 我的页：旅行设置、安全与支持、退出登录。 */
+/** 我的页：语言切换、证件钱包、安全与支持、退出登录。
+ * 服务器切换不暴露给普通用户：双击标题进入隐藏开发设置页。 */
 @Composable
 fun ProfileScreen(nav: NavController, appState: AppStateViewModel) {
     val scope = rememberCoroutineScope()
     val session = LayoverJoyApp.instance.session
 
     var showPrivacy by remember { mutableStateOf(false) }
-    var showServer by remember { mutableStateOf(false) }
-    var baseUrl by remember { mutableStateOf(Net.client.currentBaseUrl().removeSuffix("/")) }
-    var serverSaved by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(20.dp))
-        Text(L10n.t("profile.title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            L10n.t("profile.title"),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.doubleTapTo { nav.navigate(Routes.DEV_SETTINGS) },
+        )
         Spacer(Modifier.height(4.dp))
         if (appState.isLoggedIn) {
             Text(appState.userEmail ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
@@ -93,20 +95,6 @@ fun ProfileScreen(nav: NavController, appState: AppStateViewModel) {
             Spacer(Modifier.height(10.dp))
             SettingRow(L10n.t("profile.docs_wallet"), L10n.t("profile.docs_sub")) {
                 com.yuanhe.layoverjoy.ui.guardedNavigate(nav, appState, Routes.DOCUMENTS)
-            }
-            Divider()
-            SettingRow(L10n.t("profile.server"), Net.client.currentBaseUrl().removeSuffix("/")) { showServer = !showServer }
-            if (showServer) {
-                Spacer(Modifier.height(10.dp))
-                LabeledField(L10n.t("profile.backend_url"), baseUrl, { baseUrl = it.trim(); serverSaved = false }, placeholder = BuildConfig.DEFAULT_BASE_URL, keyboardType = KeyboardType.Uri)
-                Spacer(Modifier.height(8.dp))
-                SecondaryButton(if (serverSaved) L10n.t("common.saved") else L10n.t("common.save"), onClick = {
-                    scope.launch {
-                        session.setBaseUrl(baseUrl)
-                        Net.client.switchBaseUrl(baseUrl)
-                        serverSaved = true
-                    }
-                })
             }
         }
 

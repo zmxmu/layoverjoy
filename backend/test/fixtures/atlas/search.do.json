@@ -1,0 +1,543 @@
+{
+  "capturedOn": "2026-08-29",
+  "endpoint": "POST /search.do",
+  "note": "真实 Sandbox 响应，已截断标识符；status=0 表示成功",
+  "request": {
+    "tripType": "1",
+    "requestId": "layoverjoy-demo-fixture",
+    "adultNum": 1,
+    "childNum": 0,
+    "infantNum": 0,
+    "fromCity": "JKT",
+    "toCity": "DPS",
+    "fromDate": "20260915",
+    "currency": "SGD",
+    "includeMultipleFareFamily": false
+  },
+  "response": {
+    "status": 0,
+    "msg": "success",
+    "requestId": null,
+    "routings": [
+      {
+        "fid": "w7DFBHYCr0M_2jkfTSpM4N9C...TRUNCATED",
+        "routingIdentifier": "SktUX0RQU18xXzIwMjYwOTE1X18xXzBfMHxBTlc4...TRUNCATED",
+        "supportCreditTransPayment": "0",
+        "supportPaymentMethods": [
+          1
+        ],
+        "currency": "SGD",
+        "adultPrice": 41.65,
+        "adultTax": 29.51,
+        "adultDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 41.65,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 29.51,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "childPrice": 41.65,
+        "childTax": 29.51,
+        "childDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 41.65,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 29.51,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "infantPrice": 27.68,
+        "infantTax": 0.0,
+        "infantDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 27.68,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 0.0,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "childMandatorySeatingFee": null,
+        "infantAllowed": true,
+        "transactionFeePerPax": 0.0,
+        "transactionFee": 0.0,
+        "transactionFeeMode": "PER_PAX",
+        "nationalityType": 0,
+        "nationality": "",
+        "suitAge": "",
+        "PaxType": "ADT",
+        "fromSegments": [
+          {
+            "segmentIndex": 1,
+            "carrier": "QZ",
+            "flightNumber": "QZ806",
+            "depAirport": "CGK",
+            "depTime": "202609150600",
+            "arrAirport": "DPS",
+            "arrTime": "202609150900",
+            "stopCities": "",
+            "duration": 120,
+            "codeShare": false,
+            "cabin": "",
+            "cabinClass": 1,
+            "seatCount": 9,
+            "aircraftCode": "320",
+            "depTerminal": "",
+            "arrTerminal": "",
+            "operatingCarrier": "",
+            "operatingFlightnumber": "",
+            "fareFamily": "Cheapest"
+          }
+        ],
+        "retSegments": [],
+        "combineIndexs": [],
+        "rule": {
+          "hasBaggage": 1,
+          "baggageElements": [
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 0,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 1,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 2,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageOverheadLocker",
+              "passengerType": 0,
+              "baggagePiece": 1,
+              "baggageWeight": 7,
+              "baggageSize": "56*36*23cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageOverheadLocker",
+              "passengerType": 1,
+              "baggagePiece": 1,
+              "baggageWeight": 7,
+              "baggageSize": "56*36*23cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageOverheadLocker",
+              "passengerType": 2,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "56*36*23cm",
+              "isAllWeight": false
+            }
+          ],
+          "refundRules": [
+            {
+              "refundType": 0,
+              "refundStatus": "T",
+              "refundMethod": null,
+              "refundFee": 0.0,
+              "currency": "MYR",
+              "refNoshow": "T",
+              "refNoShowCondition": 0,
+              "refNoshowFee": 0.0,
+              "ruleDetailList": [
+                {
+                  "ruleId": 78933,
+                  "status": "T",
+                  "refundMethod": "CashBackToOriginalPayment",
+                  "startMinute": 525600,
+                  "endMinute": 0,
+                  "amount": 0.0,
+                  "currency": "MYR"
+                },
+                {
+                  "ruleId": 78934,
+                  "status": "T",
+                  "refundMethod": "CashBackToOriginalPayment",
+                  "startMinute": 0,
+                  "endMinute": -525600,
+                  "amount": 0.0,
+                  "currency": "MYR"
+                }
+              ]
+            }
+          ],
+          "changesRules": [
+            {
+              "changesType": 0,
+              "changesStatus": "T",
+              "changesFee": 0.0,
+              "currency": "IDR",
+              "revNoshow": "T",
+              "revNoShowCondition": 0,
+              "revNoshowFee": 0.0,
+              "ruleDetailList": [
+                {
+                  "ruleId": 79050,
+                  "status": "H",
+                  "refundMethod": null,
+                  "startMinute": 525600,
+                  "endMinute": 2880,
+                  "amount": 306000.0,
+                  "currency": "IDR"
+                },
+                {
+                  "ruleId": 79051,
+                  "status": "T",
+                  "refundMethod": null,
+                  "startMinute": 2880,
+                  "endMinute": 0,
+                  "amount": 0.0,
+                  "currency": "IDR"
+                },
+                {
+                  "ruleId": 79052,
+                  "status": "T",
+                  "refundMethod": null,
+                  "startMinute": 0,
+                  "endMinute": -525600,
+                  "amount": 0.0,
+                  "currency": "IDR"
+                }
+              ]
+            }
+          ],
+          "serviceElements": [
+            {
+              "hasFreeSeat": 0,
+              "hasFreeMeal": 0
+            }
+          ]
+        },
+        "vendorFare": null,
+        "bundleOptions": [],
+        "links": null,
+        "separateBookings": false,
+        "refreshTime": "2026-08-29T09:27:53Z",
+        "expireTime": "2026-08-29T09:59:19Z",
+        "displayFare": null,
+        "ancillarySupported": [
+          "seat",
+          "luggage"
+        ],
+        "tags": null,
+        "riskSellout": false,
+        "residentCode": null
+      },
+      {
+        "fid": "-wtKEzueGjmE5qzT9ReKEsL6...TRUNCATED",
+        "routingIdentifier": "SktUX0RQU18xXzIwMjYwOTE1X18xXzBfMHxBTlc4...TRUNCATED",
+        "supportCreditTransPayment": "0",
+        "supportPaymentMethods": [
+          1
+        ],
+        "currency": "SGD",
+        "adultPrice": 40.4,
+        "adultTax": 24.0,
+        "adultDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 40.4,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 24.0,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "childPrice": 40.4,
+        "childTax": 24.0,
+        "childDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 40.4,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 24.0,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "infantPrice": 45.47,
+        "infantTax": 0.0,
+        "infantDetails": [
+          {
+            "code": "farePrice",
+            "type": "base",
+            "amount": 45.47,
+            "description": "Ticket Price Markup",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          },
+          {
+            "code": "tax",
+            "type": "tax",
+            "amount": 0.0,
+            "description": "Tax",
+            "markupDetailId": null,
+            "version": null,
+            "direction": null
+          }
+        ],
+        "childMandatorySeatingFee": null,
+        "infantAllowed": true,
+        "transactionFeePerPax": 0.0,
+        "transactionFee": 0.0,
+        "transactionFeeMode": "PER_PAX",
+        "nationalityType": 0,
+        "nationality": "",
+        "suitAge": "",
+        "PaxType": "ADT",
+        "fromSegments": [
+          {
+            "segmentIndex": 1,
+            "carrier": "JT",
+            "flightNumber": "JT012",
+            "depAirport": "CGK",
+            "depTime": "202609151740",
+            "arrAirport": "DPS",
+            "arrTime": "202609152035",
+            "stopCities": "",
+            "duration": 115,
+            "codeShare": false,
+            "cabin": "L",
+            "cabinClass": 1,
+            "seatCount": 7,
+            "aircraftCode": "737",
+            "depTerminal": "",
+            "arrTerminal": "",
+            "operatingCarrier": "JT",
+            "operatingFlightnumber": "",
+            "fareFamily": "Economy"
+          }
+        ],
+        "retSegments": [],
+        "combineIndexs": [],
+        "rule": {
+          "hasBaggage": 1,
+          "baggageElements": [
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageUnderSeat",
+              "passengerType": 0,
+              "baggagePiece": 1,
+              "baggageWeight": 7,
+              "baggageSize": "40*30*20cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageUnderSeat",
+              "passengerType": 1,
+              "baggagePiece": 1,
+              "baggageWeight": 7,
+              "baggageSize": "40*30*20cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "CabinBaggageUnderSeat",
+              "passengerType": 2,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "40*30*20cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 0,
+              "baggagePiece": 0,
+              "baggageWeight": 10,
+              "baggageSize": "35*35*30cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 1,
+              "baggagePiece": 0,
+              "baggageWeight": 10,
+              "baggageSize": "35*35*30cm",
+              "isAllWeight": false
+            },
+            {
+              "segmentNo": 1,
+              "baggageType": "StandardCheckInBaggage",
+              "passengerType": 2,
+              "baggagePiece": 0,
+              "baggageWeight": 0,
+              "baggageSize": "35*35*30cm",
+              "isAllWeight": false
+            }
+          ],
+          "refundRules": [
+            {
+              "refundType": 0,
+              "refundStatus": "T",
+              "refundMethod": null,
+              "refundFee": 0.0,
+              "currency": "SGD",
+              "refNoshow": "T",
+              "refNoShowCondition": 0,
+              "refNoshowFee": 0.0,
+              "ruleDetailList": [
+                {
+                  "ruleId": 33510,
+                  "status": "H",
+                  "refundMethod": "CashBackToOriginalPayment",
+                  "startMinute": 525600,
+                  "endMinute": 240,
+                  "amount": 64.4,
+                  "currency": "SGD"
+                },
+                {
+                  "ruleId": 33511,
+                  "status": "T",
+                  "refundMethod": "CashBackToOriginalPayment",
+                  "startMinute": 240,
+                  "endMinute": 0,
+                  "amount": 0.0,
+                  "currency": "SGD"
+                },
+                {
+                  "ruleId": 33512,
+                  "status": "T",
+                  "refundMethod": "CashBackToOriginalPayment",
+                  "startMinute": 0,
+                  "endMinute": -525600,
+                  "amount": 0.0,
+                  "currency": "SGD"
+                }
+              ]
+            }
+          ],
+          "changesRules": [
+            {
+              "changesType": 0,
+              "changesStatus": "H",
+              "changesFee": 64.4,
+              "currency": "SGD",
+              "revNoshow": "H",
+              "revNoShowCondition": 0,
+              "revNoshowFee": 64.4,
+              "ruleDetailList": [
+                {
+                  "ruleId": 33518,
+                  "status": "H",
+                  "refundMethod": null,
+                  "startMinute": 525600,
+                  "endMinute": 0,
+                  "amount": 64.4,
+                  "currency": "SGD"
+                },
+                {
+                  "ruleId": 33519,
+                  "status": "H",
+                  "refundMethod": null,
+                  "startMinute": 0,
+                  "endMinute": -525600,
+                  "amount": 64.4,
+                  "currency": "SGD"
+                }
+              ]
+            }
+          ],
+          "serviceElements": [
+            {
+              "hasFreeSeat": 0,
+              "hasFreeMeal": 0
+            }
+          ]
+        },
+        "vendorFare": null,
+        "bundleOptions": [],
+        "links": null,
+        "separateBookings": false,
+        "refreshTime": "2026-08-29T09:15:43Z",
+        "expireTime": "2026-08-29T09:59:19Z",
+        "displayFare": null,
+        "ancillarySupported": [
+          "luggage"
+        ],
+        "tags": null,
+        "riskSellout": false,
+        "residentCode": null
+      }
+    ]
+  }
+}

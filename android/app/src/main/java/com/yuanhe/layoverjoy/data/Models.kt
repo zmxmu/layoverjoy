@@ -27,7 +27,7 @@ data class ErrorBody(val error: ErrorEnvelope = ErrorEnvelope())
 // ---------- 认证 ----------
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String, val nickname: String? = null)
+data class RegisterRequest(val email: String, val password: String, val displayName: String? = null)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
@@ -285,6 +285,13 @@ data class ExplanationPayload(
     val summary: String = "",
     val highlights: List<String> = emptyList(),
     val tips: List<String> = emptyList(),
+    val modelId: String? = null,
+    /** Nosana 推理耗时（毫秒），诚实展示真实成本。 */
+    val latencyMs: Long? = null,
+    /** 部署 ID 后 8 位。 */
+    val deploymentIdTail: String? = null,
+    /** TEMPLATE 时的降级原因（TIMEOUT/NETWORK_ERROR 等）。 */
+    val fallbackReason: String? = null,
 )
 
 /** POST /v1/plans/:id/explanation 与详情内嵌 explanation 共用。 */

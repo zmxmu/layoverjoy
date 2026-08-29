@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { AppError } from '../common/errors';
 import {
   CreateOrderInput,
@@ -17,8 +17,15 @@ import {
  * SandboxAtlasGateway：直连 ATRIP Sandbox。
  * 契约来源：03 技术方案 §3.1、§13；凭据映射：x-atlas-client-id / x-atlas-client-secret。
  *
- * 注意：真实请求/响应 Fixture 尚未抓取（Preflight PENDING），
- * 因此响应解析采用防御式多候选字段策略，绝不手工猜测完整层级。
+ * 真实请求/响应 Fixture 已于 2026-08-29 抓取并脱敏存档：
+ *   test/fixtures/atlas/search.do.json、test/fixtures/atlas/verify.do.json
+ * 关键契约（实测确认）：
+ * - 请求必须携带 Accept-Encoding: gzip，否则返回 status=102；
+ * - Search 字段为 tripType/adultNum/fromCity/toCity/fromDate(YYYYMMDD)，响应在顶层
+ *   返回 { status, msg, routings[] }，status=0 才是业务成功；
+ * - Verify 请求 { routingIdentifier }，响应顶层 { sessionId, routing, bookingRequirement,
+ *   priceChange: { isPriceChange } }；
+ * - routingIdentifier 即后续 Verify 的 offer 标识。
  * 日志绝不输出 AK/SK；原始响应只保存脱敏 Hash。
  */
 export class SandboxAtlasProvider implements FlightProvider {
@@ -35,6 +42,8 @@ export class SandboxAtlasProvider implements FlightProvider {
   private headers(): Record<string, string> {
     return {
       'content-type': 'application/json',
+      // Sandbox 强制要求 gzip，否则返回 status=102（实测）
+      'accept-encoding': 'gzip',
       'x-atlas-client-id': this.clientId,
       'x-atlas-client-secret': this.clientSecret,
     };
@@ -96,54 +105,76 @@ export class SandboxAtlasProvider implements FlightProvider {
     throw new AppError('ATLAS_PROVIDER_ERROR', '航班服务返回异常，请稍后重试。', 502, true, { providerCode });
   }
 
-  private pick(obj: any, keys: string[]): any {
-    for (const k of keys) {
-      if (obj?.[k] !== undefined && obj?.[k] !== null) return obj[k];
+  /** 业务层错误：HTTP 200 但 status !== 0（如 102 参数错误）。 */
+  private mapBusinessError(json: any, operation: string): never {
+    const code = `ATLAS_STATUS_${json?.status}`;
+    if (operation === 'SEARCH' && json?.status === 102) {
+      throw new AppError('ATLAS_BAD_REQUEST', json?.msg || '航班查询参数有误。', 400, false, { providerCode: code });
     }
-    return undefined;
+    if (operation === 'VERIFY') {
+      // 验价失败常见于报价过期，按可重试的上游异常处理
+      throw new AppError('ATLAS_PROVIDER_ERROR', json?.msg || '验价失败，请刷新后重试。', 502, true, { providerCode: code });
+    }
+    throw new AppError('ATLAS_PROVIDER_ERROR', json?.msg || '航班服务返回业务错误。', 502, true, { providerCode: code });
+  }
+
+  /** "202609150600" -> "2026-09-15T06:00:00"（沙箱时刻为机场当地时间，不做时区换算）。 */
+  private parseSandboxTime(v: string | undefined | null): string | undefined {
+    if (!v || v.length < 12) return undefined;
+    return `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}T${v.slice(8, 10)}:${v.slice(10, 12)}:00`;
+  }
+
+  /** 成人单价合计：票价 + 税费 + 交易费。 */
+  private routingTotalPrice(routing: any, adults: number): number {
+    const perPax = Number(routing?.adultPrice ?? 0) + Number(routing?.adultTax ?? 0);
+    const fee = Number(routing?.transactionFee ?? 0);
+    return Math.round((perPax * Math.max(adults, 1) + fee) * 100) / 100;
   }
 
   async search(input: FlightSearchInput): Promise<FlightOffer[]> {
+    const adults = input.adults ?? 1;
     const { status, json } = await this.post(
       '/search.do',
       {
-        origin: input.origin,
-        destination: input.destination,
-        departDate: input.departDate,
-        adults: input.adults ?? 1,
+        tripType: '1',
+        requestId: randomUUID(),
+        adultNum: adults,
+        childNum: 0,
+        infantNum: 0,
+        fromCity: input.origin,
+        toCity: input.destination,
+        fromDate: input.departDate.replace(/-/g, ''),
         currency: input.currency,
-        airlines: input.airlines,
+        ...(input.airlines?.length ? { airlines: input.airlines } : {}),
+        includeMultipleFareFamily: false,
       },
       true, // Search 读操作允许重试一次
     );
     if (status !== 200) this.mapHttpError(status, json, 'SEARCH');
+    if (json?.status !== 0) this.mapBusinessError(json, 'SEARCH');
 
-    // 防御式解析：候选字段路径（真实 Fixture 抓取后再收紧）
-    const rawOffers: any[] =
-      this.pick(json, ['offers']) ||
-      this.pick(json?.data, ['offers', 'routings', 'flightRoutings', 'results']) ||
-      [];
+    const routings: any[] = Array.isArray(json?.routings) ? json.routings : [];
     const offers: FlightOffer[] = [];
-    for (const o of Array.isArray(rawOffers) ? rawOffers : []) {
-      const providerOfferId = this.pick(o, ['offer_id', 'offerId', 'id', 'routingIdentifier']);
-      if (!providerOfferId) continue;
-      const seg = this.pick(o, ['segment', 'segments', 'flightSegment']) || {};
-      const firstSeg = Array.isArray(seg) ? seg[0] : seg;
+    for (const r of routings) {
+      const routingIdentifier = r?.routingIdentifier;
+      if (!routingIdentifier) continue;
+      const firstSeg = Array.isArray(r?.fromSegments) ? r.fromSegments[0] : undefined;
       offers.push({
-        providerOfferId: String(providerOfferId),
-        routingIdentifier: this.pick(o, ['routingIdentifier', 'routing_identifier', 'search_id', 'searchId']),
-        origin: this.pick(firstSeg, ['origin', 'from', 'departureAirport']) ?? input.origin,
-        destination: this.pick(firstSeg, ['destination', 'to', 'arrivalAirport']) ?? input.destination,
-        departureAt: this.pick(o, ['departureAt', 'departureTime', 'departTime']) || this.pick(firstSeg, ['departureTime', 'departTime']),
-        arrivalAt: this.pick(o, ['arrivalAt', 'arrivalTime', 'arriveTime']) || this.pick(firstSeg, ['arrivalTime', 'arriveTime']),
-        carrier: this.pick(o, ['carrier', 'marketingCarrier', 'airline']) || this.pick(firstSeg, ['carrier', 'airline']),
-        flightNumber: this.pick(o, ['flightNumber', 'flightNo']) || this.pick(firstSeg, ['flightNumber', 'flightNo']),
-        currency: this.pick(o, ['currency']) || input.currency || 'SGD',
-        totalPrice: Number(this.pick(o, ['totalPrice', 'total_price', 'price', 'amount', 'totalAmount']) ?? 0),
-        priceStatus: (this.pick(o, ['priceStatus', 'price_status']) || 'current') as 'current' | 'reference',
-        bookable: this.pick(o, ['bookable']) !== false,
-        baggageJson: this.pick(o, ['baggageElements', 'baggage']),
-        raw: o,
+        // routingIdentifier 是后续 Verify/Order 的报价标识
+        providerOfferId: String(routingIdentifier),
+        routingIdentifier: String(routingIdentifier),
+        origin: firstSeg?.depAirport ?? input.origin,
+        destination: firstSeg?.arrAirport ?? input.destination,
+        departureAt: this.parseSandboxTime(firstSeg?.depTime) ?? '',
+        arrivalAt: this.parseSandboxTime(firstSeg?.arrTime) ?? '',
+        carrier: firstSeg?.carrier,
+        flightNumber: firstSeg?.flightNumber,
+        currency: r?.currency || input.currency || 'SGD',
+        totalPrice: this.routingTotalPrice(r, adults),
+        priceStatus: 'current',
+        bookable: true,
+        baggageJson: Array.isArray(r?.ancillarySupported) ? r.ancillarySupported : undefined,
+        raw: r,
       });
     }
     if (offers.length === 0) {
@@ -159,19 +190,21 @@ export class SandboxAtlasProvider implements FlightProvider {
   }
 
   async verify(offerIdentifier: string): Promise<VerifiedOffer> {
-    const { status, json } = await this.post('/verify.do', { offerId: offerIdentifier, routingIdentifier: offerIdentifier });
+    const { status, json } = await this.post('/verify.do', { routingIdentifier: offerIdentifier });
     if (status !== 200) this.mapHttpError(status, json, 'VERIFY');
-    const data = json?.data ?? json ?? {};
-    const price = Number(this.pick(data, ['totalPrice', 'total_price', 'price', 'amount']) ?? 0);
+    if (json?.status !== 0) this.mapBusinessError(json, 'VERIFY');
+
+    const routing = json?.routing ?? {};
+    const priceChange = json?.priceChange ?? {};
     return {
-      providerOfferId: String(this.pick(data, ['offer_id', 'offerId', 'id']) || offerIdentifier),
-      sessionId: this.pick(data, ['sessionId', 'session_id', 'bookingId', 'booking_id']),
-      currency: this.pick(data, ['currency']) || 'SGD',
-      totalPrice: price,
+      providerOfferId: String(routing?.routingIdentifier || offerIdentifier),
+      sessionId: json?.sessionId,
+      currency: routing?.currency || 'SGD',
+      totalPrice: this.routingTotalPrice(routing, 1),
       priceStatus: 'current',
-      priceChanged: this.pick(data, ['priceChanged']) === true,
-      bookable: this.pick(data, ['bookable']) !== false,
-      bookingRequirements: this.pick(data, ['bookingRequirements', 'booking_requirements']),
+      priceChanged: priceChange?.isPriceChange === true,
+      bookable: true,
+      bookingRequirements: json?.bookingRequirement,
     };
   }
 
@@ -182,13 +215,14 @@ export class SandboxAtlasProvider implements FlightProvider {
       passengers: input.passengers,
     });
     if (status !== 200) this.mapHttpError(status, json, 'ORDER');
+    if (json?.status !== 0) this.mapBusinessError(json, 'ORDER');
     const data = json?.data ?? json ?? {};
     return {
-      orderNo: String(this.pick(data, ['orderNo', 'order_no', 'orderNumber']) || ''),
-      status: String(this.pick(data, ['status']) || 'CREATED'),
-      currency: this.pick(data, ['currency']),
-      amount: Number(this.pick(data, ['amount', 'totalPrice']) ?? 0) || undefined,
-      paymentConfirmationId: this.pick(data, ['paymentConfirmationId', 'payment_confirmation_id']),
+      orderNo: String(data.orderNo || data.order_no || ''),
+      status: String(data.status || 'CREATED'),
+      currency: data.currency,
+      amount: Number(data.amount ?? data.totalPrice ?? 0) || undefined,
+      paymentConfirmationId: data.paymentConfirmationId,
     };
   }
 
@@ -198,11 +232,12 @@ export class SandboxAtlasProvider implements FlightProvider {
       paymentConfirmationId: input.paymentConfirmationId,
     });
     if (status !== 200) this.mapHttpError(status, json, 'PAY');
+    if (json?.status !== 0) this.mapBusinessError(json, 'PAY');
     const data = json?.data ?? json ?? {};
-    const s = String(this.pick(data, ['status']) || '').toUpperCase();
+    const s = String(data.status || '').toUpperCase();
     return {
       status: s.includes('SUCCESS') || s.includes('PAID') ? 'PAID' : s.includes('FAIL') ? 'FAILED' : 'UNKNOWN',
-      providerCode: this.pick(data, ['code']),
+      providerCode: data.code,
     };
   }
 
@@ -214,12 +249,13 @@ export class SandboxAtlasProvider implements FlightProvider {
   async getOrder(orderNo: string): Promise<FlightOrderResult> {
     const { status, json } = await this.post('/queryOrderDetails.do', { orderNo });
     if (status !== 200) this.mapHttpError(status, json, 'QUERY');
+    if (json?.status !== 0) this.mapBusinessError(json, 'QUERY');
     const data = json?.data ?? json ?? {};
     return {
-      orderNo: String(this.pick(data, ['orderNo', 'order_no']) || orderNo),
-      status: String(this.pick(data, ['status']) || 'UNKNOWN'),
-      currency: this.pick(data, ['currency']),
-      amount: Number(this.pick(data, ['amount', 'totalPrice']) ?? 0) || undefined,
+      orderNo: String(data.orderNo || data.order_no || orderNo),
+      status: String(data.status || 'UNKNOWN'),
+      currency: data.currency,
+      amount: Number(data.amount ?? data.totalPrice ?? 0) || undefined,
     };
   }
 

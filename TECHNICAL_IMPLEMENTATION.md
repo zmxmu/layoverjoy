@@ -48,7 +48,7 @@ Secrets live outside the repo in `.secrets/layoverjoy.env` (never committed); `q
 | `explanations` | Nosana client + template fallback | used by `plans` |
 | `monitors` | Monitor rules + trigger evaluation | `POST /v1/monitors`, `PATCH /v1/monitors/:id/status`, `GET /v1/monitors` |
 | `notifications` | In-app center, email channel (SMTP optional) | `GET /v1/notifications`, `POST /v1/notifications/:id/read` |
-| `bookings` | Dual-order state machine, verify/order/pay/refund mocks | `POST /v1/bookings/composite-order`, `POST /v1/bookings/:id/mock-pay`, `POST /v1/bookings/:id/mock-refund`, `GET /v1/bookings` |
+| `bookings` | Dual-order state machine, verify/order/pay/refund mocks | `POST /api/orders/composite`, `POST /api/orders/:id/mock-pay`, `POST /api/orders/:id/mock-refund`, `POST /api/orders/:id/simulate-leg-b-failure`, `GET /v1/bookings`, `GET /v1/bookings/:id` |
 | `webhooks` | Atlas order-status ingestion + compensation hooks | `POST /api/webhooks/atlas/:sharedToken`, `POST /api/orders/:id/events` |
 | `planning-jobs` | Daytona planning-job contract | `POST /api/v1/planning-jobs`, status endpoints |
 | `common` | Error contract, guards, interceptors, crypto | — |
@@ -68,16 +68,35 @@ Route prefixes: business APIs under `/v1/*`; Atlas-facing contracts keep their o
 ### 3.2 Booking state machine (dual-order)
 
 ```
-DRAFT → BOTH_VERIFIED → ORDERING → LEG_A_ORDERED → BOTH_ORDERED → PAYMENT_PENDING → COMPLETED
-                                 ↘ PARTIAL_ORDER → (compensation) → SIMULATED_REFUND_PENDING → SIMULATED_REFUNDED
-any unclear result → query status only; terminal anomalies → MANUAL_REVIEW / EXPIRED
+DRAFT → BOTH_VERIFIED → [booking-time eligibility re-check] → LEG_B_ORDERING → LEG_B_ORDERED →
+LEG_A_ORDERING → BOTH_ORDERED → PAYMENT_PENDING → COMPLETED
+                    ↘ PARTIAL_ORDER → (compensation) → SIMULATED_REFUND_PENDING → SIMULATED_REFUNDED
+re-check fails → EXPIRED (BOOKING_ELIGIBILITY_FAILED); no order placed at all → MANUAL_REVIEW
+any unclear result → query status only; never auto-retry
 ```
 
-Order creation order is intentional: **Leg B first** (higher inventory risk), then Leg A. `legBFailure=true` (demo injection) forces the partial path.
+- Order creation order is intentional: **Leg B first** (higher inventory risk), then Leg A. Status is driven by the actual set of successfully ordered legs (`orderedLegs`), never optimistically.
+- `legBFailure=true` (demo injection on `composite`): after the stopover leg (leg 2) is ordered successfully, leg 1 fails with `INVENTORY_CHANGED` → `PARTIAL_ORDER` with `details.{intentId, failedLeg, providerCode}` on the `PARTIAL_BOOKING` error.
+- A booking-time eligibility re-check (mode `BOOKING`, onward ticket confirmed) runs before ordering; failure aborts honestly.
+- Demo injection for payment: header `X-Demo-Pay-Result: FAIL` on `mock-pay` forces leg-1 payment to fail (Mock payment provider only) — driven by the Android hidden dev-page toggle, stored locally only. Refund (`mock-refund`) closes out any partial/complete state.
+- Passenger given/family names are AES-encrypted at rest (`passengerJson: {givenNameEnc, familyNameEnc}`); order numbers stored encrypted with only last-4 exposed.
 
 ### 3.3 JoyScore
 
 `joyScore = clamp(usable-hours component + fare-delta component + city-experience component + interest-match component)`; breakdown returned per component with points so the UI can render the composition transparently. Interests are counted only (semantic-stable codes sent by the client).
+
+### 3.4 Eligibility engine (two-stage, fail-closed)
+
+- `mode: 'SEARCH_SCREEN'`: search-time pre-screening. Missing onward-ticket confirmation does **not** block, but results are marked `provisional: true` with `ONWARD_TICKET_PENDING_VERIFY` — never reported as confirmed.
+- `mode: 'BOOKING'` (default): hard decision before ordering. `onwardTicketConfirmed !== true` → `NEEDS_INFO` (fail-closed); the client can never fake confirmation.
+- Visa checks: missing expiry → `VISA_EXPIRY_MISSING` (NEEDS_INFO); expired → `VISA_EXPIRED` (INELIGIBLE). No document on file → fail-closed, surfaced in the funnel with honest reason codes.
+
+### 3.5 Atlas Sandbox contract (verified against the real API)
+
+- Requests must send `Accept-Encoding: gzip` (otherwise `status=102`). Business success is `status === 0` inside an HTTP 200 body.
+- Search payload: `{tripType:"1", requestId, adultNum, childNum, infantNum, fromCity, toCity, fromDate:"YYYYMMDD", currency, includeMultipleFareFamily}`; response `routings[]` keyed by `routingIdentifier` (used for verify), prices in `adultPrice/adultTax/transactionFee`.
+- Verify payload: `{routingIdentifier}`; response top-level `{sessionId, maxSeats, routing, bookingRequirement, priceChange.isPriceChange}`.
+- Anonymized real captures archived in `backend/test/fixtures/atlas/` (captured 2026-08-29).
 
 ## 4. Data Model (Prisma)
 
@@ -97,7 +116,8 @@ Encryption: field-level AES for any sensitive column via `DATA_ENCRYPTION_KEY`; 
 
 - `main.ts` binds `0.0.0.0:${PORT}` and does **not** load dotenv — the environment must be exported by the launcher (see `start.sh` in §8).
 - Required (Zod-validated): `DATABASE_URL`, `JWT_SECRET` (≥16 chars), `DATA_ENCRYPTION_KEY` (≥16 chars).
-- Optional with defaults: `ATLAS_*` (Sandbox base URL/keys), `NOSANA_*` (inference; falls back to template when unset), `SMTP_*` (email channel), `REDIS_URL`, `RUNTIME_TARGET`.
+- Optional with defaults: `ATLAS_*` (Sandbox base URL/keys), `NOSANA_*` (inference; falls back to template when unset — `NOSANA_TIMEOUT_MS` defaults to 90000 since qwen3.5:9b inference can reach ~60 s; `NOSANA_DEPLOYMENT_ID` is shown as a tail in the UI), `SMTP_*` (email channel), `REDIS_URL`, `RUNTIME_TARGET`.
+- Masked placeholder secrets (`•••`, `REPLACE_ME`) are detected by `isMaskedSecret()` and treated as unconfigured.
 - `seed.ts` loads airport hubs and entry-rule snapshots (aligned with `qoder-input/06-签证规则种子数据`).
 
 Local run:
@@ -114,10 +134,11 @@ npm run start:worker            # monitor worker
 ## 6. Android App
 
 - Single activity + Compose Navigation; Material3 theme (`ui/theme`), brand palette.
-- Network: Retrofit + kotlinx.serialization; session in DataStore (`SessionStore`), auto-refresh on 401.
-- Screens: guest-first boot — Main(bottom tabs: Home / Explore / Trips / Me) immediately, with stack routes for Login, Results, PlanDetail, MonitorSetup, BookingFlow, Notifications, Documents. Identity-requiring entries (Explore/Trips tabs, document wallet) pop up the Login screen; after sign-in, first-time users complete Onboarding(3 steps) and are routed back to the blocked target automatically.
-- Home screen is **fully local** (`LocalDemoData`) — curated city cards, no upload of real documents; the Me tab works for guests (language/server settings).
-- Configurable backend URL (Login screen / Me tab): default is the local Docker server `http://127.0.0.1:8080`; Android emulators use `http://10.0.2.2:8080`; devices use LAN or the Daytona preview URL.
+- Network: Retrofit + kotlinx.serialization; session in DataStore (`SessionStore`); OkHttp `Authenticator` performs refresh-token rotation on 401 (concurrency-safe, new token pair persisted); read timeout is 120 s to cover 90 s Nosana inference.
+- Screens: guest-first boot — Main(bottom tabs: Home / Explore / Trips / Me) immediately, with stack routes for Login, Results, PlanDetail, MonitorSetup, BookingFlow, Notifications, Documents. Identity-requiring entries (Explore/Trips tabs, document wallet) pop up the Login screen; after sign-in, first-time users complete Onboarding(3 steps) and are routed back to the blocked target automatically. Onboarding document upload failures are shown explicitly with retry/skip — never silent (the eligibility engine is fail-closed without document data).
+- Home screen is **fully local** (`LocalDemoData`) — curated city cards, no upload of real documents; the Me tab works for guests (language switching).
+- Backend selection is **hidden from end users**: default is the local Docker server `http://127.0.0.1:8080`; double-tapping the Me-tab title opens a hidden Developer Settings page offering "Local" vs "Remote official server" (Daytona Preview URL, with an editable `X-Daytona-Preview-Token` field — the token is **never baked into the APK**, entered by hand at demo time; injected by an OkHttp interceptor); the choice persists in DataStore. The same page hosts the **payment-failure simulation toggle** (local-only): when on, pay requests carry `X-Demo-Pay-Result: FAIL` so the demo can show both success and compensation outcomes.
+- Plan explanations show honest provenance: Nosana results render model id, inference latency and deployment id tail; template fallbacks are labelled as such.
 
 ### 6.1 In-app i18n (Chinese / English)
 
@@ -130,7 +151,7 @@ npm run start:worker            # monitor worker
 
 ## 7. Testing
 
-- Backend: unit tests per module (rule engine, scoring, state machine transitions, webhook idempotency) + integration tests against a throwaway Postgres via docker compose.
+- Backend: vitest unit tests — `rule-engine.spec.ts` (10 cases: two-stage modes, visa expiry, provisional flags) and `bookings-saga.spec.ts` (4 cases: happy path, leg-1 failure after leg-2 ordered, no-order failure → MANUAL_REVIEW, injection semantics). Run: `npx vitest run`.
 - Android: debug build via Gradle (`assembleDebug`); manual smoke across the four journeys (§6).
 - Full-chain smoke verified locally: register → wallet → search → plan → monitor → booking (including PARTIAL_ORDER compensation).
 
@@ -145,7 +166,7 @@ Docker-in-Docker is **not usable** on this Daytona account (bare `docker:*-dind`
 3. Start Redis (`--daemonize yes`) + PostgreSQL (`service postgresql start`); idempotently create role `layoverjoy` and database `layoverjoy`.
 4. Upload backend sources (package.json/lock, tsconfig, nest-cli, `src/`, `prisma/`).
 5. `npm ci` → `prisma generate` → `nest build`; write runtime `.env` (secrets + `DATABASE_URL`, `REDIS_URL`, `NODE_ENV=production`, `RUNTIME_TARGET=daytona`, `PORT=8080`) and `start.sh` (`set -a; . ./.env; set +a; exec node dist/$1.js`).
-6. `prisma db push` + seed; `nohup ./start.sh api` and `nohup ./start.sh worker`.
+6. `prisma db push` + seed; `nohup ./start.sh main` and `nohup ./start.sh worker`.
 7. Poll `http://127.0.0.1:8080/v1/health`, then print `getPreviewLink(8080)` — the only public port; PG/Redis listen on loopback only.
 
 Known pitfalls baked into the script:
@@ -155,7 +176,11 @@ Known pitfalls baked into the script:
 - **cwd must exist**: early commands run with `cwd=undefined` — pointing at a not-yet-created directory breaks the Agent's shell spawn.
 - **`/workspace` not writable** by the default user: create the workdir with `sudo mkdir && sudo chown`.
 - **`fs.uploadFile` is file-only** (EISDIR on directories): the script uses a recursive upload helper.
-- **binaries.prisma.sh is unreachable from the sandbox** (persistent ECONNRESET). Engine binaries are already placed by `npm ci` postinstall, so all Prisma CLI calls run with `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` to skip the remote sha256 verification; hard gates then verify the engine file exists and the public schema has tables.
+- **binaries.prisma.sh is unreachable from the sandbox** (persistent ECONNRESET — even engine binaries fail to download). Engines are therefore downloaded locally (cached in `infra/daytona/engines/`) and uploaded to `/workspace/layoverjoy/engines`. Prisma 5.22 override env vars: library-style query engine uses `PRISMA_QUERY_ENGINE_LIBRARY` (not `_BINARY`) and `PRISMA_SCHEMA_ENGINE_BINARY`; additionally the query engine is copied to `node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node` because the runtime PrismaClient only looks up that fixed filename. Hard gates verify engine presence and table count in the target database (`psql -d layoverjoy`).
+- **Entry files**: API is `dist/main.js` (`./start.sh main`), worker is `dist/worker.js`.
+- **Re-deploy port conflict**: on an already-running sandbox the previous `node dist/main.js` still holds 8080, so the new process fails with `EADDRINUSE` while health checks keep passing against the *old* code. The script `pkill`s old api/worker processes before start and hard-fails if `/tmp/api.log` contains `EADDRINUSE`.
+- **No outbound route to `sandbox.atriptech.com`** from the Daytona sandbox (verified by curl: connection timeout). The deploy therefore overrides `ATLAS_SEARCH_PROVIDER=mock` / `ATLAS_VERIFY_PROVIDER=mock` in the runtime `.env`; the UI honestly shows the provider label (`MOCK`) in search results and booking badges. The real Atlas Sandbox chain is demonstrated from the local/egress-capable environment.
+- **No outbound SMTP/Nosana either**: external SMTP hangs and makes pay/refund responses stall until the preview proxy drops the connection (body arrives empty while state still advances server-side). The deploy overrides `MAIL_PROVIDER=console` (emails logged only). Nosana inference falls back to the template provider with an honest UI label (`lastErrorCategory: NETWORK_ERROR` on `/v1/integrations`).
 - `DAYTONA_*` variables are kept out of the app runtime env (only app secrets are injected).
 
 Run:

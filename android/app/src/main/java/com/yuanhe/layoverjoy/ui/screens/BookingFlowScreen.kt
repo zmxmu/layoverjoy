@@ -322,7 +322,6 @@ private fun RiskCheckItem(checked: Boolean, onChecked: (Boolean) -> Unit) {
             Text(L10n.t("booking.risk_ack"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(L10n.t("booking.risk1"), style = MaterialTheme.typography.bodySmall)
             Text(L10n.t("booking.risk2"), style = MaterialTheme.typography.bodySmall)
-            Text(L10n.t("booking.risk3"), style = MaterialTheme.typography.bodySmall)
             Text(L10n.t("booking.risk4"), style = MaterialTheme.typography.bodySmall)
         }
     }

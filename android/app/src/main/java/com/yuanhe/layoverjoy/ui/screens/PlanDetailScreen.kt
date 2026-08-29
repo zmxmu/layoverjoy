@@ -144,7 +144,6 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                             d.riskFlags.forEach { flag ->
                                 Badge(RISK_KEY[flag]?.let { L10n.t(it) } ?: flag, color = BrandDanger, bg = BrandDanger.copy(alpha = 0.08f))
                             }
-                            if (d.isSimulated) Badge(L10n.t("common.simulated_quote"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
                         }
                     }
                 }
@@ -175,8 +174,16 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                                 payload.highlights.forEach { Text("· $it", style = MaterialTheme.typography.bodySmall) }
                             }
                             Spacer(Modifier.height(6.dp))
+                            // 推理来源诚实展示：Nosana 附模型/耗时/部署尾码，降级时明示模板。
+                            val caption = if (d.explanation?.provider == "NOSANA") {
+                                buildString {
+                                    append(L10n.t("detail.why_nosana", payload?.modelId ?: d.explanation?.modelId ?: ""))
+                                    payload?.latencyMs?.let { append(" · ").append(L10n.t("detail.why_latency", "%.1f".format(it / 1000.0))) }
+                                    payload?.deploymentIdTail?.let { append(" · ").append(L10n.t("detail.why_deploy", it)) }
+                                }
+                            } else L10n.t("detail.why_template")
                             Text(
-                                if (d.explanation?.provider == "NOSANA") L10n.t("detail.why_nosana", d.explanation?.modelId ?: "") else L10n.t("detail.why_template"),
+                                caption,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BrandInkSoft,
                             )

@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { loadEnv } from './config/env';
+import { isMaskedSecret, loadEnv } from './config/env';
 import { AtlasService } from './atlas/atlas.service';
+import { NosanaService } from './explanations/nosana.service';
 import { PrismaService } from './prisma.service';
 
 /** 健康检查与集成状态（不含任何 Secret）。 */
@@ -46,8 +47,14 @@ export class HealthController {
       },
       nosana: {
         provider: env.INFERENCE_PROVIDER,
-        configured: Boolean(env.NOSANA_API_KEY && env.NOSANA_OPENAI_BASE_URL),
+        // 不以“环境变量非空”判定：掩码占位符不算已配置；另暴露真实推理状态。
+        configured:
+          Boolean(env.NOSANA_OPENAI_BASE_URL) &&
+          (env.NOSANA_API_KEY === '' || !isMaskedSecret(env.NOSANA_API_KEY)),
         model: env.NOSANA_MODEL,
+        deploymentIdTail: env.NOSANA_DEPLOYMENT_ID ? env.NOSANA_DEPLOYMENT_ID.slice(-8) : null,
+        lastInferenceSucceededAt: NosanaService.lastInferenceSucceededAt,
+        lastErrorCategory: NosanaService.lastErrorCategory,
       },
       daytona: {
         mode: env.DAYTONA_MODE,

@@ -30,6 +30,34 @@ object TokenHolder {
     @Volatile var accessToken: String? = null
     @Volatile var refreshToken: String? = null
     @Volatile var onUnauthorized: (() -> Unit)? = null
+
+    /** Refresh 轮换成功后持久化新令牌对（由 Application 注入）。 */
+    @Volatile var onTokensRefreshed: ((access: String, refresh: String?) -> Unit)? = null
+
+    /** OkHttp Authenticator 线程上同步执行 refresh 并持久化。 */
+    fun refreshTokensBlocking(api: ApiService): AuthTokens? {
+        val rt = refreshToken ?: return null
+        return synchronized(this) {
+            try {
+                val resp = kotlinx.coroutines.runBlocking { api.refresh(RefreshRequest(rt)) }
+                val tokens = if (resp.isSuccessful) resp.body() else null
+                if (tokens != null) {
+                    accessToken = tokens.accessToken
+                    refreshToken = tokens.refreshToken ?: refreshToken
+                    onTokensRefreshed?.invoke(tokens.accessToken, refreshToken)
+                    tokens
+                } else null
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+}
+
+/** 演示开关持有者（由 SessionStore 持久化，开发页切换），供拦截器读取。 */
+object DemoFlags {
+    /** 支付失败模拟：开启后支付请求携带 X-Demo-Pay-Result: FAIL，后端 Mock 支付使第一段必然失败。 */
+    @Volatile var paySimFail: Boolean = false
 }
 
 /** 网络结果：统一携带后端错误契约。 */
@@ -122,10 +150,12 @@ interface ApiService {
 }
 
 /**
- * Retrofit 客户端。baseUrl 可在设置页切换（模拟器 10.0.2.2 / 局域网 / Daytona 部署地址）。
+ * Retrofit 客户端。baseUrl 可在隐藏开发页切换（本机 127.0.0.1 / Daytona 正式服务器）。
+ * 私有预览（Daytona）需随请求携带 X-Daytona-Preview-Token，由 [previewToken] 控制。
  */
 class ApiClient(initialBaseUrl: String) {
     @Volatile private var baseUrl: String = normalize(initialBaseUrl)
+    @Volatile private var previewToken: String? = null
     @Volatile private var retrofit: Retrofit = build(baseUrl)
 
     val api: ApiService get() = retrofit.create(ApiService::class.java)
@@ -138,31 +168,81 @@ class ApiClient(initialBaseUrl: String) {
         }
     }
 
+    /** 设置/清除私有预览 token；变化时重建客户端。 */
+    fun setPreviewToken(token: String?) {
+        val t = token?.trim()?.ifBlank { null }
+        if (t != previewToken) {
+            previewToken = t
+            retrofit = build(baseUrl)
+        }
+    }
+
     fun currentBaseUrl(): String = baseUrl
+    fun currentPreviewToken(): String? = previewToken
 
     private fun normalize(url: String): String =
         if (url.endsWith("/")) url else "$url/"
 
     private fun build(base: String): Retrofit {
-        val auth = Interceptor { chain ->
-            val req = chain.request()
-            val token = TokenHolder.accessToken
-            val withAuth = if (token != null && !req.url.encodedPath.contains("webhooks")) {
-                req.newBuilder().header("Authorization", "Bearer $token").build()
-            } else req
-            chain.proceed(withAuth)
+        val token = previewToken
+        val headers = Interceptor { chain ->
+            var req = chain.request()
+            val auth = TokenHolder.accessToken
+            if (auth != null && !req.url.encodedPath.contains("webhooks")) {
+                req = req.newBuilder().header("Authorization", "Bearer $auth").build()
+            }
+            if (token != null) {
+                req = req.newBuilder().header("X-Daytona-Preview-Token", token).build()
+            }
+            // 开发页支付失败模拟开关：仅对支付接口生效。
+            if (DemoFlags.paySimFail && req.url.encodedPath.contains("mock-pay")) {
+                req = req.newBuilder().header("X-Demo-Pay-Result", "FAIL").build()
+            }
+            chain.proceed(req)
+        }
+        // 401 时用 Refresh Token 轮换后自动重放一次（认证接口本身不重试，避免循环）。
+        val authenticator = okhttp3.Authenticator { _, response ->
+            val path = response.request.url.encodedPath
+            if (path.contains("auth/") || priorResponseCount(response) >= 2) {
+                return@Authenticator null
+            }
+            // 并发场景：其他请求已完成轮换，直接用新令牌重放。
+            val current = TokenHolder.accessToken
+            val sentAuth = response.request.header("Authorization")
+            if (current != null && sentAuth != null && "Bearer $current" != sentAuth) {
+                return@Authenticator response.request.newBuilder().header("Authorization", "Bearer $current").build()
+            }
+            val tokens = TokenHolder.refreshTokensBlocking(retrofit.create(ApiService::class.java))
+            if (tokens != null) {
+                response.request.newBuilder().header("Authorization", "Bearer ${tokens.accessToken}").build()
+            } else {
+                TokenHolder.onUnauthorized?.invoke()
+                null
+            }
         }
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            // Nosana 推理可达 60~90 秒，读超时须覆盖后端超时上限。
+            .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
-            .addInterceptor(auth)
+            .addInterceptor(headers)
+            .authenticator(authenticator)
             .build()
         return Retrofit.Builder()
             .baseUrl(base)
             .client(client)
             .addConverterFactory(AppJson.asConverterFactory("application/json".toMediaType()))
             .build()
+    }
+
+    private fun priorResponseCount(response: okhttp3.Response): Int {
+        var count = 1
+        var prior = response.priorResponse
+        while (prior != null) {
+            count += 1
+            prior = prior.priorResponse
+        }
+        return count
     }
 }
 

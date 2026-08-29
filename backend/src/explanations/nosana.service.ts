@@ -1,5 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { loadEnv } from '../config/env';
+import { isMaskedSecret, loadEnv } from '../config/env';
+
+export type ExplanationFallbackReason =
+  | 'PROVIDER_DISABLED'
+  | 'NOT_CONFIGURED'
+  | 'TIMEOUT'
+  | 'HTTP_ERROR'
+  | 'PARSE_ERROR'
+  | 'NETWORK_ERROR';
 
 export interface ExplanationRequest {
   cityNameZh: string;
@@ -16,6 +24,12 @@ export interface ExplanationRequest {
 export interface ExplanationResult {
   provider: 'NOSANA' | 'TEMPLATE';
   modelId?: string;
+  /** 部署 ID 后 8 位（不含完整 ID，供 UI/证据展示）。 */
+  deploymentIdTail?: string;
+  latencyMs?: number;
+  generatedAt?: string;
+  /** TEMPLATE 时的降级原因分类，诚实展示而非伪装成 Nosana。 */
+  fallbackReason?: ExplanationFallbackReason;
   summary: string;
   highlights: string[];
   tips: string[];
@@ -24,14 +38,21 @@ export interface ExplanationResult {
 /**
  * Nosana 解释服务（09 文档 §6）：
  * Nosana 只生成解释和体验建议，不生成航班、价格、签证结论或订单状态。
- * 调用失败必须降级为本地模板解释，并在结果中标记 provider=TEMPLATE。
+ * 调用失败必须降级为本地模板解释，并在结果中标记 provider=TEMPLATE 及原因。
+ *
+ * 鉴权说明：部署内是 Ollama OpenAI-compatible endpoint，推理本身不校验 Bearer；
+ * NOSANA_API_KEY 属于管理面凭据，仅在非空且未脱敏时随请求携带，不作为推理前置条件。
  */
 @Injectable()
 export class NosanaService {
   private readonly logger = new Logger('NosanaService');
 
+  /** 最近一次推理状态（供 /integrations 健康面板，不依赖"环境变量非空"）。 */
+  static lastInferenceSucceededAt: string | null = null;
+  static lastErrorCategory: string | null = null;
+
   /** 模板降级解释：不调用任何外部服务。 */
-  templateExplanation(req: ExplanationRequest): ExplanationResult {
+  templateExplanation(req: ExplanationRequest, reason?: ExplanationFallbackReason): ExplanationResult {
     const days = req.usableHours / 24;
     const deltaText =
       req.airfareDelta > 0
@@ -41,6 +62,8 @@ export class NosanaService {
           : '与直飞价格相当';
     return {
       provider: 'TEMPLATE',
+      fallbackReason: reason,
+      generatedAt: new Date().toISOString(),
       summary: `在${req.cityNameZh}停留 ${req.stayDays} 天，大约有 ${days.toFixed(1)} 天有效游玩时间，${deltaText}。`,
       highlights: [
         `${req.stayDays} 天停留让转机变成一段真正的短途旅行`,
@@ -56,11 +79,20 @@ export class NosanaService {
   /** 调用 Nosana OpenAI-compatible Chat Completion（非流式、JSON 输出）。 */
   async explain(req: ExplanationRequest): Promise<ExplanationResult> {
     const env = loadEnv();
-    if (env.INFERENCE_PROVIDER !== 'nosana' || !env.NOSANA_API_KEY || !env.NOSANA_OPENAI_BASE_URL) {
-      return this.templateExplanation(req);
+    if (env.INFERENCE_PROVIDER !== 'nosana') {
+      return this.templateExplanation(req, 'PROVIDER_DISABLED');
     }
+    if (!env.NOSANA_OPENAI_BASE_URL) {
+      NosanaService.lastErrorCategory = 'NOT_CONFIGURED';
+      return this.templateExplanation(req, 'NOT_CONFIGURED');
+    }
+    // 管理 Key 脱敏/缺失时不带 Authorization（Ollama 端不校验），而不是直接降级。
+    const apiKey = isMaskedSecret(env.NOSANA_API_KEY) ? '' : env.NOSANA_API_KEY;
+    const deploymentTail = env.NOSANA_DEPLOYMENT_ID ? env.NOSANA_DEPLOYMENT_ID.slice(-8) : undefined;
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), env.NOSANA_TIMEOUT_MS);
+    const startedAt = Date.now();
     try {
       const systemPrompt = [
         '你是 LayoverJoy 的旅行体验解说员。只解释已给出的结构化方案，不生成新的航班、价格、签证结论或订单状态。',
@@ -78,13 +110,12 @@ export class NosanaService {
         riskFlags: req.riskFlags,
         interests: req.interests,
       });
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
       const res = await fetch(`${env.NOSANA_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${env.NOSANA_API_KEY}`,
-        },
+        headers,
         body: JSON.stringify({
           model: env.NOSANA_MODEL,
           stream: false,
@@ -96,23 +127,36 @@ export class NosanaService {
         }),
       });
       if (!res.ok) {
+        NosanaService.lastErrorCategory = `HTTP_${res.status}`;
         this.logger.warn(`Nosana HTTP ${res.status}; falling back to template explanation`);
-        return this.templateExplanation(req);
+        return this.templateExplanation(req, 'HTTP_ERROR');
       }
       const data: any = await res.json();
       const content: string = data?.choices?.[0]?.message?.content ?? '';
       const parsed = JSON.parse(content);
       if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
+      NosanaService.lastInferenceSucceededAt = new Date().toISOString();
+      NosanaService.lastErrorCategory = null;
       return {
         provider: 'NOSANA',
         modelId: data?.model || env.NOSANA_MODEL,
+        deploymentIdTail: deploymentTail,
+        latencyMs: Date.now() - startedAt,
+        generatedAt: new Date().toISOString(),
         summary: parsed.summary,
         highlights: Array.isArray(parsed.highlights) ? parsed.highlights.slice(0, 4) : [],
         tips: Array.isArray(parsed.tips) ? parsed.tips.slice(0, 4) : [],
       };
     } catch (e) {
+      const aborted = (e as Error).name === 'AbortError';
+      const reason: ExplanationFallbackReason = aborted
+        ? 'TIMEOUT'
+        : e instanceof SyntaxError
+          ? 'PARSE_ERROR'
+          : 'NETWORK_ERROR';
+      NosanaService.lastErrorCategory = reason;
       this.logger.warn(`Nosana call failed (${(e as Error).message}); falling back to template explanation`);
-      return this.templateExplanation(req);
+      return this.templateExplanation(req, reason);
     } finally {
       clearTimeout(timer);
     }

@@ -1,7 +1,9 @@
 package com.yuanhe.layoverjoy
 
 import android.app.Application
+import com.yuanhe.layoverjoy.data.DemoFlags
 import com.yuanhe.layoverjoy.data.Net
+import com.yuanhe.layoverjoy.data.ServerEnv
 import com.yuanhe.layoverjoy.data.SessionStore
 import com.yuanhe.layoverjoy.data.TokenHolder
 import com.yuanhe.layoverjoy.ui.i18n.L10n
@@ -25,13 +27,22 @@ class LayoverJoyApp : Application() {
         instance = this
         session = SessionStore(this)
         L10n.init(this)
-        Net.init(null)
+        // 默认地址随运行环境自适应：模拟器自动用 10.0.2.2（固定别名，不随电脑 IP 变化），真机/本机用 127.0.0.1；
+        // 用户（开发页）保存过的地址随后覆盖。
+        Net.init(ServerEnv.localServerUrl())
         appScope.launch {
             val snap = session.snapshot()
             snap.baseUrl?.let { Net.client.switchBaseUrl(it) }
+            snap.previewToken?.let { Net.client.setPreviewToken(it) }
+            // 开发页演示开关恢复（仅本地缓存，重启后仍生效）。
+            DemoFlags.paySimFail = snap.paySimFail
             TokenHolder.accessToken = snap.accessToken
             TokenHolder.refreshToken = snap.refreshToken
-            TokenHolder.onUnauthorized = { /* 401 时回到登录页由 UI 层处理 */ }
+            TokenHolder.onUnauthorized = { /* 401 时退为游客态由 UI 层处理 */ }
+            // Refresh 轮换成功后同步持久化新令牌对，重启后仍然有效。
+            TokenHolder.onTokensRefreshed = { access, refresh ->
+                appScope.launch { session.saveTokens(access, refresh) }
+            }
         }
     }
 

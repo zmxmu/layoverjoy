@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, JwtAuthGuard, AuthUser } from '../common/auth';
 import { BookingsService, CompositeOrderInput } from './bookings.service';
@@ -16,8 +16,8 @@ export class OrdersMockController {
   }
 
   @Post(':id/mock-pay')
-  mockPay(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.bookings.mockPay(user.userId, id);
+  mockPay(@CurrentUser() user: AuthUser, @Param('id') id: string, @Headers('x-demo-pay-result') demoPayResult?: string) {
+    return this.bookings.mockPay(user.userId, id, demoPayResult);
   }
 
   @Post(':id/simulate-leg-b-failure')
