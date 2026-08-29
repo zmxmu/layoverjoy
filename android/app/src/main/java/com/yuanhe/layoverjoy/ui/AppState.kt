@@ -8,7 +8,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.yuanhe.layoverjoy.LayoverJoyApp
+import com.yuanhe.layoverjoy.data.ApiResult
+import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.SessionStore
+import com.yuanhe.layoverjoy.data.apiCall
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -51,7 +54,7 @@ class AppStateViewModel(val session: SessionStore) : ViewModel() {
     suspend fun onAuthDone(email: String) {
         userEmail = email
         isLoggedIn = true
-        if (session.snapshot().onboardingDone) {
+        if (session.snapshot().onboardingDone || serverHasPassport()) {
             gate = Gate.Main
         } else {
             // 首次登录走引导流程：引导结束后统一落在首页，不再回跳拦截前的页面，
@@ -59,6 +62,21 @@ class AppStateViewModel(val session: SessionStore) : ViewModel() {
             authReturnRoute = null
             gate = Gate.Onboarding
         }
+    }
+
+    /**
+     * 重新登录/换机场景：证件已持久化在服务端数据库，不应让用户重走引导重录。
+     * 查询失败（如断网）时保守返回 false，宁可多走一次引导也不跳过资格数据收集。
+     */
+    private suspend fun serverHasPassport(): Boolean {
+        val has = runCatching {
+            when (val r = apiCall { Net.api.documents() }) {
+                is ApiResult.Ok -> r.data.documents.any { it.kind == "PASSPORT" }
+                else -> false
+            }
+        }.getOrDefault(false)
+        if (has) session.restoreOnboardingDone()
+        return has
     }
 
     fun onOnboardingDone() {

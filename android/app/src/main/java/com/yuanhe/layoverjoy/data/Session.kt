@@ -81,6 +81,9 @@ class SessionStore(private val context: Context) {
         }
     }
 
+    /** 服务端已有证件时仅恢复“引导已完成”标记，不覆盖本地已存的偏好数据。 */
+    suspend fun restoreOnboardingDone() = context.dataStore.edit { it[Keys.onboardingDone] = true }
+
     suspend fun localPassport(): Triple<String?, String?, String?> {
         val p = context.dataStore.data.first()
         return Triple(p[Keys.localPassportCountry], p[Keys.localPassportType], p[Keys.localPassportExpiry])
