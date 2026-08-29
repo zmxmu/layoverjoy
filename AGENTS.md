@@ -23,7 +23,8 @@
 - 产品名：LayoverJoy
 - 中文口号：转机的乐趣
 - Android applicationId：com.yuanhe.layoverjoy
-- Android：Kotlin、Jetpack Compose、Material 3
+- Android：Kotlin、Jetpack Compose、Material 3，应用内中英双语（默认中文）
+- 双语实现：ui/i18n/L10n.kt 词典 + Compose 快照状态，切换即时生效不重启；语言切换入口在“我的”页
 - 后端：NestJS、TypeScript
 - 数据库：PostgreSQL
 - 缓存与任务协调：Redis
@@ -105,6 +106,13 @@ Provider 由环境变量选择。外部服务不可用时返回可解释降级�
 - 钱包卡片文字必须横排，导航箭头保持轻量。
 - 所有 Sandbox 价格都显示测试环境标签。
 - Daytona 运行证据只展示结构化工具摘要，不展示模型思维链。
+- 界面文案禁止硬编码单语字符串：一律走 L10n.t(key)；枚举类标签（漏斗状态、置信度、风险、证件类型）用 code→i18n key 映射，只向后端传 code。
+
+## 9.1 项目文档约定
+
+- project/PRODUCT_DEFINITION.md：英文产品定义（对外口径），变更产品范围时同步更新。
+- project/TECHNICAL_IMPLEMENTATION.md：英文技术实现（架构/契约/部署），变更架构或部署方式时同步更新。
+- project/AGENTS.md：本文件，生成约束最高优先级。
 
 ## 10. 数据模型约束
 

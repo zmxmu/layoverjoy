@@ -17,7 +17,7 @@
  * 用法：cd project/infra/daytona && npm install && npm run deploy:demo
  */
 import { Daytona } from '@daytonaio/sdk';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -83,6 +83,20 @@ async function run(sandbox: any, cmd: string, timeout = 300, cwd: string | undef
     return r.result ?? '';
   }
   throw new Error(`命令重试 5 次仍失败：${cmd}\n${lastErr?.message ?? ''}`);
+}
+
+/** SDK 的 uploadFile 只支持单文件（目录会报 EISDIR），这里递归上传。 */
+async function uploadDir(sandbox: any, localDir: string, remoteDir: string) {
+  await run(sandbox, `mkdir -p ${remoteDir}`, 60);
+  for (const entry of readdirSync(localDir)) {
+    const localPath = resolve(localDir, entry);
+    const remotePath = `${remoteDir}/${entry}`;
+    if (statSync(localPath).isDirectory()) {
+      await uploadDir(sandbox, localPath, remotePath);
+    } else {
+      await sandbox.fs.uploadFile(localPath, remotePath);
+    }
+  }
 }
 
 async function main() {
@@ -190,8 +204,8 @@ async function main() {
     if (!existsSync(src)) throw new Error(`缺少文件：${src}`);
     await sandbox.fs.uploadFile(src, dst);
   }
-  await sandbox.fs.uploadFile(resolve(projectRoot, 'backend/src'), `${BACKEND}/src`);
-  await sandbox.fs.uploadFile(resolve(projectRoot, 'backend/prisma'), `${BACKEND}/prisma`);
+  await uploadDir(sandbox, resolve(projectRoot, 'backend/src'), `${BACKEND}/src`);
+  await uploadDir(sandbox, resolve(projectRoot, 'backend/prisma'), `${BACKEND}/prisma`);
 
   // 5) 构建：npm ci + prisma generate + build；注入 .env
   console.log('[5/7] npm ci + prisma generate + build（首次约 3-6 分钟）…');
