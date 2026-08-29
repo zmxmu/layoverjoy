@@ -12,12 +12,11 @@ import com.yuanhe.layoverjoy.data.SessionStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
-/** 应用级状态：登录态与路由入口。 */
+/** 应用级状态：登录态与路由入口。游客优先：未登录也直达主界面，需要身份的页面再触发登录。 */
 class AppStateViewModel(val session: SessionStore) : ViewModel() {
 
     sealed class Gate {
         data object Loading : Gate()
-        data object Auth : Gate()
         data object Onboarding : Gate()
         data object Main : Gate()
     }
@@ -28,22 +27,31 @@ class AppStateViewModel(val session: SessionStore) : ViewModel() {
     var userEmail by mutableStateOf<String?>(null)
         private set
 
+    var isLoggedIn by mutableStateOf(false)
+        private set
+
+    /** 登录成功后要返回的目标路由（未登录时被拦截的页面）。 */
+    var authReturnRoute by mutableStateOf<String?>(null)
+        private set
+
+    fun markAuthReturn(route: String?) {
+        authReturnRoute = route
+    }
+
     init {
-        // 冷启动快速恢复会话（DataStore 本地读取，毫秒级）
+        // 冷启动快速恢复会话（DataStore 本地读取，毫秒级）；未登录直接进主界面当游客
         runBlocking {
             val snap = session.snapshot()
             userEmail = snap.userEmail
-            gate = when {
-                snap.accessToken == null -> Gate.Auth
-                !snap.onboardingDone -> Gate.Onboarding
-                else -> Gate.Main
-            }
+            isLoggedIn = snap.accessToken != null
+            gate = Gate.Main
         }
     }
 
-    fun onAuthDone(email: String) {
+    suspend fun onAuthDone(email: String) {
         userEmail = email
-        gate = Gate.Onboarding
+        isLoggedIn = true
+        gate = if (session.snapshot().onboardingDone) Gate.Main else Gate.Onboarding
     }
 
     fun onOnboardingDone() {
@@ -52,17 +60,15 @@ class AppStateViewModel(val session: SessionStore) : ViewModel() {
 
     fun onLoggedOut() {
         userEmail = null
-        gate = Gate.Auth
+        isLoggedIn = false
+        gate = Gate.Main
     }
 
     suspend fun refreshGate() {
         val snap = session.snapshot()
         userEmail = snap.userEmail
-        gate = when {
-            snap.accessToken == null -> Gate.Auth
-            !snap.onboardingDone -> Gate.Onboarding
-            else -> Gate.Main
-        }
+        isLoggedIn = snap.accessToken != null
+        gate = Gate.Main
     }
 
     companion object {

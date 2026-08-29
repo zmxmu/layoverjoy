@@ -38,6 +38,7 @@ import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
+import com.yuanhe.layoverjoy.ui.PrimaryButton
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SecondaryButton
 import com.yuanhe.layoverjoy.ui.SectionTitle
@@ -62,7 +63,17 @@ fun ProfileScreen(nav: NavController, appState: AppStateViewModel) {
         Spacer(Modifier.height(20.dp))
         Text(L10n.t("profile.title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Text(appState.userEmail ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+        if (appState.isLoggedIn) {
+            Text(appState.userEmail ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+        } else {
+            // 游客态：提示登录，语言切换等本地设置不受影响
+            Text(L10n.t("profile.not_logged_in"), style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+            Spacer(Modifier.height(10.dp))
+            PrimaryButton(text = L10n.t("profile.login_cta"), onClick = {
+                appState.markAuthReturn(Routes.PROFILE)
+                nav.navigate(Routes.LOGIN) { launchSingleTop = true }
+            })
+        }
         Spacer(Modifier.height(16.dp))
 
         SectionTitle(L10n.t("profile.travel_settings"))
@@ -80,7 +91,9 @@ fun ProfileScreen(nav: NavController, appState: AppStateViewModel) {
                 }
             }
             Spacer(Modifier.height(10.dp))
-            SettingRow(L10n.t("profile.docs_wallet"), L10n.t("profile.docs_sub")) { nav.navigate(Routes.DOCUMENTS) }
+            SettingRow(L10n.t("profile.docs_wallet"), L10n.t("profile.docs_sub")) {
+                com.yuanhe.layoverjoy.ui.guardedNavigate(nav, appState, Routes.DOCUMENTS)
+            }
             Divider()
             SettingRow(L10n.t("profile.server"), Net.client.currentBaseUrl().removeSuffix("/")) { showServer = !showServer }
             if (showServer) {
@@ -110,13 +123,15 @@ fun ProfileScreen(nav: NavController, appState: AppStateViewModel) {
         }
 
         Spacer(Modifier.height(24.dp))
-        SecondaryButton(L10n.t("profile.logout"), onClick = {
-            scope.launch {
-                runCatching { apiCall { Net.api.logout() } }
-                session.clear()
-                appState.onLoggedOut()
-            }
-        })
+        if (appState.isLoggedIn) {
+            SecondaryButton(L10n.t("profile.logout"), onClick = {
+                scope.launch {
+                    runCatching { apiCall { Net.api.logout() } }
+                    session.clear()
+                    appState.onLoggedOut()
+                }
+            })
+        }
         Spacer(Modifier.height(28.dp))
     }
 }

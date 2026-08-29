@@ -29,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yuanhe.layoverjoy.ui.i18n.L10n
+import com.yuanhe.layoverjoy.ui.screens.AuthScreen
 import com.yuanhe.layoverjoy.ui.screens.BookingFlowScreen
 import com.yuanhe.layoverjoy.ui.screens.DocumentsScreen
 import com.yuanhe.layoverjoy.ui.screens.HomeScreen
@@ -47,6 +48,7 @@ object Routes {
     const val SEARCH = "search"
     const val TRIPS = "trips"
     const val PROFILE = "profile"
+    const val LOGIN = "login"
     const val RESULTS = "results/{runId}"
     const val PLAN_DETAIL = "plan/{planId}"
     const val MONITOR_SETUP = "monitor/{planId}"
@@ -69,6 +71,19 @@ private val TABS = listOf(
     Tab(Routes.PROFILE, "tab.profile", Icons.Filled.Person, Icons.Outlined.Person),
 )
 
+/** 需要登录身份的 tab（首页为本地数据、我的页支持游客切语言，均不拦截）。 */
+private val GUARDED_TABS = setOf(Routes.SEARCH, Routes.TRIPS)
+
+/** 游客优先：未登录时进需要身份的页面先弹登录页，登录成功后自动回到目标页。 */
+fun guardedNavigate(nav: androidx.navigation.NavController, appState: AppStateViewModel, route: String) {
+    if (appState.isLoggedIn || route == Routes.LOGIN) {
+        nav.navigate(route) { launchSingleTop = true }
+    } else {
+        appState.markAuthReturn(route)
+        nav.navigate(Routes.LOGIN) { launchSingleTop = true }
+    }
+}
+
 /** 主界面：底部四页签 + 深层页面（结果/详情/监控设置/预订/通知/证件）。 */
 @Composable
 fun MainScreen(appState: AppStateViewModel) {
@@ -76,6 +91,17 @@ fun MainScreen(appState: AppStateViewModel) {
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showBottomBar = currentRoute in TABS.map { it.route }
+
+    // 登录（必要时含引导）完成后回到主界面时，自动跳回此前被拦截的目标页；
+    // 以 gate+isLoggedIn 为键：引导期间旧组合不会提前消费 authReturnRoute。
+    androidx.compose.runtime.LaunchedEffect(appState.gate, appState.isLoggedIn) {
+        if (appState.gate == AppStateViewModel.Gate.Main && appState.isLoggedIn) {
+            appState.authReturnRoute?.let { target ->
+                appState.markAuthReturn(null)
+                nav.navigate(target) { launchSingleTop = true }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = BrandBackground,
@@ -88,6 +114,12 @@ fun MainScreen(appState: AppStateViewModel) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
+                                if (tab.route in GUARDED_TABS && !appState.isLoggedIn) {
+                                    // 未登录：先弹登录页，登录后自动回到该 tab
+                                    appState.markAuthReturn(tab.route)
+                                    nav.navigate(Routes.LOGIN) { launchSingleTop = true }
+                                    return@NavigationBarItem
+                                }
                                 nav.navigate(tab.route) {
                                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                                     launchSingleTop = true
@@ -112,6 +144,17 @@ fun MainScreen(appState: AppStateViewModel) {
             composable(Routes.SEARCH) { SearchScreen(nav) }
             composable(Routes.TRIPS) { TripsScreen(nav) }
             composable(Routes.PROFILE) { ProfileScreen(nav, appState) }
+            composable(Routes.LOGIN) {
+                AuthScreen(
+                    appState,
+                    onClose = { nav.popBackStack() },
+                    onSuccess = {
+                        // 仅回退到 tab 层；跳回被拦截目标页统一由上方 LaunchedEffect 处理，
+                        // 若 gate 已切到引导页，本 NavHost 会被销毁，popBackStack 无副作用。
+                        nav.popBackStack(Routes.HOME, inclusive = false)
+                    },
+                )
+            }
             composable(Routes.RESULTS, listOf(navArgument("runId") { type = NavType.StringType })) {
                 ResultsScreen(nav, it.arguments?.getString("runId").orEmpty())
             }

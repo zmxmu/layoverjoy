@@ -17,7 +17,8 @@
  * 用法：cd project/infra/daytona && npm install && npm run deploy:demo
  */
 import { Daytona } from '@daytonaio/sdk';
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +36,48 @@ const DB_PASS = process.env.DEMO_DB_PASSWORD || 'layoverjoy_demo_only';
 const DB_NAME = 'layoverjoy';
 const DATABASE_URL = `postgresql://${DB_USER}:${DB_PASS}@127.0.0.1:5432/${DB_NAME}?schema=public`;
 const REDIS_URL = 'redis://127.0.0.1:6379';
+
+// Prisma 引擎离线方案：Sandbox 到 binaries.prisma.sh 持续不可达（连二进制本体都下载失败），
+// 改为本地下载（本地可达）→ 上传 Sandbox → 用 PRISMA_*_ENGINE_BINARY 指向。
+// commit/路径取自后端 node_modules 中 @prisma/engines 实际使用的版本。
+const ENGINE_COMMIT = '605197351a3c8bdd595af2d2a9bc3025bca48ea2';
+const ENGINE_BASE = `https://binaries.prisma.sh/all_commits/${ENGINE_COMMIT}/debian-openssl-3.0.x`;
+const ENGINES_LOCAL = resolve(here, 'engines');
+const ENGINES_REMOTE = `${WORKDIR}/engines`;
+const QUERY_ENGINE_REMOTE = `${ENGINES_REMOTE}/libquery_engine.so.node`;
+const SCHEMA_ENGINE_REMOTE = `${ENGINES_REMOTE}/schema-engine`;
+const ENGINE_ENV = `PRISMA_QUERY_ENGINE_BINARY=${QUERY_ENGINE_REMOTE} PRISMA_SCHEMA_ENGINE_BINARY=${SCHEMA_ENGINE_REMOTE}`;
+
+/** 本地下载并缓存 Prisma 引擎（.gz 下载后本地解压再上传，避免沙箱内联网）。 */
+async function ensureLocalEngines(): Promise<{ query: string; schema: string }> {
+  mkdirSync(ENGINES_LOCAL, { recursive: true });
+  const targets: Array<[string, string]> = [
+    ['libquery_engine.so.node.gz', 'libquery_engine.so.node'],
+    ['schema-engine.gz', 'schema-engine'],
+  ];
+  for (const [remote, local] of targets) {
+    const dst = resolve(ENGINES_LOCAL, local);
+    if (existsSync(dst) && statSync(dst).size > 1_000_000) continue;
+    console.log(`  下载引擎 ${remote} …`);
+    let lastErr: any = null;
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const buf = Buffer.from(await (await fetch(`${ENGINE_BASE}/${remote}`)).arrayBuffer());
+        writeFileSync(dst, gunzipSync(buf));
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        await new Promise((s) => setTimeout(s, 3000));
+      }
+    }
+    if (lastErr) throw new Error(`引擎下载失败：${remote}（${lastErr.message ?? lastErr}）`);
+  }
+  return {
+    query: resolve(ENGINES_LOCAL, 'libquery_engine.so.node'),
+    schema: resolve(ENGINES_LOCAL, 'schema-engine'),
+  };
+}
 
 function loadSecrets(): Record<string, string> {
   if (!existsSync(secretsPath)) {
@@ -207,12 +250,26 @@ async function main() {
   await uploadDir(sandbox, resolve(projectRoot, 'backend/src'), `${BACKEND}/src`);
   await uploadDir(sandbox, resolve(projectRoot, 'backend/prisma'), `${BACKEND}/prisma`);
 
-  // 5) 构建：npm ci + prisma generate + build；注入 .env
-  console.log('[5/7] npm ci + prisma generate + build（首次约 3-6 分钟）…');
+  // 5) 构建：先上传本地下载的 Prisma 引擎，再 npm ci + prisma generate + build；注入 .env
+  console.log('[5/7] 上传 Prisma 引擎 → npm ci → prisma generate → build…');
+  const engines = await ensureLocalEngines();
+  await run(sandbox, `mkdir -p ${ENGINES_REMOTE}`, 60);
+  await sandbox.fs.uploadFile(engines.query, QUERY_ENGINE_REMOTE);
+  await sandbox.fs.uploadFile(engines.schema, SCHEMA_ENGINE_REMOTE);
+  await run(sandbox, `chmod +x ${SCHEMA_ENGINE_REMOTE}`, 30);
   await run(sandbox, 'npm ci --no-audit --no-fund >>/tmp/npm.log 2>&1 && echo NPM_OK', 1500, BACKEND);
-  await run(sandbox, 'for i in 1 2 3 4 5; do npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && echo GEN_OK && break; sleep 5; done', 1500, BACKEND);
+  // 引擎已离线就位：用 PRISMA_*_ENGINE_BINARY 指向，prisma 全程不再访问 binaries.prisma.sh
+  await run(sandbox, `for i in 1 2 3; do ${ENGINE_ENV} npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && echo GEN_OK && break; sleep 5; done`, 1500, BACKEND);
   await run(sandbox, 'npm run build >>/tmp/npm.log 2>&1 && echo BUILD_OK', 900, BACKEND);
-  await run(sandbox, 'test -d node_modules/.prisma/client && test -f dist/main.js && echo ARTIFACTS_OK', 60, BACKEND);
+  // 硬性校验：查询引擎二进制必须存在于 client 输出目录（防止 generate 静默失败）
+  await run(
+    sandbox,
+    'if ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1; then echo ENGINE_OK; else ' +
+      `for i in 1 2 3; do ${ENGINE_ENV} npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && ` +
+      'ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1 && echo ENGINE_OK && break; sleep 5; done; fi',
+    1500,
+    BACKEND,
+  );
 
   // 运行时 .env（密钥 + 覆盖项；后置覆盖生效）
   const envLines = [
@@ -227,13 +284,21 @@ async function main() {
 
   // 启动脚本：载入 .env 后运行指定入口（api/worker）
   const startSh =
-    '#!/bin/bash\nset -e\ncd ' + BACKEND + '\nset -a; . ./.env; set +a\nexec node dist/${1:-main}.js\n';
+    '#!/bin/bash\nset -e\ncd ' + BACKEND + '\nset -a; . ./.env; set +a\n' +
+    `export PRISMA_QUERY_ENGINE_BINARY=${QUERY_ENGINE_REMOTE}\n` +
+    'exec node dist/${1:-main}.js\n';
   await sandbox.fs.uploadFile(Buffer.from(startSh), `${BACKEND}/start.sh`);
   await run(sandbox, 'chmod +x start.sh', 30, BACKEND);
 
   // 6) 同步 schema + 种子，启动 api 与 worker
   console.log('[6/7] prisma db push + seed，启动 api 与 worker…');
-  await run(sandbox, 'set -a; . ./.env; set +a; npx prisma db push --skip-generate >>/tmp/dbpush.log 2>&1 && echo PUSH_OK', 600, BACKEND);
+  await run(sandbox, `set -a; . ./.env; set +a; for i in 1 2 3; do ${ENGINE_ENV} npx prisma db push --skip-generate >>/tmp/dbpush.log 2>&1 && echo PUSH_OK && break; sleep 5; done`, 1500, BACKEND);
+  // 硬性校验：db push 后公共 schema 必须有表（防止重试循环静默失败）
+  await run(
+    sandbox,
+    '[ $(sudo -u postgres psql -tAc "select count(*) from information_schema.tables where table_schema=\'public\'") -gt 0 ] && echo TABLES_OK',
+    60,
+  );
   await run(sandbox, 'set -a; . ./.env; set +a; node dist/seed.js >>/tmp/seed.log 2>&1 && echo SEED_OK', 300, BACKEND);
   await run(sandbox, 'nohup ./start.sh api >/tmp/api.log 2>&1 & sleep 1; echo API_STARTED', 60, BACKEND);
   await run(sandbox, 'nohup ./start.sh worker >/tmp/worker.log 2>&1 & sleep 1; echo WORKER_STARTED', 60, BACKEND);

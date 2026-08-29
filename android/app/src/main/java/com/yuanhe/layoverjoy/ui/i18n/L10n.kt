@@ -89,7 +89,7 @@ object L10n {
         "auth.create" to "创建账户",
         "auth.server_settings" to "服务器地址设置",
         "auth.backend_url" to "后端地址",
-        "auth.server_hint" to "模拟器默认使用 {1}（宿主机 Docker）；真机请改为电脑局域网地址或 Daytona 部署地址。",
+        "auth.server_hint" to "默认连接本机 Docker 服务 {1}；安卓模拟器请改用 http://10.0.2.2:8080，真机请改为电脑局域网地址或 Daytona 部署地址。",
         // 引导
         "ob.step1_title" to "先告诉我们，你使用什么证件旅行。",
         "ob.step1_sub" to "只收集完成旅行判断所需的信息：签发国家、护照类型与有效期。",
@@ -335,6 +335,8 @@ object L10n {
         "booking.status.expired" to "已过期",
         // 我的
         "profile.title" to "我的",
+        "profile.not_logged_in" to "未登录",
+        "profile.login_cta" to "登录 / 注册",
         "profile.travel_settings" to "旅行设置",
         "profile.language" to "语言 / Language",
         "profile.language_sub" to "中文 / English",
@@ -388,7 +390,7 @@ object L10n {
         "auth.create" to "Create account",
         "auth.server_settings" to "Server address settings",
         "auth.backend_url" to "Backend URL",
-        "auth.server_hint" to "Emulator defaults to {1} (host Docker); on a device, use your computer's LAN address or the Daytona deployment URL.",
+        "auth.server_hint" to "Defaults to your local Docker server {1}; on an Android emulator use http://10.0.2.2:8080 instead, and on a device use your computer's LAN address or the Daytona deployment URL.",
         // Onboarding
         "ob.step1_title" to "First, tell us which document you travel with.",
         "ob.step1_sub" to "We only collect what's needed to judge entry eligibility: issuing country, passport type and expiry.",
@@ -634,6 +636,8 @@ object L10n {
         "booking.status.expired" to "Expired",
         // Profile
         "profile.title" to "Me",
+        "profile.not_logged_in" to "Not signed in",
+        "profile.login_cta" to "Sign in / Register",
         "profile.travel_settings" to "Travel settings",
         "profile.language" to "Language / 语言",
         "profile.language_sub" to "中文 / English",

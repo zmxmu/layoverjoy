@@ -14,7 +14,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yuanhe.layoverjoy.data.TokenHolder
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.MainScreen
-import com.yuanhe.layoverjoy.ui.screens.AuthScreen
 import com.yuanhe.layoverjoy.ui.screens.OnboardingScreen
 import com.yuanhe.layoverjoy.ui.theme.AppShapes
 import com.yuanhe.layoverjoy.ui.theme.AppTypography
@@ -50,12 +49,12 @@ private fun LayoverJoyTheme(content: @Composable () -> Unit) {
     )
 }
 
-/** 根据会话门控路由到登录 / 引导 / 主界面。 */
+/** 游客优先：启动直达主界面（四 tab）；登录页作为需要身份的页面内路由弹出。 */
 @Composable
 private fun Root() {
     val appState: AppStateViewModel = viewModel(factory = AppStateViewModel.Factory)
 
-    // 401（token 失效且无法刷新）时回退到登录页
+    // 401（token 失效且无法刷新）时退为游客态，需要身份的页面会重新引导登录
     TokenHolder.onUnauthorized = {
         appState.onLoggedOut()
     }
@@ -64,7 +63,6 @@ private fun Root() {
         AppStateViewModel.Gate.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = BrandPrimary)
         }
-        AppStateViewModel.Gate.Auth -> AuthScreen(appState)
         AppStateViewModel.Gate.Onboarding -> OnboardingScreen(appState)
         AppStateViewModel.Gate.Main -> MainScreen(appState)
     }

@@ -115,9 +115,9 @@ npm run start:worker            # monitor worker
 
 - Single activity + Compose Navigation; Material3 theme (`ui/theme`), brand palette.
 - Network: Retrofit + kotlinx.serialization; session in DataStore (`SessionStore`), auto-refresh on 401.
-- Screens: Auth → Onboarding(3 steps) → Main(bottom tabs: Home / Explore / Trips / Me) with stack routes for Results, PlanDetail, MonitorSetup, BookingFlow, Notifications, Documents.
-- Home screen is **fully local** (`LocalDemoData`) — curated city cards, no upload of real documents.
-- Configurable backend URL (Auth screen / Me tab): emulator default is the host Docker bridge; devices use LAN or the Daytona preview URL.
+- Screens: guest-first boot — Main(bottom tabs: Home / Explore / Trips / Me) immediately, with stack routes for Login, Results, PlanDetail, MonitorSetup, BookingFlow, Notifications, Documents. Identity-requiring entries (Explore/Trips tabs, document wallet) pop up the Login screen; after sign-in, first-time users complete Onboarding(3 steps) and are routed back to the blocked target automatically.
+- Home screen is **fully local** (`LocalDemoData`) — curated city cards, no upload of real documents; the Me tab works for guests (language/server settings).
+- Configurable backend URL (Login screen / Me tab): default is the local Docker server `http://127.0.0.1:8080`; Android emulators use `http://10.0.2.2:8080`; devices use LAN or the Daytona preview URL.
 
 ### 6.1 In-app i18n (Chinese / English)
 
@@ -153,6 +153,9 @@ Known pitfalls baked into the script:
 - **Agent readiness**: `echo ready` retry loop (20×5 s) after create/start.
 - **Transient `fork/exec /usr/bin/zsh` errors**: command-level retry (5×5 s); these are Agent-not-ready signals, not real missing shells.
 - **cwd must exist**: early commands run with `cwd=undefined` — pointing at a not-yet-created directory breaks the Agent's shell spawn.
+- **`/workspace` not writable** by the default user: create the workdir with `sudo mkdir && sudo chown`.
+- **`fs.uploadFile` is file-only** (EISDIR on directories): the script uses a recursive upload helper.
+- **binaries.prisma.sh is unreachable from the sandbox** (persistent ECONNRESET). Engine binaries are already placed by `npm ci` postinstall, so all Prisma CLI calls run with `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` to skip the remote sha256 verification; hard gates then verify the engine file exists and the public schema has tables.
 - `DAYTONA_*` variables are kept out of the app runtime env (only app secrets are injected).
 
 Run:

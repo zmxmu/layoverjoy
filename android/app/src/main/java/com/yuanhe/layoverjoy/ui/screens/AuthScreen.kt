@@ -41,9 +41,10 @@ import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
 import kotlinx.coroutines.launch
 
-/** 登录 / 注册页（不实现演示账户，按契约全部使用真实注册）。 */
+/** 登录 / 注册页（不实现演示账户，按契约全部使用真实注册）。
+ * 游客优先模式下作为主界面内路由弹出：[onClose] 非空时显示返回按钮，登录成功回调 [onSuccess]。 */
 @Composable
-fun AuthScreen(appState: AppStateViewModel) {
+fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuccess: (() -> Unit)? = null) {
     val scope = rememberCoroutineScope()
     val session = LayoverJoyApp.instance.session
 
@@ -60,6 +61,12 @@ fun AuthScreen(appState: AppStateViewModel) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
+        if (onClose != null) {
+            TextButton(onClick = onClose, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                Text("‹ " + L10n.t("common.back"), color = BrandInkSoft, style = MaterialTheme.typography.labelLarge)
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         Text(L10n.t("auth.app_name"), style = MaterialTheme.typography.titleLarge, color = BrandPrimary)
         Spacer(Modifier.height(6.dp))
         Text(
@@ -114,6 +121,7 @@ fun AuthScreen(appState: AppStateViewModel) {
                             session.saveTokens(result.data.accessToken, result.data.refreshToken)
                             session.setEmail(email)
                             appState.onAuthDone(email)
+                            onSuccess?.invoke()
                         }
                         is ApiResult.Err -> error = result.message
                     }
