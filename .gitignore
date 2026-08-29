@@ -1,0 +1,28 @@
+# ---- Node ----
+node_modules/
+backend/dist/
+*.tsbuildinfo
+
+# ---- 环境变量与密钥（永不入库）----
+.env
+.env.*
+!.env.example
+.secrets/
+
+# ---- Daytona 部署缓存（引擎二进制本地下载即可）----
+infra/daytona/engines/
+infra/daytona/tmp-*.mts
+
+# ---- Android 构建产物 ----
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
+
+# ---- 日志与临时文件 ----
+*.log
+logs/
+tmp/
+.DS_Store

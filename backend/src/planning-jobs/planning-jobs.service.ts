@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { DaytonaRunner } from './daytona.runner';
+import {
+  CandidateSandboxInput,
+  DaytonaRunner,
+  SandboxExecutionError,
+  SanitizedFlightLeg,
+} from './daytona.runner';
 import { EntryRulesService } from '../entry-rules/entry-rules.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { NosanaService } from '../explanations/nosana.service';
@@ -19,18 +24,6 @@ export interface PlanningJobRequest {
   passportType?: string;
   visas?: Array<{ country: string; validUntil?: string }>;
   preferences?: { acceptRedEye?: boolean; airlines?: string[] };
-}
-
-interface CandidateResult {
-  candidateCity: string;
-  eligibility: string;
-  ruleIds: string[];
-  flightOfferIds: string[];
-  totalCost: number | null;
-  currency: string | null;
-  usableHours: number | null;
-  riskFlags: string[];
-  evidenceTimestamp: string;
 }
 
 /**
@@ -133,6 +126,7 @@ export class PlanningJobsService {
       }
 
       const finalStatus = failures.length === 0 ? 'COMPLETED' : successes.length > 0 ? 'PARTIAL' : 'FAILED';
+      const cleanup = summarizeCleanup(done);
       await this.prisma.planningJob.update({
         where: { id: jobId },
         data: {
@@ -142,7 +136,8 @@ export class PlanningJobsService {
             succeeded: successes.length,
             failed: failures.length,
             failedCandidates: failures.map((f) => ({ city: f.candidateCity, error: f.error })),
-            sandboxCleanedUp: true,
+            sandboxCleanedUp: cleanup.allCleaned,
+            sandboxCleanup: cleanup,
           } as any,
           explanationJson: explanations as any,
           completedAt: new Date(),
@@ -173,37 +168,24 @@ export class PlanningJobsService {
     });
     const hub = hubs.find((h) => (h.metroCode ?? h.airports[0].iata) === candidateCity) ?? hubs[0];
     try {
-      const { result, sandbox } = await this.runner.runIsolated<CandidateResult>(candidateCity, async () => {
-        // 1) 确定性签证规则前置过滤
-        const stayDays = Math.max(...(request.stayDays ?? [2]));
-        const eligibility = await this.rules.evaluate({
-          travelDate: request.departureDate,
-          purpose: 'TOURISM',
-          stayDays,
-          passport: {
-            issuingCountry: request.passportCountry,
-            type: request.passportType || 'ORDINARY',
-          },
-          visas: (request.visas ?? []).map((v) => ({ country: v.country, validUntil: v.validUntil })),
-          destinationCountry: hub.countryCode,
-          // 候选规划属搜索期初筛：第二段尚未 Verify，不得谎报已确认；硬判定在预订期复核。
-          mode: 'SEARCH_SCREEN',
-        });
-        if (eligibility.status !== 'ELIGIBLE') {
-          return {
-            candidateCity,
-            eligibility: eligibility.status,
-            ruleIds: eligibility.ruleId ? [eligibility.ruleId] : [],
-            flightOfferIds: [],
-            totalCost: null,
-            currency: null,
-            usableHours: null,
-            riskFlags: eligibility.reasonCodes,
-            evidenceTimestamp: new Date().toISOString(),
-          };
-        }
+      // Provider calls stay in the trusted backend. Tier-1 Daytona Sandboxes have restricted egress.
+      const stayDays = Math.max(...(request.stayDays ?? [2]));
+      const eligibility = await this.rules.evaluate({
+        travelDate: request.departureDate,
+        purpose: 'TOURISM',
+        stayDays,
+        passport: {
+          issuingCountry: request.passportCountry,
+          type: request.passportType || 'ORDINARY',
+        },
+        visas: (request.visas ?? []).map((v) => ({ country: v.country, validUntil: v.validUntil })),
+        destinationCountry: hub.countryCode,
+        mode: 'SEARCH_SCREEN',
+      });
 
-        // 2) Atlas 搜索两段
+      let leg1Input: SanitizedFlightLeg | null = null;
+      let leg2Input: SanitizedFlightLeg | null = null;
+      if (eligibility.status === 'ELIGIBLE') {
         const hubCode = hub.metroCode ?? hub.airports[0].iata;
         const leg1 = await this.atlas.searchWithCache({
           origin: request.origin,
@@ -222,32 +204,21 @@ export class PlanningJobsService {
           currency: 'SGD',
         });
         const leg2Best = bestBookable(leg2.offers);
-        if (!leg1Best || !leg2Best) {
-          return {
-            candidateCity,
-            eligibility: 'NO_INVENTORY',
-            ruleIds: eligibility.ruleId ? [eligibility.ruleId] : [],
-            flightOfferIds: [],
-            totalCost: null,
-            currency: null,
-            usableHours: null,
-            riskFlags: ['NO_SANDBOX_INVENTORY'],
-            evidenceTimestamp: new Date().toISOString(),
-          };
-        }
-        const usableHours = Math.max(0, (new Date(leg2Best.departureAt).getTime() - new Date(leg1Best.arrivalAt).getTime()) / 3600_000 - 6);
-        return {
-          candidateCity,
-          eligibility: 'ELIGIBLE',
-          ruleIds: eligibility.ruleId ? [eligibility.ruleId] : [],
-          flightOfferIds: [leg1Best.providerOfferId, leg2Best.providerOfferId],
-          totalCost: Math.round((leg1Best.totalPrice + leg2Best.totalPrice) * 100) / 100,
-          currency: leg1Best.currency,
-          usableHours: Math.round(usableHours * 10) / 10,
-          riskFlags: ['SEPARATE_TICKETS', 'RECHECK_BAGGAGE'],
-          evidenceTimestamp: new Date().toISOString(),
-        };
-      });
+        leg1Input = leg1Best ? sanitizeLeg(leg1Best) : null;
+        leg2Input = leg2Best ? sanitizeLeg(leg2Best) : null;
+      }
+
+      const sandboxInput: CandidateSandboxInput = {
+        candidateCity,
+        eligibility: eligibility.status,
+        ruleIds: eligibility.ruleId ? [eligibility.ruleId] : [],
+        leg1: leg1Input,
+        leg2: leg2Input,
+        riskFlags: eligibility.status === 'ELIGIBLE'
+          ? ['SEPARATE_TICKETS', 'RECHECK_BAGGAGE']
+          : eligibility.reasonCodes,
+      };
+      const { result, sandbox } = await this.runner.runIsolated(candidateCity, sandboxInput);
 
       await this.prisma.planningJobCandidate.update({
         where: { id: candidateId },
@@ -262,14 +233,22 @@ export class PlanningJobsService {
           riskFlagsJson: result.riskFlags as any,
           sandboxId: sandbox.sandboxId,
           durationMs: sandbox.durationMs,
-          evidenceJson: { candidateResult: result, sandboxId: sandbox.sandboxId, logs: sandbox.logs, runnerMode: this.runner.mode() } as any,
+          evidenceJson: { candidateResult: result, sandbox, configuredRunnerMode: this.runner.mode() } as any,
           finishedAt: new Date(),
         },
       });
     } catch (e) {
+      const sandbox = e instanceof SandboxExecutionError ? e.sandbox : null;
       await this.prisma.planningJobCandidate.update({
         where: { id: candidateId },
-        data: { status: 'FAILED', error: (e as Error).message.slice(0, 500), finishedAt: new Date() },
+        data: {
+          status: 'FAILED',
+          error: (e as Error).message.slice(0, 500),
+          sandboxId: sandbox?.sandboxId || null,
+          durationMs: sandbox?.durationMs || null,
+          evidenceJson: sandbox ? { error: (e as Error).message.slice(0, 500), sandbox } as any : undefined,
+          finishedAt: new Date(),
+        },
       });
     }
   }
@@ -307,10 +286,12 @@ export class PlanningJobsService {
     const job = await this.prisma.planningJob.findFirst({ where: { id: jobId, userId } });
     if (!job) throw AppError.notFound('规划任务');
     const candidates = await this.prisma.planningJobCandidate.findMany({ where: { planningJobId: jobId } });
+    const cleanup = summarizeCleanup(candidates);
     return {
       jobId: job.id,
       runnerMode: job.runnerMode,
-      sandboxCleanedUp: true,
+      sandboxCleanedUp: cleanup.allCleaned,
+      sandboxCleanup: cleanup,
       candidates: candidates.map((c) => ({
         candidateCity: c.candidateCity,
         status: c.status,
@@ -338,4 +319,28 @@ function bestBookable(offers: FlightOffer[]): FlightOffer | null {
 function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   return new Date(d.getTime() + days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+function sanitizeLeg(offer: FlightOffer): SanitizedFlightLeg {
+  return {
+    providerOfferId: offer.providerOfferId,
+    totalPrice: offer.totalPrice,
+    currency: offer.currency,
+    departureAt: offer.departureAt,
+    arrivalAt: offer.arrivalAt,
+  };
+}
+
+function summarizeCleanup(candidates: Array<{ evidenceJson: unknown }>) {
+  const statuses = candidates
+    .map((candidate) => (candidate.evidenceJson as any)?.sandbox?.cleanupStatus as string | undefined)
+    .filter((status): status is string => Boolean(status));
+  return {
+    allCleaned: !statuses.includes('delete-failed') && statuses.length === candidates.length,
+    deleted: statuses.filter((status) => status === 'deleted').length,
+    deleteFailed: statuses.filter((status) => status === 'delete-failed').length,
+    notCreated: statuses.filter((status) => status === 'not-created').length,
+    notApplicable: statuses.filter((status) => status === 'not-applicable').length,
+    unknown: candidates.length - statuses.length,
+  };
 }

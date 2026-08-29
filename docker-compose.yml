@@ -43,6 +43,9 @@ services:
       REDIS_URL: redis://redis:6379
       NODE_ENV: development
       RUNTIME_TARGET: local
+      # Atlas/Nosana 由可信本地后端调用；候选评估默认进程内执行（local-runner，诚实标注）。
+      # 需要展示真隔离沙箱时：DAYTONA_MODE=live docker compose up
+      DAYTONA_MODE: ${DAYTONA_MODE:-local-runner}
       PORT: 8080
     depends_on:
       db:

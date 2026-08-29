@@ -1,17 +1,62 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { loadEnv } from '../config/env';
+import { Daytona } from '@daytona/sdk';
+import { isMaskedSecret, loadEnv } from '../config/env';
+
+const EVALUATOR_VERSION = 'layoverjoy-candidate-evaluator-v1';
+
+export interface SanitizedFlightLeg {
+  providerOfferId: string;
+  totalPrice: number;
+  currency: string;
+  departureAt: string;
+  arrivalAt: string;
+}
+
+/** Only de-identified, already-fetched business data may enter a candidate Sandbox. */
+export interface CandidateSandboxInput {
+  candidateCity: string;
+  eligibility: string;
+  ruleIds: string[];
+  leg1: SanitizedFlightLeg | null;
+  leg2: SanitizedFlightLeg | null;
+  riskFlags: string[];
+}
+
+export interface CandidateEvaluationResult {
+  candidateCity: string;
+  eligibility: string;
+  ruleIds: string[];
+  flightOfferIds: string[];
+  totalCost: number | null;
+  currency: string | null;
+  usableHours: number | null;
+  riskFlags: string[];
+  evidenceTimestamp: string;
+  evaluatorVersion: string;
+}
 
 export interface SandboxRunResult {
   sandboxId: string;
   logs: string[];
   durationMs: number;
+  executionMode: 'mock' | 'local-runner' | 'daytona';
+  cleanupStatus: 'not-applicable' | 'not-created' | 'deleted' | 'delete-failed';
+  networkPolicy: 'not-applicable' | 'daytona-tier-policy+block-all';
+  evaluatorVersion: string;
+}
+
+export class SandboxExecutionError extends Error {
+  constructor(message: string, readonly sandbox: SandboxRunResult) {
+    super(message);
+    this.name = 'SandboxExecutionError';
+  }
 }
 
 /**
- * Daytona Sandbox 运行器。三种模式（08 文档 / env.DAYTONA_MODE）：
- * - mock：不发任何外部请求，模拟时间线，仅用于本地离线联调；
- * - local-runner：本机顺序执行候选评估，证据中如实标注 runner=local；
- * - live：通过 Daytona REST API 创建/执行/销毁真实 Sandbox；任何 API 失败都如实抛出，禁止伪造证据。
+ * Daytona candidate runner:
+ * - mock/local-runner execute the same deterministic evaluator in-process;
+ * - live creates an ephemeral Daytona Sandbox and executes the evaluator there;
+ * - external APIs are deliberately called by the trusted backend before this step.
  */
 @Injectable()
 export class DaytonaRunner {
@@ -21,103 +66,226 @@ export class DaytonaRunner {
     return loadEnv().DAYTONA_MODE;
   }
 
-  /** 为一个候选执行隔离任务。evaluate 是业务评估回调（在后端内执行实际计算）。 */
-  async runIsolated<T>(candidateCity: string, evaluate: () => Promise<T>): Promise<{ result: T; sandbox: SandboxRunResult }> {
+  async runIsolated(
+    candidateCity: string,
+    input: CandidateSandboxInput,
+  ): Promise<{ result: CandidateEvaluationResult; sandbox: SandboxRunResult }> {
+    assertDeidentified(input);
     const mode = this.mode();
     const started = Date.now();
+
     if (mode === 'mock') {
-      await sleep(300 + Math.random() * 500);
-      const result = await evaluate();
+      await sleep(250 + Math.random() * 250);
       return {
-        result,
+        result: evaluateCandidate(input),
         sandbox: {
-          sandboxId: `mock-sbx-${candidateCity.toLowerCase()}-${Date.now().toString(36)}`,
-          logs: [`[mock] sandbox created for ${candidateCity}`, '[mock] candidate evaluation executed', '[mock] sandbox destroyed'],
+          sandboxId: `mock-sbx-${slug(candidateCity)}-${Date.now().toString(36)}`,
+          logs: ['[mock] no remote sandbox created', `[mock] ${EVALUATOR_VERSION} executed in-process`],
           durationMs: Date.now() - started,
+          executionMode: 'mock',
+          cleanupStatus: 'not-applicable',
+          networkPolicy: 'not-applicable',
+          evaluatorVersion: EVALUATOR_VERSION,
         },
       };
     }
+
     if (mode === 'live') {
-      return this.runInRemoteSandbox(candidateCity, evaluate, started);
+      return this.runInRemoteSandbox(candidateCity, input, started);
     }
-    // local-runner：如实标注
-    const result = await evaluate();
+
     return {
-      result,
+      result: evaluateCandidate(input),
       sandbox: {
-        sandboxId: `local-runner-${candidateCity.toLowerCase()}`,
-        logs: [`[local-runner] candidate ${candidateCity} evaluated in-process`, '[local-runner] no remote sandbox created'],
+        sandboxId: `local-runner-${slug(candidateCity)}`,
+        logs: ['[local-runner] no remote sandbox created', `[local-runner] ${EVALUATOR_VERSION} executed in-process`],
         durationMs: Date.now() - started,
+        executionMode: 'local-runner',
+        cleanupStatus: 'not-applicable',
+        networkPolicy: 'not-applicable',
+        evaluatorVersion: EVALUATOR_VERSION,
       },
     };
   }
 
-  /** Live：真实调用 Daytona REST API 创建 Sandbox，在其中执行标记命令，然后销毁。 */
-  private async runInRemoteSandbox<T>(candidateCity: string, evaluate: () => Promise<T>, started: number): Promise<{ result: T; sandbox: SandboxRunResult }> {
+  private async runInRemoteSandbox(
+    candidateCity: string,
+    input: CandidateSandboxInput,
+    started: number,
+  ): Promise<{ result: CandidateEvaluationResult; sandbox: SandboxRunResult }> {
     const env = loadEnv();
-    if (!env.DAYTONA_API_KEY) throw new Error('DAYTONA_API_KEY missing; cannot run live Daytona sandbox');
-    const base = env.DAYTONA_API_URL.replace(/\/$/, '');
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.DAYTONA_API_KEY}` };
+    if (isMaskedSecret(env.DAYTONA_API_KEY)) {
+      throw new Error('DAYTONA_API_KEY missing or masked; cannot run live Daytona sandbox');
+    }
+
+    const daytona = new Daytona({
+      apiKey: env.DAYTONA_API_KEY,
+      apiUrl: env.DAYTONA_API_URL,
+      target: env.DAYTONA_TARGET_REGION,
+    });
     const logs: string[] = [];
-    let sandboxId = '';
+    let sandbox: any = null;
+    let result: CandidateEvaluationResult | null = null;
+    let runError: Error | null = null;
+    let cleanupStatus: SandboxRunResult['cleanupStatus'] = 'not-created';
+
     try {
-      // 1) 创建 Sandbox（固定 snapshot，区域由环境变量注入）
-      const createRes = await fetch(`${base}/v1/sandbox`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          snapshot: env.DAYTONA_SNAPSHOT,
-          autoStart: true,
-          target: env.DAYTONA_TARGET_REGION,
-          labels: { project: 'layoverjoy', candidate: candidateCity },
-        }),
-      });
-      if (!createRes.ok) throw new Error(`Daytona create sandbox HTTP ${createRes.status}`);
-      const created: any = await createRes.json();
-      sandboxId = created?.id || created?.sandboxId || '';
-      if (!sandboxId) throw new Error('Daytona create sandbox response missing id');
-      logs.push(`[daytona] sandbox ${sandboxId} created (snapshot=${env.DAYTONA_SNAPSHOT}, region=${env.DAYTONA_TARGET_REGION})`);
-
-      // 2) 在 Sandbox 内执行候选标记命令（隔离执行环境验证）
-      try {
-        const execRes = await fetch(`${base}/v1/sandbox/${sandboxId}/process/execute`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            command: `echo "layoverjoy-candidate ${candidateCity} started at $(date -u +%FT%TZ)" > /tmp/candidate.log && cat /tmp/candidate.log`,
-            timeout: 30,
-          }),
-        });
-        if (execRes.ok) {
-          const execOut: any = await execRes.json();
-          logs.push(`[daytona] exec ok: ${String(execOut?.result ?? execOut?.stdout ?? '').slice(0, 200)}`);
-        } else {
-          logs.push(`[daytona] exec HTTP ${execRes.status} (non-fatal)`);
-        }
-      } catch (e) {
-        logs.push(`[daytona] exec failed (non-fatal): ${(e as Error).message}`);
-      }
-
-      // 3) 业务评估（候选计算在后端执行，Sandbox 提供隔离运行证据）
-      const result = await evaluate();
-      return {
-        result,
-        sandbox: { sandboxId, logs, durationMs: Date.now() - started },
+      const createParams: Record<string, unknown> = {
+        name: `layoverjoy-${slug(candidateCity)}-${Date.now().toString(36)}`.slice(0, 63),
+        language: 'typescript',
+        labels: { project: 'layoverjoy', workload: 'candidate-evaluation', candidate: slug(candidateCity) },
+        ephemeral: true,
+        autoStopInterval: 5,
+        ttlMinutes: env.DAYTONA_SANDBOX_TTL_MINUTES,
+        networkBlockAll: true,
       };
+      if (env.DAYTONA_SNAPSHOT) createParams.snapshot = env.DAYTONA_SNAPSHOT;
+
+      sandbox = await daytona.create(createParams as any, { timeout: env.DAYTONA_CREATE_TIMEOUT_SECONDS });
+      logs.push(`[daytona] sandbox ${sandbox.id} created`);
+      logs.push('[daytona] input contains route/price/rule IDs only; no PII or provider secrets');
+      logs.push('[daytona] network policy: organization tier restrictions + networkBlockAll');
+
+      const evaluatorScript = [
+        `const evaluateCandidate = ${evaluateCandidate.toString()};`,
+        'const input = JSON.parse(process.env.LAYOVERJOY_CANDIDATE_INPUT);',
+        'process.stdout.write(JSON.stringify(evaluateCandidate(input)));',
+      ].join('\n');
+      const execution = await sandbox.process.executeCommand(
+        'node -e "$LAYOVERJOY_EVALUATOR_JS"',
+        undefined,
+        {
+          LAYOVERJOY_EVALUATOR_JS: evaluatorScript,
+          LAYOVERJOY_CANDIDATE_INPUT: JSON.stringify(input),
+        },
+        env.DAYTONA_EXEC_TIMEOUT_SECONDS,
+      );
+      if (execution.exitCode !== 0) {
+        throw new Error(`Daytona evaluator exited with code ${execution.exitCode}`);
+      }
+      result = parseEvaluationResult(execution.result);
+      logs.push(`[daytona] ${EVALUATOR_VERSION} completed inside sandbox`);
+    } catch (error) {
+      runError = error instanceof Error ? error : new Error(String(error));
+      logs.push(`[daytona] execution failed: ${safeError(runError.message)}`);
     } finally {
-      // 4) 任务完成后必须销毁临时 Sandbox，避免敏感偏好残留
-      if (sandboxId) {
+      if (sandbox) {
         try {
-          await fetch(`${base}/v1/sandbox/${sandboxId}`, { method: 'DELETE', headers });
-          logs.push(`[daytona] sandbox ${sandboxId} destroyed`);
-        } catch (e) {
-          this.logger.warn(`sandbox ${sandboxId} destroy failed: ${(e as Error).message}`);
+          await daytona.delete(sandbox, 60, true);
+          cleanupStatus = 'deleted';
+          logs.push(`[daytona] sandbox ${sandbox.id} deleted`);
+        } catch (error) {
+          cleanupStatus = 'delete-failed';
+          const message = error instanceof Error ? error.message : String(error);
+          logs.push(`[daytona] cleanup failed: ${safeError(message)}`);
+          this.logger.warn(`sandbox ${sandbox.id} cleanup failed: ${safeError(message)}`);
         }
       }
     }
+
+    const evidence: SandboxRunResult = {
+      sandboxId: sandbox?.id ?? '',
+      logs,
+      durationMs: Date.now() - started,
+      executionMode: 'daytona',
+      cleanupStatus,
+      networkPolicy: 'daytona-tier-policy+block-all',
+      evaluatorVersion: EVALUATOR_VERSION,
+    };
+    if (runError || !result) {
+      throw new SandboxExecutionError(runError?.message ?? 'Daytona evaluator returned no result', evidence);
+    }
+    return { result, sandbox: evidence };
   }
 }
 
+/** Pure and dependency-free so its source can execute in an offline Sandbox. */
+function evaluateCandidate(input: CandidateSandboxInput): CandidateEvaluationResult {
+  const base = {
+    candidateCity: input.candidateCity,
+    ruleIds: input.ruleIds,
+    evidenceTimestamp: new Date().toISOString(),
+    evaluatorVersion: 'layoverjoy-candidate-evaluator-v1',
+  };
+  if (input.eligibility !== 'ELIGIBLE') {
+    return {
+      ...base,
+      eligibility: input.eligibility,
+      flightOfferIds: [],
+      totalCost: null,
+      currency: null,
+      usableHours: null,
+      riskFlags: input.riskFlags,
+    };
+  }
+  if (!input.leg1 || !input.leg2) {
+    return {
+      ...base,
+      eligibility: 'NO_INVENTORY',
+      flightOfferIds: [],
+      totalCost: null,
+      currency: null,
+      usableHours: null,
+      riskFlags: Array.from(new Set([...input.riskFlags, 'NO_ATLAS_INVENTORY'])),
+    };
+  }
+  if (input.leg1.currency !== input.leg2.currency) {
+    return {
+      ...base,
+      eligibility: 'NEEDS_REPRICE',
+      flightOfferIds: [input.leg1.providerOfferId, input.leg2.providerOfferId],
+      totalCost: null,
+      currency: null,
+      usableHours: null,
+      riskFlags: Array.from(new Set([...input.riskFlags, 'CURRENCY_MISMATCH'])),
+    };
+  }
+  const arrival = Date.parse(input.leg1.arrivalAt);
+  const onward = Date.parse(input.leg2.departureAt);
+  const usableHours = Number.isFinite(arrival) && Number.isFinite(onward)
+    ? Math.max(0, (onward - arrival) / 3_600_000 - 6)
+    : 0;
+  return {
+    ...base,
+    eligibility: 'ELIGIBLE',
+    flightOfferIds: [input.leg1.providerOfferId, input.leg2.providerOfferId],
+    totalCost: Math.round((input.leg1.totalPrice + input.leg2.totalPrice) * 100) / 100,
+    currency: input.leg1.currency,
+    usableHours: Math.round(usableHours * 10) / 10,
+    riskFlags: Array.from(new Set(input.riskFlags)),
+  };
+}
+
+function parseEvaluationResult(raw: string): CandidateEvaluationResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw.trim());
+  } catch {
+    throw new Error('Daytona evaluator returned invalid JSON');
+  }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Daytona evaluator returned an invalid object');
+  const value = parsed as CandidateEvaluationResult;
+  if (!value.candidateCity || !value.eligibility || value.evaluatorVersion !== EVALUATOR_VERSION) {
+    throw new Error('Daytona evaluator result failed contract validation');
+  }
+  return value;
+}
+
+function assertDeidentified(input: CandidateSandboxInput) {
+  const serialized = JSON.stringify(input);
+  if (/passportNumber|documentNumber|fullName|givenName|familyName|email|secret|apiKey/i.test(serialized)) {
+    throw new Error('Candidate Sandbox input contains a forbidden identity or secret field');
+  }
+}
+
+function safeError(message: string): string {
+  return message.replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]').slice(0, 300);
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'candidate';
+}
+
 function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

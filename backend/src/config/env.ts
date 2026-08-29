@@ -44,7 +44,11 @@ const EnvSchema = z.object({
   DAYTONA_API_KEY: z.string().optional().default(''),
   DAYTONA_API_URL: z.string().default('https://app.daytona.io/api'),
   DAYTONA_TARGET_REGION: z.string().default('us'),
-  DAYTONA_SNAPSHOT: z.string().default('layoverjoy-dind-v1'),
+  // Empty means Daytona's current default snapshot. The retired DIND snapshot is not required.
+  DAYTONA_SNAPSHOT: z.string().default(''),
+  DAYTONA_SANDBOX_TTL_MINUTES: z.coerce.number().int().min(2).max(30).default(10),
+  DAYTONA_CREATE_TIMEOUT_SECONDS: z.coerce.number().int().min(30).max(600).default(120),
+  DAYTONA_EXEC_TIMEOUT_SECONDS: z.coerce.number().int().min(5).max(120).default(30),
 
   SMTP_HOST: z.string().optional().default(''),
   SMTP_PORT: z.coerce.number().default(465),
