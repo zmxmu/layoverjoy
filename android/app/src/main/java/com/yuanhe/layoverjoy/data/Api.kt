@@ -36,8 +36,11 @@ object TokenHolder {
 
     /** OkHttp Authenticator 线程上同步执行 refresh 并持久化。 */
     fun refreshTokensBlocking(api: ApiService): AuthTokens? {
-        val rt = refreshToken ?: return null
         return synchronized(this) {
+            // 锁内读取 refresh token：并发 401 时先获得锁的线程完成轮换后，
+            // 后续线程必须用新 token；在锁外捕获的旧 token 已被服务端作废，
+            // 会导致刷新失败误触发登出（重启后会话丢失的根因）。
+            val rt = refreshToken ?: return null
             try {
                 val resp = kotlinx.coroutines.runBlocking { api.refresh(RefreshRequest(rt)) }
                 val tokens = if (resp.isSuccessful) resp.body() else null

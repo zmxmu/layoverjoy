@@ -114,6 +114,13 @@ Provider 由环境变量选择。外部服务不可用时返回可解释降级�
 - project/TECHNICAL_IMPLEMENTATION.md：英文技术实现（架构/契约/部署），变更架构或部署方式时同步更新。
 - project/AGENTS.md：本文件，生成约束最高优先级。
 
+## 9.2 Android 导航与会话约定
+
+- 底部 tab 切换统一走 `navigateToTab`（MainScreen.kt）：`popUpTo(startDestination)` + `launchSingleTop`，**禁用 `saveState/restoreState`**——深层页面会把 tab 根路由推入当前栈，保存/恢复机制会将被污染的分支挂回原 tab，产生「点 Home 却回到搜索页」类返回栈错乱。
+- 深层导航允许推入 tab 根路由（如灵感卡进搜索），但 tab 点击必须永远落回该 tab 根页。
+- 登录页关闭（onClose）必须 `markAuthReturn(null)` 清空回跳目标，避免下次登录跳到过期目标页。
+- `TokenHolder.refreshTokensBlocking` 必须在锁内读取 refresh token：并发 401 时轮换会作废旧 token，锁外捕获旧 token 的线程刷新失败会误触发登出（重启后会话丢失的根因）。
+
 ## 10. 数据模型约束
 
 - MVP 每个用户只能有一本 ACTIVE 主护照。

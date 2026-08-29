@@ -86,6 +86,19 @@ fun guardedNavigate(nav: androidx.navigation.NavController, appState: AppStateVi
     }
 }
 
+/**
+ * tab 切换统一入口：永远落回该 tab 根页。
+ * 不使用 saveState/restoreState 的按 tab 保存栈——深层页面（如首页灵感卡）
+ * 会把 tab 根路由推入当前栈，保存/恢复机制会将被污染的分支挂回原 tab，
+ * 导致「点 Home 却回到搜索页」一类返回栈错乱。确定性优先于栈恢复体验。
+ */
+private fun navigateToTab(nav: androidx.navigation.NavController, route: String) {
+    nav.navigate(route) {
+        popUpTo(nav.graph.findStartDestination().id)
+        launchSingleTop = true
+    }
+}
+
 /** 主界面：底部四页签 + 深层页面（结果/详情/监控设置/预订/通知/证件）。 */
 @Composable
 fun MainScreen(appState: AppStateViewModel) {
@@ -102,7 +115,8 @@ fun MainScreen(appState: AppStateViewModel) {
             appState.authReturnRoute?.let { target ->
                 if (nav.currentDestination != null) {
                     appState.markAuthReturn(null)
-                    nav.navigate(target) { launchSingleTop = true }
+                    if (target in TABS.map { it.route }) navigateToTab(nav, target)
+                    else nav.navigate(target) { launchSingleTop = true }
                 }
             }
         }
@@ -125,11 +139,7 @@ fun MainScreen(appState: AppStateViewModel) {
                                     nav.navigate(Routes.LOGIN) { launchSingleTop = true }
                                     return@NavigationBarItem
                                 }
-                                nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                navigateToTab(nav, tab.route)
                             },
                             icon = { Icon(if (selected) tab.filled else tab.outlined, contentDescription = label) },
                             label = { Text(label) },
@@ -152,7 +162,11 @@ fun MainScreen(appState: AppStateViewModel) {
             composable(Routes.LOGIN) {
                 AuthScreen(
                     appState,
-                    onClose = { nav.popBackStack() },
+                    onClose = {
+                        // 取消登录必须清掉回跳目标，否则下次登录会跳到过期目标页。
+                        appState.markAuthReturn(null)
+                        nav.popBackStack()
+                    },
                     onSuccess = {
                         // 仅回退到 tab 层；跳回被拦截目标页统一由上方 LaunchedEffect 处理，
                         // 若 gate 已切到引导页，本 NavHost 会被销毁，popBackStack 无副作用。
