@@ -46,7 +46,9 @@ const ENGINES_LOCAL = resolve(here, 'engines');
 const ENGINES_REMOTE = `${WORKDIR}/engines`;
 const QUERY_ENGINE_REMOTE = `${ENGINES_REMOTE}/libquery_engine.so.node`;
 const SCHEMA_ENGINE_REMOTE = `${ENGINES_REMOTE}/schema-engine`;
-const ENGINE_ENV = `PRISMA_QUERY_ENGINE_BINARY=${QUERY_ENGINE_REMOTE} PRISMA_SCHEMA_ENGINE_BINARY=${SCHEMA_ENGINE_REMOTE}`;
+// 引擎覆盖环境变量：Prisma 5.22 中查询引擎（library 型 .so.node）对应 PRISMA_QUERY_ENGINE_LIBRARY，
+// schema-engine 对应 PRISMA_SCHEMA_ENGINE_BINARY（从 prisma/build/index.js 源码确认的映射）。
+const ENGINE_ENV = `PRISMA_QUERY_ENGINE_LIBRARY=${QUERY_ENGINE_REMOTE} PRISMA_SCHEMA_ENGINE_BINARY=${SCHEMA_ENGINE_REMOTE}`;
 
 /** 本地下载并缓存 Prisma 引擎（.gz 下载后本地解压再上传，避免沙箱内联网）。 */
 async function ensureLocalEngines(): Promise<{ query: string; schema: string }> {
@@ -258,15 +260,16 @@ async function main() {
   await sandbox.fs.uploadFile(engines.schema, SCHEMA_ENGINE_REMOTE);
   await run(sandbox, `chmod +x ${SCHEMA_ENGINE_REMOTE}`, 30);
   await run(sandbox, 'npm ci --no-audit --no-fund >>/tmp/npm.log 2>&1 && echo NPM_OK', 1500, BACKEND);
-  // 引擎已离线就位：用 PRISMA_*_ENGINE_BINARY 指向，prisma 全程不再访问 binaries.prisma.sh
+  // 引擎已离线就位：用 PRISMA_QUERY_ENGINE_LIBRARY/PRISMA_SCHEMA_ENGINE_BINARY 指向，prisma 全程不再访问 binaries.prisma.sh
   await run(sandbox, `for i in 1 2 3; do ${ENGINE_ENV} npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && echo GEN_OK && break; sleep 5; done`, 1500, BACKEND);
   await run(sandbox, 'npm run build >>/tmp/npm.log 2>&1 && echo BUILD_OK', 900, BACKEND);
-  // 硬性校验：查询引擎二进制必须存在于 client 输出目录（防止 generate 静默失败）
+  // 硬性校验：查询引擎必须存在于 client 输出目录；重试后仍缺失则硬失败（防止静默通过）
   await run(
     sandbox,
     'if ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1; then echo ENGINE_OK; else ' +
       `for i in 1 2 3; do ${ENGINE_ENV} npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && ` +
-      'ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1 && echo ENGINE_OK && break; sleep 5; done; fi',
+      'ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1 && echo ENGINE_OK && break; sleep 5; done; fi; ' +
+      'ls node_modules/.prisma/client/libquery_engine* >/dev/null 2>&1 || exit 1',
     1500,
     BACKEND,
   );
@@ -285,18 +288,18 @@ async function main() {
   // 启动脚本：载入 .env 后运行指定入口（api/worker）
   const startSh =
     '#!/bin/bash\nset -e\ncd ' + BACKEND + '\nset -a; . ./.env; set +a\n' +
-    `export PRISMA_QUERY_ENGINE_BINARY=${QUERY_ENGINE_REMOTE}\n` +
+    `export PRISMA_QUERY_ENGINE_LIBRARY=${QUERY_ENGINE_REMOTE}\n` +
     'exec node dist/${1:-main}.js\n';
   await sandbox.fs.uploadFile(Buffer.from(startSh), `${BACKEND}/start.sh`);
   await run(sandbox, 'chmod +x start.sh', 30, BACKEND);
 
   // 6) 同步 schema + 种子，启动 api 与 worker
   console.log('[6/7] prisma db push + seed，启动 api 与 worker…');
-  await run(sandbox, `set -a; . ./.env; set +a; for i in 1 2 3; do ${ENGINE_ENV} npx prisma db push --skip-generate >>/tmp/dbpush.log 2>&1 && echo PUSH_OK && break; sleep 5; done`, 1500, BACKEND);
-  // 硬性校验：db push 后公共 schema 必须有表（防止重试循环静默失败）
+  await run(sandbox, `set -a; . ./.env; set +a; PUSH_OK=; for i in 1 2 3; do ${ENGINE_ENV} npx prisma db push --skip-generate >>/tmp/dbpush.log 2>&1 && PUSH_OK=1 && echo PUSH_OK && break; sleep 5; done; [ -n "$PUSH_OK" ] || exit 1`, 1500, BACKEND);
+  // 硬性校验：db push 后目标库（-d layoverjoy，此前误连默认 postgres 库导致永远为 0）必须有表
   await run(
     sandbox,
-    '[ $(sudo -u postgres psql -tAc "select count(*) from information_schema.tables where table_schema=\'public\'") -gt 0 ] && echo TABLES_OK',
+    `N=$(sudo -u postgres psql -d ${DB_NAME} -tAc 'select count(*) from information_schema.tables where table_schema=''public'''); echo TABLE_COUNT=$N; [ "$N" -gt 0 ] && echo TABLES_OK`,
     60,
   );
   await run(sandbox, 'set -a; . ./.env; set +a; node dist/seed.js >>/tmp/seed.log 2>&1 && echo SEED_OK', 300, BACKEND);
