@@ -59,6 +59,7 @@ import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
+import com.yuanhe.layoverjoy.ui.i18n.L10n
 import kotlinx.coroutines.launch
 
 /**
@@ -97,7 +98,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(if (phase < 2) "预订（模拟）" else "预订状态") },
+            title = { Text(if (phase < 2) L10n.t("booking.title") else L10n.t("booking.title_status")) },
             navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = BrandBackground),
         )
@@ -105,7 +106,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
         val d = detail
         if (d == null) {
             ErrorBanner(error, Modifier.padding(20.dp))
-            if (error == null) LoadingBlock("正在加载方案…")
+            if (error == null) LoadingBlock(L10n.t("detail.loading"))
             return@Column
         }
 
@@ -117,40 +118,40 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
 
             when (phase) {
                 0 -> {
-                    SectionTitle("乘机人（可选，演示环境）")
+                    SectionTitle(L10n.t("booking.passengers_title"))
                     JoyCard {
-                        LabeledField("名（拼音）", givenName, { givenName = it.uppercase() }, placeholder = "SAN")
+                        LabeledField(L10n.t("booking.given_name"), givenName, { givenName = it.uppercase() }, placeholder = "SAN")
                         Spacer(Modifier.height(10.dp))
-                        LabeledField("姓（拼音）", familyName, { familyName = it.uppercase() }, placeholder = "ZHANG")
+                        LabeledField(L10n.t("booking.family_name"), familyName, { familyName = it.uppercase() }, placeholder = "ZHANG")
                         Spacer(Modifier.height(8.dp))
-                        Text("演示环境不会向航司提交真实乘机人信息。", style = MaterialTheme.typography.labelSmall)
+                        Text(L10n.t("booking.passenger_note"), style = MaterialTheme.typography.labelSmall)
                     }
                     Spacer(Modifier.height(12.dp))
-                    SectionTitle("风险确认（必读）")
+                    SectionTitle(L10n.t("booking.risk_title"))
                     JoyCard {
                         RiskCheckItem(riskAck, { riskAck = it })
                         Spacer(Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(injectLegBFailure, { injectLegBFailure = it }, colors = CheckboxDefaults.colors(checkedColor = BrandDanger))
                             Column(Modifier.weight(1f)) {
-                                Text("演示注入：第二段下单失败", style = MaterialTheme.typography.bodySmall, color = BrandDanger)
-                                Text("体验 PARTIAL_ORDER 双订单补偿流程", style = MaterialTheme.typography.labelSmall)
+                                Text(L10n.t("booking.inject_title"), style = MaterialTheme.typography.bodySmall, color = BrandDanger)
+                                Text(L10n.t("booking.inject_sub"), style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
                     Spacer(Modifier.height(16.dp))
                     PrimaryButton(
-                        text = "下一步：确认订单",
+                        text = L10n.t("booking.next_confirm"),
                         enabled = riskAck,
                         onClick = { error = null; phase = 1 },
                     )
                 }
                 1 -> {
-                    SectionTitle("确认行程")
+                    SectionTitle(L10n.t("booking.confirm_title"))
                     JoyCard {
                         d.legs.forEach { leg ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                Text("第 ${leg.legNo} 段 ${leg.origin} → ${leg.destination}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                Text(L10n.t("common.leg_no", leg.legNo) + " ${leg.origin} → ${leg.destination}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                                 Text(fmtPrice(leg.totalPrice, leg.currency), style = MaterialTheme.typography.bodyMedium)
                             }
                             Text("${leg.carrier ?: ""} ${leg.flightNumber ?: ""} · ${fmtDateTime(leg.departureAt)}", style = MaterialTheme.typography.labelSmall)
@@ -158,15 +159,15 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         }
                         Spacer(Modifier.height(6.dp))
                         Row(Modifier.fillMaxWidth()) {
-                            Text("两段合计", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                            Text(L10n.t("booking.total"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                             Text(fmtPrice(d.airfareTotal, d.currency), style = MaterialTheme.typography.titleSmall, color = BrandPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    InfoBanner("两段为分开出票的独立订单：先创建第二段（库存风险更高），再创建第一段。创建后约有 30 分钟支付窗口。")
+                    InfoBanner(L10n.t("booking.separate_note"))
                     Spacer(Modifier.height(16.dp))
                     PrimaryButton(
-                        text = "创建两段订单（Verify + Order）",
+                        text = L10n.t("booking.create_orders"),
                         loading = loading,
                         onClick = {
                             loading = true
@@ -189,7 +190,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                     is ApiResult.Err -> {
                                         error = r.message
                                         if (r.code == "PARTIAL_BOOKING") {
-                                            notice = "第一段已下单、第二段失败：已停止支付，可执行双订单补偿（模拟退款）。"
+                                            notice = L10n.t("booking.partial_notice")
                                             // 后端在错误细节里返回 intentId，用它加载部分订单并进入状态机页。
                                             val intentId = (r.details?.get("intentId") as? kotlinx.serialization.json.JsonPrimitive)?.content
                                             if (intentId != null) {
@@ -209,7 +210,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         },
                     )
                     Spacer(Modifier.height(8.dp))
-                    SecondaryButton("返回修改", onClick = { phase = 0 })
+                    SecondaryButton(L10n.t("booking.back_edit"), onClick = { phase = 0 })
                 }
                 else -> {
                     val b = booking
@@ -217,25 +218,25 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         LoadingBlock()
                     } else {
                         val color = bookingStatusColor(b.status)
-                        SectionTitle("订单状态")
+                        SectionTitle(L10n.t("booking.order_status"))
                         JoyCard {
                             Text(bookingStatusText(b.status), style = MaterialTheme.typography.titleMedium, color = color, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(6.dp))
                             Row {
                                 Badge(b.sourceEnvironment, color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
                                 Spacer(Modifier.width(6.dp))
-                                Badge("模拟交易 · 无真实扣款", color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
+                                Badge(L10n.t("booking.sim_no_charge"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
                             }
                             Spacer(Modifier.height(8.dp))
                             b.orders.forEach { o ->
                                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                    Text("第 ${o.legNo} 段订单", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                    Text(L10n.t("booking.leg_order", o.legNo), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     Text(o.status, style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
-                                    Text(o.orderNoLast4?.let { " · 尾号 $it" } ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+                                    Text(o.orderNoLast4?.let { L10n.t("booking.leg_last4", it) } ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
                                 }
                             }
                             if (b.expiresAt != null) {
-                                Text("支付窗口至 ${fmtDateTime(b.expiresAt!!)}", style = MaterialTheme.typography.labelSmall, color = BrandAccent)
+                                Text(L10n.t("trips.pay_window", fmtDateTime(b.expiresAt!!)), style = MaterialTheme.typography.labelSmall, color = BrandAccent)
                             }
                         }
                         Spacer(Modifier.height(16.dp))
@@ -243,7 +244,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         when (b.status) {
                             "PAYMENT_PENDING" -> {
                                 PrimaryButton(
-                                    text = "模拟支付两段订单",
+                                    text = L10n.t("booking.mock_pay"),
                                     loading = loading,
                                     onClick = {
                                         loading = true
@@ -260,13 +261,13 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                     },
                                 )
                                 Spacer(Modifier.height(10.dp))
-                                Text("支付结果不明确时不会自动重试，仅通过查询订单状态确认。", style = MaterialTheme.typography.labelSmall)
+                                Text(L10n.t("booking.no_auto_retry"), style = MaterialTheme.typography.labelSmall)
                             }
                             "PARTIAL_ORDER" -> {
-                                InfoBanner("已触发双订单补偿：第一段订单保留并转入人工处理；本演示可用“模拟退款”收尾。")
+                                InfoBanner(L10n.t("booking.partial_banner"))
                                 Spacer(Modifier.height(10.dp))
                                 SecondaryButton(
-                                    text = if (loading) "处理中…" else "模拟退款（无真实资金交易）",
+                                    text = if (loading) L10n.t("common.processing") else L10n.t("booking.mock_refund"),
                                     enabled = !loading,
                                     onClick = {
                                         loading = true
@@ -281,10 +282,10 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                 )
                             }
                             "COMPLETED" -> {
-                                InfoBanner("两段均已模拟支付完成！感谢体验，可用“模拟退款”结束演示。")
+                                InfoBanner(L10n.t("booking.completed_banner"))
                                 Spacer(Modifier.height(10.dp))
                                 SecondaryButton(
-                                    text = if (loading) "处理中…" else "模拟退款（无真实资金交易）",
+                                    text = if (loading) L10n.t("common.processing") else L10n.t("booking.mock_refund"),
                                     enabled = !loading,
                                     onClick = {
                                         loading = true
@@ -299,10 +300,10 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                 )
                             }
                             "SIMULATED_REFUNDED", "SIMULATED_REFUND_PENDING" -> {
-                                InfoBanner("模拟退款流程已完成/进行中：没有发生真实资金交易。")
+                                InfoBanner(L10n.t("booking.refunded_banner"))
                             }
                             else -> {
-                                SecondaryButton("刷新状态", onClick = { scope.launch { refreshBooking(b.bookingId) } })
+                                SecondaryButton(L10n.t("common.refresh"), onClick = { scope.launch { refreshBooking(b.bookingId) } })
                             }
                         }
                         Spacer(Modifier.height(24.dp))
@@ -318,11 +319,11 @@ private fun RiskCheckItem(checked: Boolean, onChecked: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.Top) {
         Checkbox(checked, onChecked, colors = CheckboxDefaults.colors(checkedColor = BrandPrimary))
         Column {
-            Text("我了解以下风险并确认继续", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text("· 两段航程为分开出票，误机不互赔", style = MaterialTheme.typography.bodySmall)
-            Text("· 行李可能需要重新托运", style = MaterialTheme.typography.bodySmall)
-            Text("· 报价来自 Atlas Sandbox 模拟环境，不会产生真实出票或扣款", style = MaterialTheme.typography.bodySmall)
-            Text("· 价格可能在验价时变化，变化时将停止并重新确认", style = MaterialTheme.typography.bodySmall)
+            Text(L10n.t("booking.risk_ack"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(L10n.t("booking.risk1"), style = MaterialTheme.typography.bodySmall)
+            Text(L10n.t("booking.risk2"), style = MaterialTheme.typography.bodySmall)
+            Text(L10n.t("booking.risk3"), style = MaterialTheme.typography.bodySmall)
+            Text(L10n.t("booking.risk4"), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

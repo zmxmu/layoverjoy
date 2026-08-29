@@ -48,6 +48,8 @@ import com.yuanhe.layoverjoy.ui.fmtPrice
 import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
+import com.yuanhe.layoverjoy.ui.i18n.AppLanguage
+import com.yuanhe.layoverjoy.ui.i18n.L10n
 import kotlinx.coroutines.launch
 
 /** 监控设置：“什么时候通知我”——目标票价到达时邮件 + App 通知。 */
@@ -56,7 +58,10 @@ import kotlinx.coroutines.launch
 fun MonitorSetupScreen(nav: NavController, planId: String) {
     val scope = rememberCoroutineScope()
     var planLoaded by remember { mutableStateOf(false) }
-    var routeText by remember { mutableStateOf("") }
+    var cityZh by remember { mutableStateOf("") }
+    var cityEn by remember { mutableStateOf("") }
+    var stayDays by remember { mutableStateOf(0) }
+    var joyScore by remember { mutableStateOf(0) }
     var currency by remember { mutableStateOf("SGD") }
     var currentTotal by remember { mutableStateOf(0.0) }
     var target by remember { mutableStateOf("") }
@@ -70,7 +75,10 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
         when (val r = apiCall { Net.api.planDetail(planId) }) {
             is ApiResult.Ok -> {
                 val d = r.data
-                routeText = "${d.stopoverCity?.cityNameZh ?: ""} 停留 ${d.stayDays} 天 · JoyScore ${d.joyScore}"
+                cityZh = d.stopoverCity?.cityNameZh ?: ""
+                cityEn = d.stopoverCity?.cityNameEn ?: ""
+                stayDays = d.stayDays
+                joyScore = d.joyScore
                 currency = d.currency
                 currentTotal = d.airfareTotal
                 target = "%.0f".format(d.airfareTotal * 0.95)
@@ -82,7 +90,7 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("设置价格监控") },
+            title = { Text(L10n.t("monitor.title")) },
             navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = BrandBackground),
         )
@@ -94,17 +102,18 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
                 Spacer(Modifier.height(8.dp))
                 JoyCard {
-                    Text(routeText, style = MaterialTheme.typography.titleSmall)
+                    val cityName = if (L10n.current == AppLanguage.EN) cityEn.ifBlank { cityZh } else cityZh.ifBlank { cityEn }
+                    Text(L10n.t("monitor.route", cityName, stayDays, joyScore), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
-                    Text("当前两段合计 ${fmtPrice(currentTotal, currency)}（模拟报价）", style = MaterialTheme.typography.labelSmall)
+                    Text(L10n.t("monitor.current_total", fmtPrice(currentTotal, currency)), style = MaterialTheme.typography.labelSmall)
                 }
                 Spacer(Modifier.height(12.dp))
 
                 JoyCard {
-                    Text("什么时候通知我", style = MaterialTheme.typography.titleSmall)
+                    Text(L10n.t("monitor.when_notify"), style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(12.dp))
                     LabeledField(
-                        "目标票价（两段合计，$currency）",
+                        L10n.t("monitor.target_label", currency),
                         target,
                         { target = it.filter { c -> c.isDigit() || c == '.' } },
                         placeholder = "%.0f".format(currentTotal * 0.95),
@@ -113,33 +122,33 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
                     Spacer(Modifier.height(14.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("App 通知", style = MaterialTheme.typography.bodyMedium)
-                            Text("打开应用时可查看", style = MaterialTheme.typography.labelSmall)
+                            Text(L10n.t("monitor.app_notify"), style = MaterialTheme.typography.bodyMedium)
+                            Text(L10n.t("monitor.app_notify_sub"), style = MaterialTheme.typography.labelSmall)
                         }
                         Switch(notifyApp, { notifyApp = it }, colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary))
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("邮件通知", style = MaterialTheme.typography.bodyMedium)
-                            Text("发送到你的注册邮箱", style = MaterialTheme.typography.labelSmall)
+                            Text(L10n.t("monitor.email_notify"), style = MaterialTheme.typography.bodyMedium)
+                            Text(L10n.t("monitor.email_notify_sub"), style = MaterialTheme.typography.labelSmall)
                         }
                         Switch(notifyEmail, { notifyEmail = it }, colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary))
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                InfoBanner("后台每 5 分钟例行检查一次；价格到达目标时才会通知。报价来自 Atlas Sandbox，不会产生真实出票。")
+                InfoBanner(L10n.t("monitor.note"))
                 Spacer(Modifier.height(16.dp))
                 ErrorBanner(error)
                 if (error != null) Spacer(Modifier.height(10.dp))
 
                 if (success) {
-                    InfoBanner("监控已创建！可在「行程」页查看检查状态。")
+                    InfoBanner(L10n.t("monitor.created"))
                     Spacer(Modifier.height(12.dp))
-                    PrimaryButton("返回", onClick = { nav.popBackStack() })
+                    PrimaryButton(L10n.t("common.back"), onClick = { nav.popBackStack() })
                 } else {
                     PrimaryButton(
-                        text = "创建监控",
+                        text = L10n.t("monitor.create"),
                         loading = loading,
                         enabled = target.toDoubleOrNull() != null,
                         onClick = {

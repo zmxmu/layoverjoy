@@ -26,6 +26,8 @@ const projectRoot = resolve(here, '../..');            // project/
 const repoRoot = resolve(projectRoot, '..');            // 仓库根
 const secretsPath = resolve(repoRoot, '.secrets/layoverjoy.env');
 const WORKDIR = '/workspace/layoverjoy';
+// 早期命令（目录尚未创建）不指定 cwd：cwd 目录不存在会导致 Agent 起 shell 失败（报 fork/exec 类错误）
+const DEFAULT_CWD: string | undefined = undefined;
 const BACKEND = `${WORKDIR}/backend`;
 const SANDBOX_NAME = 'layoverjoy-demo';
 const DB_USER = 'layoverjoy';
@@ -47,12 +49,40 @@ function loadSecrets(): Record<string, string> {
   return env;
 }
 
-async function run(sandbox: any, cmd: string, timeout = 300, cwd = WORKDIR): Promise<string> {
-  const r = await sandbox.process.executeCommand(cmd, cwd, {}, timeout);
-  if (r.exitCode !== 0) {
-    throw new Error(`命令失败(${r.exitCode})：${cmd}\n${r.result ?? ''}`);
+async function execOnce(sandbox: any, cmd: string, cwd: string | undefined, timeout: number) {
+  return sandbox.process.executeCommand(cmd, cwd, {}, timeout);
+}
+
+/** 带瞬时失败重试的命令执行（Agent 刚启动/平台抖动时会出现 fork/exec /usr/bin/zsh 报错）。 */
+async function run(sandbox: any, cmd: string, timeout = 300, cwd: string | undefined = DEFAULT_CWD): Promise<string> {
+  let lastErr: any = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    let r: any = null;
+    try {
+      r = await execOnce(sandbox, cmd, cwd, timeout);
+    } catch (e: any) {
+      lastErr = e;
+      const msg = String(e?.message ?? e);
+      if (attempt < 5 && /fork\/exec|not ready|unavailable|ECONN|timeout/i.test(msg)) {
+        console.log(`  ⚠️ 命令瞬时失败，重试 ${attempt}/5：${msg.slice(0, 100)}`);
+        await new Promise((s) => setTimeout(s, 5000));
+        continue;
+      }
+      throw e;
+    }
+    if (r.exitCode !== 0) {
+      const out = r.result ?? '';
+      // exitCode -1 且 shell 缺失类报错 → Agent 尚未就绪，重试
+      if (attempt < 5 && r.exitCode === -1 && /fork\/exec|no such file/i.test(out)) {
+        console.log(`  ⚠️ Agent 未就绪（${out.slice(0, 80)}），重试 ${attempt}/5…`);
+        await new Promise((s) => setTimeout(s, 5000));
+        continue;
+      }
+      throw new Error(`命令失败(${r.exitCode})：${cmd}\n${out}`);
+    }
+    return r.result ?? '';
   }
-  return r.result ?? '';
+  throw new Error(`命令重试 5 次仍失败：${cmd}\n${lastErr?.message ?? ''}`);
 }
 
 async function main() {
@@ -69,7 +99,10 @@ async function main() {
   if (reuseId) {
     console.log(`[1/7] 复用已有 Sandbox ${reuseId}`);
     sandbox = await daytona.get(reuseId);
-    await daytona.start(sandbox).catch(() => console.log('  （Sandbox 已在运行）'));
+    // 已处于 started 时不再调用 start（避免平台重启导致 Agent 短暂不可用）
+    if ((sandbox as any).state !== 'started') {
+      await daytona.start(sandbox).catch(() => console.log('  （Sandbox 已在运行）'));
+    }
   } else {
     console.log(`[1/7] 创建 demo Sandbox（${SANDBOX_NAME}，默认 Snapshot）`);
     // 先找同名已停止的，避免重复创建
@@ -82,7 +115,9 @@ async function main() {
     if (found) {
       console.log(`  复用同名 Sandbox ${found.id}`);
       sandbox = found;
-      await daytona.start(sandbox).catch(() => {});
+      if ((sandbox as any).state !== 'started') {
+        await daytona.start(sandbox).catch(() => {});
+      }
     } else {
       sandbox = await daytona.create(
         { name: SANDBOX_NAME, autoStopInterval: 240 },
@@ -92,12 +127,13 @@ async function main() {
   }
   console.log(`  Sandbox: ${sandbox.id}`);
 
-  // 1.5) 等待 Sandbox Agent 就绪（刚创建时 exec shell 可能尚未可用）
+  // 1.5) 等待 Sandbox Agent 就绪（刚创建/刚启动时 exec shell 可能尚未可用）
   let ready = false;
   for (let i = 0; i < 20; i++) {
-    const r = await sandbox.process.executeCommand('echo ready', undefined, {}, 30).catch(() => null);
-    if (r && r.exitCode === 0 && (r.result ?? '').includes('ready')) { ready = true; break; }
-    console.log(`  等待 Agent 就绪 (${i + 1}/20)…`);
+    const r = await execOnce(sandbox, 'echo ready', undefined, 30).catch(() => null);
+    const out = r?.result ?? '';
+    if (r && r.exitCode === 0 && out.includes('ready')) { ready = true; break; }
+    console.log(`  等待 Agent 就绪 (${i + 1}/20)… ${String(out).slice(0, 60)}`);
     await new Promise((s) => setTimeout(s, 5000));
   }
   if (!ready) throw new Error('Sandbox Agent 未在 100 秒内就绪，请删除该 Sandbox 后重试');
@@ -193,13 +229,13 @@ async function main() {
   for (let i = 0; i < 30; i++) {
     const r = await sandbox.process.executeCommand(
       'wget -qO- http://127.0.0.1:8080/v1/health 2>/dev/null || curl -fs http://127.0.0.1:8080/v1/health 2>/dev/null || true',
-      WORKDIR, {}, 30,
+      DEFAULT_CWD, {}, 30,
     );
     if ((r.result ?? '').includes('"status"')) { healthy = true; break; }
     await new Promise((s) => setTimeout(s, 5000));
   }
   if (!healthy) {
-    const log = await sandbox.process.executeCommand('tail -n 40 /tmp/api.log', WORKDIR, {}, 30);
+    const log = await sandbox.process.executeCommand('tail -n 40 /tmp/api.log', DEFAULT_CWD, {}, 30);
     throw new Error(`API 未在 150 秒内就绪。/tmp/api.log 末尾：\n${log.result ?? ''}`);
   }
 

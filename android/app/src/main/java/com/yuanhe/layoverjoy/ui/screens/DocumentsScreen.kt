@@ -50,10 +50,12 @@ import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
+import com.yuanhe.layoverjoy.ui.i18n.L10n
 import kotlinx.coroutines.launch
 
-private val PASSPORT_TYPES = listOf("ORDINARY" to "普通", "DIPLOMATIC" to "外交", "OFFICIAL" to "公务")
-private val VISA_TYPES = listOf("TOURIST" to "旅游", "BUSINESS" to "商务", "TRANSIT" to "过境")
+/** 护照类型：code 传后端，label 走 i18n。 */
+private val PASSPORT_TYPES = listOf("ORDINARY" to "docs.pt.ordinary", "DIPLOMATIC" to "docs.pt.diplomatic", "OFFICIAL" to "docs.pt.official")
+private val VISA_TYPES = listOf("TOURIST" to "docs.vt.tourist", "BUSINESS" to "docs.vt.business", "TRANSIT" to "docs.vt.transit")
 
 /** 证件钱包：只保存签发国家、类型与有效期；无号码、无照片。 */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -77,23 +79,23 @@ fun DocumentsScreen(nav: NavController) {
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("旅行证件钱包") },
+            title = { Text(L10n.t("docs.title")) },
             navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = BrandBackground),
         )
 
         LazyColumn(Modifier.weight(1f).padding(horizontal = 20.dp)) {
             item {
-                InfoBanner("我们只记录用于入境资格判断的最小信息：签发国家、证件/签证类型与有效期。不会索要证件号码、姓名或照片。")
+                InfoBanner(L10n.t("docs.banner"))
                 Spacer(Modifier.height(10.dp))
                 ErrorBanner(error)
             }
 
             val list = docs
             if (list == null) {
-                item { EmptyBlock("加载中…") }
+                item { EmptyBlock(L10n.t("common.loading")) }
             } else {
-                if (list.isEmpty()) item { EmptyBlock("钱包是空的。添加一本护照后，Agent 才能核对入境资格。") }
+                if (list.isEmpty()) item { EmptyBlock(L10n.t("docs.empty")) }
                 items(list, key = { it.id }) { d ->
                     DocumentCard(d, onDelete = {
                         scope.launch {
@@ -108,10 +110,10 @@ fun DocumentsScreen(nav: NavController) {
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TextButton(onClick = { showAddPassport = !showAddPassport; showAddVisa = false }) {
-                        Text("+ 护照", color = BrandPrimary, fontWeight = FontWeight.SemiBold)
+                        Text(L10n.t("docs.add_passport"), color = BrandPrimary, fontWeight = FontWeight.SemiBold)
                     }
                     TextButton(onClick = { showAddVisa = !showAddVisa; showAddPassport = false }) {
-                        Text("+ 签证", color = BrandPrimary, fontWeight = FontWeight.SemiBold)
+                        Text(L10n.t("docs.add_visa"), color = BrandPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -132,25 +134,25 @@ private fun DocumentCard(d: DocumentDto, onDelete: () -> Unit) {
     JoyCard(Modifier.padding(vertical = 5.dp)) {
         Row(Modifier.fillMaxWidth()) {
             Text(
-                if (d.kind == "PASSPORT") "护照 · ${d.countryCode}" else "签证 · ${d.countryCode}",
+                if (d.kind == "PASSPORT") L10n.t("docs.passport_of", d.countryCode) else L10n.t("docs.visa_of", d.countryCode),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onDelete) { Text("删除", color = BrandDanger) }
+            TextButton(onClick = onDelete) { Text(L10n.t("common.delete"), color = BrandDanger) }
         }
         Text(
             buildString {
-                d.passportType?.let { append("类型 $it · ") }
-                d.visaType?.let { append("签证类别 $it · ") }
-                append("有效期至 ${d.expiresOn?.let { fmtDate(it) } ?: "未填写"}")
+                d.passportType?.let { append(L10n.t("docs.type_prefix", it)) }
+                d.visaType?.let { append(L10n.t("docs.visa_type_prefix", it)) }
+                append(L10n.t("docs.expiry_prefix", d.expiresOn?.let { fmtDate(it) } ?: L10n.t("docs.expiry_na")))
             },
             style = MaterialTheme.typography.bodySmall,
             color = BrandInkSoft,
         )
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Badge(if (d.status == "ACTIVE") "有效" else d.status, color = if (d.status == "ACTIVE") BrandPrimary else BrandDanger, bg = if (d.status == "ACTIVE") BrandPrimary.copy(alpha = 0.1f) else BrandDanger.copy(alpha = 0.08f))
-            if (d.isPrimary) Badge("主护照", color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
+            Badge(if (d.status == "ACTIVE") L10n.t("docs.active") else d.status, color = if (d.status == "ACTIVE") BrandPrimary else BrandDanger, bg = if (d.status == "ACTIVE") BrandPrimary.copy(alpha = 0.1f) else BrandDanger.copy(alpha = 0.08f))
+            if (d.isPrimary) Badge(L10n.t("docs.primary"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
         }
     }
 }
@@ -166,23 +168,23 @@ private fun AddPassportForm(onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
 
     JoyCard(Modifier.padding(vertical = 8.dp)) {
-        Text("添加护照", style = MaterialTheme.typography.titleSmall)
+        Text(L10n.t("docs.passport_form_title"), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(10.dp))
-        LabeledField("签发国家（ISO 代码）", country, { country = it.uppercase().take(2) }, placeholder = "CN")
+        LabeledField(L10n.t("docs.country_label"), country, { country = it.uppercase().take(2) }, placeholder = "CN")
         Spacer(Modifier.height(10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PASSPORT_TYPES.forEach { (code, label) ->
+            PASSPORT_TYPES.forEach { (code, key) ->
                 TextButton(onClick = { type = code }) {
-                    Text(label, color = if (type == code) BrandPrimary else BrandInkSoft, fontWeight = if (type == code) FontWeight.Bold else FontWeight.Normal)
+                    Text(L10n.t(key), color = if (type == code) BrandPrimary else BrandInkSoft, fontWeight = if (type == code) FontWeight.Bold else FontWeight.Normal)
                 }
             }
         }
-        LabeledField("有效期至（YYYY-MM-DD）", expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
+        LabeledField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
         Spacer(Modifier.height(8.dp))
         ErrorBanner(err)
         Spacer(Modifier.height(8.dp))
         PrimaryButton(
-            text = "保存护照",
+            text = L10n.t("docs.save_passport"),
             loading = busy,
             enabled = country.length == 2 && expiry.matches(Regex("\\d{4}-\\d{2}-\\d{2}")),
             onClick = {
@@ -211,23 +213,23 @@ private fun AddVisaForm(onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
 
     JoyCard(Modifier.padding(vertical = 8.dp)) {
-        Text("添加签证", style = MaterialTheme.typography.titleSmall)
+        Text(L10n.t("docs.visa_form_title"), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(10.dp))
-        LabeledField("签证国家（ISO 代码）", country, { country = it.uppercase().take(2) }, placeholder = "MY")
+        LabeledField(L10n.t("docs.visa_country_label"), country, { country = it.uppercase().take(2) }, placeholder = "MY")
         Spacer(Modifier.height(10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            VISA_TYPES.forEach { (code, label) ->
+            VISA_TYPES.forEach { (code, key) ->
                 TextButton(onClick = { type = code }) {
-                    Text(label, color = if (type == code) BrandPrimary else BrandInkSoft, fontWeight = if (type == code) FontWeight.Bold else FontWeight.Normal)
+                    Text(L10n.t(key), color = if (type == code) BrandPrimary else BrandInkSoft, fontWeight = if (type == code) FontWeight.Bold else FontWeight.Normal)
                 }
             }
         }
-        LabeledField("有效期至（YYYY-MM-DD）", expiry, { expiry = it.trim() }, placeholder = "2027-06-30")
+        LabeledField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2027-06-30")
         Spacer(Modifier.height(8.dp))
         ErrorBanner(err)
         Spacer(Modifier.height(8.dp))
         PrimaryButton(
-            text = "保存签证",
+            text = L10n.t("docs.save_visa"),
             loading = busy,
             enabled = country.length == 2 && expiry.matches(Regex("\\d{4}-\\d{2}-\\d{2}")),
             onClick = {
