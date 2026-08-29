@@ -273,6 +273,13 @@ async function main() {
     1500,
     BACKEND,
   );
+  // 运行时 PrismaClient 只按固定文件名在 .prisma/client 目录查找（不读覆盖环境变量），显式拷贝兜底：
+  await run(
+    sandbox,
+    `cp ${QUERY_ENGINE_REMOTE} node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node && echo ENGINE_COPIED`,
+    60,
+    BACKEND,
+  );
 
   // 运行时 .env（密钥 + 覆盖项；后置覆盖生效）
   const envLines = [
@@ -296,10 +303,10 @@ async function main() {
   // 6) 同步 schema + 种子，启动 api 与 worker
   console.log('[6/7] prisma db push + seed，启动 api 与 worker…');
   await run(sandbox, `set -a; . ./.env; set +a; PUSH_OK=; for i in 1 2 3; do ${ENGINE_ENV} npx prisma db push --skip-generate >>/tmp/dbpush.log 2>&1 && PUSH_OK=1 && echo PUSH_OK && break; sleep 5; done; [ -n "$PUSH_OK" ] || exit 1`, 1500, BACKEND);
-  // 硬性校验：db push 后目标库（-d layoverjoy，此前误连默认 postgres 库导致永远为 0）必须有表
+  // 硬性校验：目标库必须有表（-d 指定；current_schema() 避免引号被 executeCommand 外层剥掉）
   await run(
     sandbox,
-    `N=$(sudo -u postgres psql -d ${DB_NAME} -tAc 'select count(*) from information_schema.tables where table_schema=''public'''); echo TABLE_COUNT=$N; [ "$N" -gt 0 ] && echo TABLES_OK`,
+    `N=$(sudo -u postgres psql -d ${DB_NAME} -tAc "select count(*) from pg_catalog.pg_tables where schemaname=current_schema()"); echo TABLE_COUNT=$N; [ "$N" -gt 0 ] && echo TABLES_OK`,
     60,
   );
   await run(sandbox, 'set -a; . ./.env; set +a; node dist/seed.js >>/tmp/seed.log 2>&1 && echo SEED_OK', 300, BACKEND);
