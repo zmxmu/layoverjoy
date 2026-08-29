@@ -11,6 +11,9 @@ export type ExplanationFallbackReason =
 
 export interface ExplanationRequest {
   cityNameZh: string;
+  cityNameEn?: string;
+  /** 输出语言：zh 简体 / en English；缺省 zh。 */
+  lang?: 'zh' | 'en';
   stayDays: number;
   usableHours: number;
   airfareDelta: number;
@@ -28,6 +31,8 @@ export interface ExplanationResult {
   deploymentIdTail?: string;
   latencyMs?: number;
   generatedAt?: string;
+  /** 生成时使用的语言，供缓存按语言失效。 */
+  lang?: 'zh' | 'en';
   /** TEMPLATE 时的降级原因分类，诚实展示而非伪装成 Nosana。 */
   fallbackReason?: ExplanationFallbackReason;
   summary: string;
@@ -51,9 +56,34 @@ export class NosanaService {
   static lastInferenceSucceededAt: string | null = null;
   static lastErrorCategory: string | null = null;
 
-  /** 模板降级解释：不调用任何外部服务。 */
+  /** 模板降级解释：不调用任何外部服务；按请求语言输出。 */
   templateExplanation(req: ExplanationRequest, reason?: ExplanationFallbackReason): ExplanationResult {
+    const lang = req.lang ?? 'zh';
     const days = req.usableHours / 24;
+    if (lang === 'en') {
+      const city = req.cityNameEn?.trim() || req.cityNameZh;
+      const deltaText =
+        req.airfareDelta > 0
+          ? `costs about ${req.airfareDelta} ${req.currency} more than a direct flight`
+          : req.airfareDelta < 0
+            ? `saves about ${Math.abs(req.airfareDelta)} ${req.currency} versus a direct flight`
+            : 'is priced on par with a direct flight';
+      return {
+        provider: 'TEMPLATE',
+        fallbackReason: reason,
+        lang,
+        generatedAt: new Date().toISOString(),
+        summary: `A ${req.stayDays}-day stopover in ${city} gives you roughly ${days.toFixed(1)} usable days and ${deltaText}.`,
+        highlights: [
+          `${req.stayDays} days turn a connection into a real mini-trip`,
+          `JoyScore ${req.joyScore}: price, playtime, comfort and risk combined`,
+        ],
+        tips: [
+          'Two separate tickets: allow ample connection time and re-check bags',
+          'Re-check official entry rules before booking',
+        ],
+      };
+    }
     const deltaText =
       req.airfareDelta > 0
         ? `相比直飞多花约 ${req.airfareDelta} ${req.currency}`
@@ -63,6 +93,7 @@ export class NosanaService {
     return {
       provider: 'TEMPLATE',
       fallbackReason: reason,
+      lang,
       generatedAt: new Date().toISOString(),
       summary: `在${req.cityNameZh}停留 ${req.stayDays} 天，大约有 ${days.toFixed(1)} 天有效游玩时间，${deltaText}。`,
       highlights: [
@@ -90,75 +121,95 @@ export class NosanaService {
     const apiKey = isMaskedSecret(env.NOSANA_API_KEY) ? '' : env.NOSANA_API_KEY;
     const deploymentTail = env.NOSANA_DEPLOYMENT_ID ? env.NOSANA_DEPLOYMENT_ID.slice(-8) : undefined;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), env.NOSANA_TIMEOUT_MS);
     const startedAt = Date.now();
-    try {
-      const systemPrompt = [
-        '你是 LayoverJoy 的旅行体验解说员。只解释已给出的结构化方案，不生成新的航班、价格、签证结论或订单状态。',
-        '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
-        '语言：简体中文；summary 不超过 80 字；highlights 2-3 条；tips 1-3 条。',
-      ].join('\n');
-      const userPrompt = JSON.stringify({
-        city: req.cityNameZh,
-        stayDays: req.stayDays,
-        usableHours: req.usableHours,
-        airfareDelta: req.airfareDelta,
-        currency: req.currency,
-        joyScore: req.joyScore,
-        joyScoreBreakdown: req.joyScoreBreakdown,
-        riskFlags: req.riskFlags,
-        interests: req.interests,
-      });
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-      const res = await fetch(`${env.NOSANA_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        signal: controller.signal,
-        headers,
-        body: JSON.stringify({
-          model: env.NOSANA_MODEL,
-          stream: false,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-        }),
-      });
-      if (!res.ok) {
-        NosanaService.lastErrorCategory = `HTTP_${res.status}`;
-        this.logger.warn(`Nosana HTTP ${res.status}; falling back to template explanation`);
-        return this.templateExplanation(req, 'HTTP_ERROR');
+    const deadline = startedAt + env.NOSANA_TIMEOUT_MS;
+    const lang = req.lang ?? 'zh';
+    const systemPrompt =
+      lang === 'en'
+        ? [
+            'You are the LayoverJoy travel experience narrator. Only explain the structured plan provided; never invent flights, prices, visa conclusions or order status.',
+            'Output MUST be valid JSON: {"summary": string, "highlights": string[], "tips": string[]}',
+            'Language: English; summary within 60 words; highlights 2-3; tips 1-3.',
+          ].join('\n')
+        : [
+            '你是 LayoverJoy 的旅行体验解说员。只解释已给出的结构化方案，不生成新的航班、价格、签证结论或订单状态。',
+            '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
+            '语言：简体中文；summary 不超过 80 字；highlights 2-3 条；tips 1-3 条。',
+          ].join('\n');
+    const userPrompt = JSON.stringify({
+      city: lang === 'en' ? (req.cityNameEn?.trim() || req.cityNameZh) : req.cityNameZh,
+      stayDays: req.stayDays,
+      usableHours: req.usableHours,
+      airfareDelta: req.airfareDelta,
+      currency: req.currency,
+      joyScore: req.joyScore,
+      joyScoreBreakdown: req.joyScoreBreakdown,
+      riskFlags: req.riskFlags,
+      interests: req.interests,
+    });
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    // 09 文档约定：推理失败最多重试一次（仅解析/网络类错误重试；超时与 HTTP 错误直接降级），再失败降级模板。
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const budgetMs = deadline - Date.now();
+      if (budgetMs < 5000) break;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), budgetMs);
+      try {
+        const res = await fetch(`${env.NOSANA_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers,
+          body: JSON.stringify({
+            model: env.NOSANA_MODEL,
+            stream: false,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        });
+        if (!res.ok) {
+          NosanaService.lastErrorCategory = `HTTP_${res.status}`;
+          this.logger.warn(`Nosana HTTP ${res.status}; falling back to template explanation`);
+          return this.templateExplanation(req, 'HTTP_ERROR');
+        }
+        const data: any = await res.json();
+        const content: string = data?.choices?.[0]?.message?.content ?? '';
+        const parsed = JSON.parse(content);
+        if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
+        NosanaService.lastInferenceSucceededAt = new Date().toISOString();
+        NosanaService.lastErrorCategory = null;
+        return {
+          provider: 'NOSANA',
+          modelId: data?.model || env.NOSANA_MODEL,
+          deploymentIdTail: deploymentTail,
+          latencyMs: Date.now() - startedAt,
+          generatedAt: new Date().toISOString(),
+          lang,
+          summary: parsed.summary,
+          highlights: Array.isArray(parsed.highlights) ? parsed.highlights.slice(0, 4) : [],
+          tips: Array.isArray(parsed.tips) ? parsed.tips.slice(0, 4) : [],
+        };
+      } catch (e) {
+        const aborted = (e as Error).name === 'AbortError';
+        const reason: ExplanationFallbackReason = aborted
+          ? 'TIMEOUT'
+          : e instanceof SyntaxError
+            ? 'PARSE_ERROR'
+            : 'NETWORK_ERROR';
+        NosanaService.lastErrorCategory = reason;
+        if (aborted || attempt === 2) {
+          this.logger.warn(`Nosana call failed (${(e as Error).message}); falling back to template explanation`);
+          return this.templateExplanation(req, reason);
+        }
+        this.logger.warn(`Nosana attempt ${attempt} failed (${(e as Error).message}); retrying once`);
+      } finally {
+        clearTimeout(timer);
       }
-      const data: any = await res.json();
-      const content: string = data?.choices?.[0]?.message?.content ?? '';
-      const parsed = JSON.parse(content);
-      if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
-      NosanaService.lastInferenceSucceededAt = new Date().toISOString();
-      NosanaService.lastErrorCategory = null;
-      return {
-        provider: 'NOSANA',
-        modelId: data?.model || env.NOSANA_MODEL,
-        deploymentIdTail: deploymentTail,
-        latencyMs: Date.now() - startedAt,
-        generatedAt: new Date().toISOString(),
-        summary: parsed.summary,
-        highlights: Array.isArray(parsed.highlights) ? parsed.highlights.slice(0, 4) : [],
-        tips: Array.isArray(parsed.tips) ? parsed.tips.slice(0, 4) : [],
-      };
-    } catch (e) {
-      const aborted = (e as Error).name === 'AbortError';
-      const reason: ExplanationFallbackReason = aborted
-        ? 'TIMEOUT'
-        : e instanceof SyntaxError
-          ? 'PARSE_ERROR'
-          : 'NETWORK_ERROR';
-      NosanaService.lastErrorCategory = reason;
-      this.logger.warn(`Nosana call failed (${(e as Error).message}); falling back to template explanation`);
-      return this.templateExplanation(req, reason);
-    } finally {
-      clearTimeout(timer);
     }
+    return this.templateExplanation(req, 'TIMEOUT');
   }
 }

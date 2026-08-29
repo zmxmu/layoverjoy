@@ -90,7 +90,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
     }
 
     LaunchedEffect(planId) {
-        when (val r = apiCall { Net.api.planDetail(planId) }) {
+        when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
             is ApiResult.Ok -> detail = r.data
             is ApiResult.Err -> error = r.message
         }

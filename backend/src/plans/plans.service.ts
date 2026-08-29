@@ -4,6 +4,11 @@ import { NosanaService } from '../explanations/nosana.service';
 import { CITY_PACKS, HUB_CATALOG } from '../airports/catalog';
 import { AppError } from '../common/errors';
 
+/** 语言参数归一化：仅接受 en，其余一律 zh。 */
+export function normLang(lang?: string): 'zh' | 'en' {
+  return lang === 'en' ? 'en' : 'zh';
+}
+
 /** 方案详情与解释服务。解释结果落库为不可变快照。 */
 @Injectable()
 export class PlansService {
@@ -18,7 +23,7 @@ export class PlansService {
     return c ? { cityId: c.cityId, cityNameZh: c.cityNameZh, cityNameEn: c.cityNameEn, countryCode: c.countryCode } : null;
   }
 
-  async getPlan(userId: string, planId: string) {
+  async getPlan(userId: string, planId: string, lang: 'zh' | 'en' = 'zh') {
     const plan = await this.prisma.stopoverPlan.findFirst({
       where: { id: planId, searchRun: { userId } },
     });
@@ -81,7 +86,13 @@ export class PlansService {
           }
         : null,
       cityPack: pack
-        ? { attractions: pack.attractions, areas: pack.areas, tips: pack.tips, airportToCityZh: pack.airportToCityZh, suggestedDays: pack.suggestedDays }
+        ? {
+            attractions: lang === 'en' ? pack.attractionsEn : pack.attractions,
+            areas: lang === 'en' ? pack.areasEn : pack.areas,
+            tips: lang === 'en' ? pack.tipsEn : pack.tips,
+            airportToCity: lang === 'en' ? pack.airportToCityEn : pack.airportToCityZh,
+            suggestedDays: pack.suggestedDays,
+          }
         : null,
       explanation: explanation
         ? { provider: explanation.provider, modelId: explanation.modelId, payload: explanation.payloadJson }
@@ -89,15 +100,15 @@ export class PlansService {
     };
   }
 
-  /** 生成并保存解释。Nosana 失败时自动降级为模板解释。 */
-  async explain(userId: string, planId: string) {
+  /** 生成并保存解释。Nosana 失败时自动降级为模板解释；缓存按语言失效。 */
+  async explain(userId: string, planId: string, lang: 'zh' | 'en' = 'zh') {
     const plan = await this.prisma.stopoverPlan.findFirst({
       where: { id: planId, searchRun: { userId } },
     });
     if (!plan) throw AppError.notFound('方案');
 
     const existing = await this.prisma.planExplanation.findUnique({ where: { planId: plan.id } });
-    if (existing && existing.provider === 'NOSANA') {
+    if (existing && existing.provider === 'NOSANA' && (((existing.payloadJson as any)?.lang as string) ?? 'zh') === lang) {
       return { provider: existing.provider, modelId: existing.modelId, payload: existing.payloadJson };
     }
 
@@ -106,6 +117,8 @@ export class PlansService {
     const prefs: any = run?.preferencesJson ?? {};
     const result = await this.nosana.explain({
       cityNameZh: city?.cityNameZh ?? plan.stopoverCityId ?? '中转城市',
+      cityNameEn: city?.cityNameEn,
+      lang,
       stayDays: plan.stayDays,
       usableHours: plan.usableHours,
       airfareDelta: plan.airfareDelta,

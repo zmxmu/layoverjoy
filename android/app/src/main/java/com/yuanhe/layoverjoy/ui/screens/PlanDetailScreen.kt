@@ -83,13 +83,24 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
     var explaining by remember { mutableStateOf(false) }
 
     suspend fun load() {
-        when (val r = apiCall { Net.api.planDetail(planId) }) {
-            is ApiResult.Ok -> detail = r.data
+        when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
+            is ApiResult.Ok -> {
+                detail = r.data
+                // 解释快照语言与当前 UI 语言不一致（切换语言/旧缓存）时按当前语言重新生成
+                val p = r.data.explanation?.payload
+                if (p != null && (p.lang ?: "zh") != L10n.current.tag) {
+                    apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
+                    when (val r2 = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
+                        is ApiResult.Ok -> detail = r2.data
+                        is ApiResult.Err -> {}
+                    }
+                }
+            }
             is ApiResult.Err -> error = r.message
         }
     }
 
-    LaunchedEffect(planId) { load() }
+    LaunchedEffect(planId, L10n.current) { load() }
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -197,7 +208,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                             onClick = {
                                 explaining = true
                                 scope.launch {
-                                    apiCall { Net.api.createExplanation(planId) }
+                                    apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
                                     load()
                                     explaining = false
                                 }
@@ -216,7 +227,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                     }
                     item {
                         JoyCard {
-                            Text(d.cityPack!!.airportToCityZh, style = MaterialTheme.typography.bodySmall, color = BrandPrimary)
+                            Text(d.cityPack!!.airportToCity, style = MaterialTheme.typography.bodySmall, color = BrandPrimary)
                             Spacer(Modifier.height(8.dp))
                             Text(L10n.t("detail.attractions"), style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
                             Text(d.cityPack!!.attractions.joinToString(if (L10n.current == AppLanguage.EN) ", " else "、"), style = MaterialTheme.typography.bodySmall)

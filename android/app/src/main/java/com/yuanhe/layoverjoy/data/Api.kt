@@ -135,8 +135,8 @@ interface ApiService {
     @GET("v1/searches/{id}/plans") suspend fun searchPlans(@Path("id") id: String): retrofit2.Response<PlansResponse>
 
     // 方案
-    @GET("v1/plans/{id}") suspend fun planDetail(@Path("id") id: String): retrofit2.Response<PlanDetailDto>
-    @POST("v1/plans/{id}/explanation") suspend fun createExplanation(@Path("id") id: String): retrofit2.Response<ExplanationDto>
+    @GET("v1/plans/{id}") suspend fun planDetail(@Path("id") id: String, @Query("lang") lang: String): retrofit2.Response<PlanDetailDto>
+    @POST("v1/plans/{id}/explanation") suspend fun createExplanation(@Path("id") id: String, @Query("lang") lang: String): retrofit2.Response<ExplanationDto>
 
     // 通知 / 监控
     @GET("v1/notifications") suspend fun notifications(@Query("unread") unread: String?): retrofit2.Response<NotificationsResponse>

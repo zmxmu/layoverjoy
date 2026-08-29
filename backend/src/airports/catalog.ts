@@ -89,16 +89,30 @@ export function candidateHubs(excludeCountryCodes: string[], limit = 8): CityEnt
   return picked;
 }
 
-/** 本地城市体验包（MVP 不接酒店库存，均为人工维护建议）。 */
+/** 本地城市体验包（MVP 不接酒店库存，均为人工维护建议）。中英双语，按请求语言返回。 */
 export const CITY_PACKS: Record<
   string,
-  { attractions: string[]; areas: string[]; tips: string[]; airportToCityZh: string; suggestedDays: number }
+  {
+    attractions: string[];
+    areas: string[];
+    tips: string[];
+    airportToCityZh: string;
+    attractionsEn: string[];
+    areasEn: string[];
+    tipsEn: string[];
+    airportToCityEn: string;
+    suggestedDays: number;
+  }
 > = {
   'my-kuala-lumpur': {
     attractions: ['双子塔 KLCC', '茨厂街', '黑风洞', '独立广场', '中央艺术坊'],
     areas: ['KLCC', '武吉免登', '茨厂街（唐人街）', '吉隆坡老城'],
     tips: ['多数商场营业至 22:00', '周五部分场所礼拜时段调整', '建议出行前复核营业时间'],
     airportToCityZh: 'KLIA Ekspres 机场快线约 28 分钟直达 KL Sentral',
+    attractionsEn: ['Petronas Twin Towers (KLCC)', 'Petaling Street (Chinatown)', 'Batu Caves', 'Merdeka Square', 'Central Market'],
+    areasEn: ['KLCC', 'Bukit Bintang', 'Petaling Street (Chinatown)', 'Old Kuala Lumpur'],
+    tipsEn: ['Most malls open until 22:00', 'Some venues adjust hours for Friday prayers', 'Re-check opening hours before you go'],
+    airportToCityEn: 'KLIA Ekspres takes about 28 minutes non-stop to KL Sentral',
     suggestedDays: 3,
   },
   'th-bangkok': {
@@ -106,6 +120,10 @@ export const CITY_PACKS: Record<
     areas: ['暹罗', '素坤逸', '老城区', '河畔'],
     tips: ['大皇宫需着装过膝', '高峰时段堵车明显，预留时间', '建议出行前复核营业时间'],
     airportToCityZh: '素万那普机场快线约 30 分钟到帕亚泰站',
+    attractionsEn: ['Grand Palace', 'Wat Pho', 'Siam shopping district', 'Chatuchak Weekend Market', 'Chao Phraya evening cruise'],
+    areasEn: ['Siam', 'Sukhumvit', 'Old City', 'Riverside'],
+    tipsEn: ['The Grand Palace requires attire below the knee', 'Rush-hour traffic is heavy — allow buffer time', 'Re-check opening hours before you go'],
+    airportToCityEn: 'Suvarnabhumi Airport Rail Link takes about 30 minutes to Phaya Thai',
     suggestedDays: 3,
   },
   'hk-hong-kong': {
@@ -113,6 +131,10 @@ export const CITY_PACKS: Record<
     areas: ['尖沙咀', '中环', '旺角'],
     tips: ['机场快线约 24 分钟到中环', '过境需真实续程凭证', '建议出行前复核营业时间'],
     airportToCityZh: '机场快线约 24 分钟直达中环',
+    attractionsEn: ['Victoria Harbour', 'Victoria Peak', 'Temple Street Night Market', 'Avenue of Stars'],
+    areasEn: ['Tsim Sha Tsui', 'Central', 'Mong Kok'],
+    tipsEn: ['Airport Express takes about 24 minutes to Central', 'Transit requires genuine onward proof', 'Re-check opening hours before you go'],
+    airportToCityEn: 'Airport Express takes about 24 minutes non-stop to Central',
     suggestedDays: 2,
   },
   'vn-ho-chi-minh-city': {
@@ -120,6 +142,10 @@ export const CITY_PACKS: Record<
     areas: ['第一郡', '第三郡'],
     tips: ['电子签需提前申请', '摩托车多，过街注意', '建议出行前复核营业时间'],
     airportToCityZh: '出租车约 20 分钟到第一郡',
+    attractionsEn: ['Bui Vien Walking Street', 'Reunification Palace', 'Ben Thanh Market', 'Saigon Notre-Dame Basilica'],
+    areasEn: ['District 1', 'District 3'],
+    tipsEn: ['E-visa must be applied for in advance', 'Watch for motorbikes when crossing streets', 'Re-check opening hours before you go'],
+    airportToCityEn: 'About 20 minutes by taxi to District 1',
     suggestedDays: 2,
   },
   'vn-hanoi': {
@@ -127,6 +153,10 @@ export const CITY_PACKS: Record<
     areas: ['还剑区', '巴亭区'],
     tips: ['电子签需提前申请', '纪念堂周一周五闭馆', '建议出行前复核营业时间'],
     airportToCityZh: '86 路机场巴士约 45 分钟到还剑湖',
+    attractionsEn: ['Hoan Kiem Lake', 'Old Quarter (36 Streets)', 'Ho Chi Minh Mausoleum', 'Train Street'],
+    areasEn: ['Hoan Kiem District', 'Ba Dinh District'],
+    tipsEn: ['E-visa must be applied for in advance', 'The Mausoleum is closed on Mondays and Fridays', 'Re-check opening hours before you go'],
+    airportToCityEn: 'Bus route 86 takes about 45 minutes to Hoan Kiem Lake',
     suggestedDays: 2,
   },
 };

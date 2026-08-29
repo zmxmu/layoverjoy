@@ -72,7 +72,7 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
     var success by remember { mutableStateOf(false) }
 
     LaunchedEffect(planId) {
-        when (val r = apiCall { Net.api.planDetail(planId) }) {
+        when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
             is ApiResult.Ok -> {
                 val d = r.data
                 cityZh = d.stopoverCity?.cityNameZh ?: ""

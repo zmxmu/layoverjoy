@@ -53,3 +53,21 @@
     不影响已生成方案的展示。
   - 报价无过期时间时 freshness=UNKNOWN，UI 不显示「实时」类措辞。
 - 下一任务：无（按 11 号方案 §10 停止条件，完成即止）。
+
+## NOSANA-LIVE：真实 GPU 推理接入与英文内容全英文化（2026-08-29）
+
+- 状态：DONE
+- 背景：详情页解释区此前因 `NOSANA_OPENAI_BASE_URL` 未配置而走模板降级；英文界面下城市体验包仍为中文。
+- 改动：
+  - `docker-compose.yml`：api 注入 Nosana 部署默认值（endpoint / deployment id / model，均非密凭据；可被环境变量覆盖）。
+  - `backend/src/explanations/nosana.service.ts`：解释请求支持 `lang`（zh/en，双语 prompt 与双语模板）；按 09 文档约定失败最多重试一次（仅解析/网络类错误，整体 deadline 封顶）再降级模板；结果携带 `lang` 供缓存按语言失效。
+  - `backend/src/plans/*`：`GET /v1/plans/:id` 与 `POST/GET /v1/plans/:id/explanation` 接受 `?lang=`；城市体验包按语言返回（`airportToCityZh` 键更名为 `airportToCity`）；NOSANA 缓存行语言不一致时重新生成。
+  - `backend/src/airports/catalog.ts`：5 个城市体验包补英文内容。
+  - Android：`planDetail`/`createExplanation` 透传 `L10n.current.tag`；详情页语言切换自动重载并按需重生成解释。
+- 验证：
+  - 部署 61xya…BfGw 初次实测在线但推理退化（content 空、reasoning 退化）→ 管理页重启后恢复。
+  - 真实推理实测：provider=NOSANA，model qwen3.5:9b，latency 44–49s，deployment tail Y5V9BfGw；en/zh 双语输出均实测。
+  - 间歇空内容场景：attempt 1 PARSE_ERROR → 重试；持续失败诚实降级 TEMPLATE 并标注原因。
+  - 模拟器英文详情页全英文截图：`docs/screenshots/plan-detail-nosana-en.png`（含 Nosana 归属标注）。
+- 测试：tsc EXIT 0；vitest 14/14；check-i18n 265 keys 0 缺失；Gradle BUILD SUCCESSFUL 装机验证。
+- 已知限制：Nosana 为共享 GPU 节点，冷启动/繁忙时单次推理可达 40–60s，偶发空内容；总预算 NOSANA_TIMEOUT_MS=90s，超限诚实降级模板。

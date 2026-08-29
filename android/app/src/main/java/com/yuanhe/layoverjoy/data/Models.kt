@@ -323,7 +323,8 @@ data class CityPack(
     val attractions: List<String> = emptyList(),
     val areas: List<String> = emptyList(),
     val tips: List<String> = emptyList(),
-    val airportToCityZh: String = "",
+    /** 后端按请求语言返回的机场→市区交通说明。 */
+    val airportToCity: String = "",
     val suggestedDays: Int = 0,
 )
 
@@ -340,6 +341,8 @@ data class ExplanationPayload(
     val deploymentIdTail: String? = null,
     /** TEMPLATE 时的降级原因（TIMEOUT/NETWORK_ERROR 等）。 */
     val fallbackReason: String? = null,
+    /** 生成时使用的语言（zh/en），用于语言切换后失效重生成。 */
+    val lang: String? = null,
 )
 
 /** POST /v1/plans/:id/explanation 与详情内嵌 explanation 共用。 */
