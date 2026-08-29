@@ -116,6 +116,8 @@ interface ApiService {
 
     // 我
     @GET("v1/me") suspend fun me(): retrofit2.Response<MeProfile>
+    /** 首页机会卡：只读后端已落库搜索结果。 */
+    @GET("v1/home/opportunity") suspend fun homeOpportunity(): retrofit2.Response<HomeOpportunityResponse>
     @GET("v1/me/documents") suspend fun documents(): retrofit2.Response<DocumentsResponse>
     @POST("v1/me/documents") suspend fun addDocument(@Body body: DocumentInput): retrofit2.Response<IdResponse>
     @PATCH("v1/me/documents/{id}") suspend fun updateDocument(@Path("id") id: String, @Body body: DocumentInput): retrofit2.Response<IdResponse>

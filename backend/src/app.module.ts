@@ -21,9 +21,10 @@ import { WebhookController, WebhookDebugController } from './webhooks/webhook.co
 import { PlanningJobsService } from './planning-jobs/planning-jobs.service';
 import { PlanningJobsController } from './planning-jobs/planning-jobs.controller';
 import { DaytonaRunner } from './planning-jobs/daytona.runner';
+import { HomeModule } from './home/home.module';
 
 @Module({
-  imports: [CoreModule, AuthModule, AtlasModule],
+  imports: [CoreModule, AuthModule, AtlasModule, HomeModule],
   controllers: [
     HealthController,
     AirportsController,

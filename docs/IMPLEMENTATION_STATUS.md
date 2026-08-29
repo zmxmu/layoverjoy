@@ -1,0 +1,55 @@
+# LayoverJoy — Qoder 构建记录
+
+> 维护规范：`qoder-input/04-LayoverJoy-Qoder任务执行计划.md` §2。
+> 每个 Task 记录状态、完成时间、修改文件、验收结果、测试命令与结果、已知限制。
+> 记录中不得出现任何 Key、Token、密码或真实证件信息。
+
+## HOME-P0 首页升级为 Visa-Aware 决策入口
+
+- 状态：DONE
+- 完成时间：2026-08-29T22:35:00+08:00
+- Prompt 摘要：把首页从可点击漏斗升级为 Visa-Aware 决策入口。依据
+  `qoder-input/11-LayoverJoy-首页核心产品改进执行方案.md`，只实现「我的最佳中转机会」卡：
+  后端新增只读机会接口（只读本地已落库数据，不调用外部 Provider），Android 首页新增机会卡
+  并覆盖 加载中/缺证件/空/就绪/过期/网络失败 全部状态，删除 Agent 静态动态与底部重复 CTA，
+  补齐 17 个中英双语文案 key。
+- 修改文件：
+  - `backend/src/home/home.types.ts`（新增：契约类型）
+  - `backend/src/home/home.service.ts`（新增：选择算法与状态机）
+  - `backend/src/home/home.controller.ts`（新增：`GET /v1/home/opportunity`，JwtAuthGuard）
+  - `backend/src/home/home.module.ts`（新增）
+  - `backend/src/app.module.ts`（注册 HomeModule）
+  - `android/.../data/Api.kt`（新增 `homeOpportunity()`）
+  - `android/.../data/Models.kt`（新增 4 个机会卡模型，金额全部可空）
+  - `android/.../ui/screens/HomeScreen.kt`（重写：机会卡全状态渲染、三路并行加载、删除 Agent 动态与底部 CTA）
+  - `android/.../ui/i18n/L10n.kt`（新增 17 个 opportunity/provider key，删除废弃 key）
+  - `docs/IMPLEMENTATION_STATUS.md`（新增：本记录）
+  - `docs/screenshots/home-opportunity-en.png`（新增：英文首页机会卡截图）
+- 验收结果：
+  - 接口状态机实测（本地 Docker 后端）：
+    - 无主护照 → `NEEDS_DOCUMENT` ✓
+    - 有护照、无合格搜索 → `EMPTY`（含 profile）✓
+    - 真实搜索完成后 → `READY`：eligibleHubCount=3（ELIGIBLE 快照按 cityId 去重）、
+      选中 joyScore=93 的 KUL 方案、airfareDelta=-9.09（DIRECT_BASELINE 存在）、
+      estimatedTripTotal 只读 costBreakdown、quoteFreshness=CURRENT、
+      sourceProvider=ATLAS_SANDBOX 且 isSimulated=true ✓
+  - 人工验收（模拟器装机，英文界面）：READY 卡渲染路线 SIN–KUL–SHA、2-day stay 胶囊、
+    「Eligible under current rule」+「Atlas Sandbox」标签、金额与天数与接口一致；
+    点击「View this plan」正确进入方案详情页；未登录时不重复渲染卡片（沿用游客引导）。
+  - 截图：`docs/screenshots/home-opportunity-en.png`
+- 测试命令：
+  - `npx tsc --noEmit -p tsconfig.json`（backend）
+  - `npx vitest run`（backend）
+  - `bash scripts/check-i18n.sh`
+  - `cd android && ./gradlew assembleDebug --console=plain`
+- 测试结果：
+  - tsc：EXIT 0，无错误
+  - vitest：14/14 通过
+  - check-i18n：265 keys，0 缺失
+  - Gradle：BUILD SUCCESSFUL，APK 装机验证通过
+- 已知限制：
+  - 机会接口只读本地已落库数据，不触发新搜索；无搜索记录时展示 EMPTY 引导。
+  - Atlas Sandbox 无库存的中转地不产生方案（funnel 标记 NO_SANDBOX_INVENTORY），
+    不影响已生成方案的展示。
+  - 报价无过期时间时 freshness=UNKNOWN，UI 不显示「实时」类措辞。
+- 下一任务：无（按 11 号方案 §10 停止条件，完成即止）。

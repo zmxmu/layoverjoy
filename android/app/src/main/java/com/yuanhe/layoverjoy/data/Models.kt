@@ -99,6 +99,54 @@ data class DocumentInput(
 @Serializable
 data class IdResponse(val id: String)
 
+// ---------- 首页机会卡 ----------
+
+/** 首页「我的最佳中转机会」：金额一律 Double?，未知不用 0 顶替（11-执行方案 §5.2）。 */
+@Serializable
+data class OpportunityProfile(
+    val passportCountry: String = "",
+    val passportType: String? = null,
+    val validVisaCount: Int = 0,
+)
+
+@Serializable
+data class OpportunityEligibility(
+    val status: String = "",
+    val ruleId: String? = null,
+    val ruleVersion: String? = null,
+)
+
+@Serializable
+data class OpportunityDetail(
+    val planId: String = "",
+    val searchRunId: String = "",
+    val origin: String = "",
+    val hub: String = "",
+    val destination: String = "",
+    val stayDays: Int = 0,
+    val usableHours: Double = 0.0,
+    val currency: String = "",
+    val airfareTotal: Double? = null,
+    val directAirfare: Double? = null,
+    val airfareDelta: Double? = null,
+    val estimatedTripTotal: Double? = null,
+    val joyScore: Int = 0,
+    val eligibility: OpportunityEligibility = OpportunityEligibility(),
+    val sourceProvider: String = "MOCK",
+    val isSimulated: Boolean = true,
+    val quoteFreshness: String = "UNKNOWN",
+    val quoteExpiresAt: String? = null,
+)
+
+@Serializable
+data class HomeOpportunityResponse(
+    val state: String = "EMPTY", // NEEDS_DOCUMENT | EMPTY | READY | STALE
+    val profile: OpportunityProfile? = null,
+    val eligibleHubCount: Int? = null,
+    val opportunity: OpportunityDetail? = null,
+    val generatedAt: String = "",
+)
+
 // ---------- 机场目录 ----------
 
 @Serializable
