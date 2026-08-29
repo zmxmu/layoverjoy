@@ -68,6 +68,7 @@ object L10n {
         "common.processing" to "处理中…",
         "common.points_suffix" to "{1} 分",
         "common.days_badge" to "停留 {1} 天",
+        "common.simulated_quote" to "模拟报价",
         "common.leg_no" to "第 {1} 段",
         "common.days_unit" to "{1} 天",
         // 底部导航
@@ -378,6 +379,7 @@ object L10n {
         "common.processing" to "Processing…",
         "common.points_suffix" to "{1} pts",
         "common.days_badge" to "{1}-day stay",
+        "common.simulated_quote" to "Simulated quote",
         "common.leg_no" to "Leg {1}",
         "common.days_unit" to "{1} d",
         // Bottom tabs
