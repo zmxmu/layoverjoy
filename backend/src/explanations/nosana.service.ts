@@ -157,14 +157,18 @@ export class NosanaService {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), budgetMs);
       try {
-        const res = await fetch(`${env.NOSANA_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
+        // 走 Ollama 原生 /api/chat：OpenAI 兼容接口无法关闭 qwen3.5 的长推理（实测 45–50s），
+        // 原生接口 think:false + format:json 同等质量约 5s（实测 10 倍提速）。
+        const nativeBase = env.NOSANA_OPENAI_BASE_URL.replace(/\/v1\/?$/, '').replace(/\/$/, '');
+        const res = await fetch(`${nativeBase}/api/chat`, {
           method: 'POST',
           signal: controller.signal,
           headers,
           body: JSON.stringify({
             model: env.NOSANA_MODEL,
             stream: false,
-            response_format: { type: 'json_object' },
+            think: false,
+            format: 'json',
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
@@ -177,7 +181,7 @@ export class NosanaService {
           return this.templateExplanation(req, 'HTTP_ERROR');
         }
         const data: any = await res.json();
-        const content: string = data?.choices?.[0]?.message?.content ?? '';
+        const content: string = data?.message?.content ?? '';
         const parsed = JSON.parse(content);
         if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
         NosanaService.lastInferenceSucceededAt = new Date().toISOString();

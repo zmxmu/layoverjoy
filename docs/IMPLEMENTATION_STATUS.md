@@ -66,8 +66,9 @@
   - Android：`planDetail`/`createExplanation` 透传 `L10n.current.tag`；详情页语言切换自动重载并按需重生成解释。
 - 验证：
   - 部署 61xya…BfGw 初次实测在线但推理退化（content 空、reasoning 退化）→ 管理页重启后恢复。
-  - 真实推理实测：provider=NOSANA，model qwen3.5:9b，latency 44–49s，deployment tail Y5V9BfGw；en/zh 双语输出均实测。
+  - 真实推理实测：provider=NOSANA，model qwen3.5:9b，deployment tail Y5V9BfGw；en/zh 双语输出均实测。
+  - 提速：OpenAI 兼容接口无法关闭 qwen3.5 长推理（45–50s）；改走 Ollama 原生 `/api/chat` + `think:false` + `format:json`，实测 3.8–4.5s（10 倍）。
   - 间歇空内容场景：attempt 1 PARSE_ERROR → 重试；持续失败诚实降级 TEMPLATE 并标注原因。
   - 模拟器英文详情页全英文截图：`docs/screenshots/plan-detail-nosana-en.png`（含 Nosana 归属标注）。
 - 测试：tsc EXIT 0；vitest 14/14；check-i18n 265 keys 0 缺失；Gradle BUILD SUCCESSFUL 装机验证。
-- 已知限制：Nosana 为共享 GPU 节点，冷启动/繁忙时单次推理可达 40–60s，偶发空内容；总预算 NOSANA_TIMEOUT_MS=90s，超限诚实降级模板。
+- 已知限制：Nosana 为共享 GPU 节点，冷启动/繁忙时偶发空内容；总预算 NOSANA_TIMEOUT_MS=90s，超限诚实降级模板。解释落库缓存，重复展示瞬时。
