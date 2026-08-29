@@ -140,7 +140,7 @@ async function main() {
 
   // 2) 系统依赖：PostgreSQL、Redis、构建工具（argon2 原生模块）
   console.log('[2/7] 安装系统依赖（postgresql/redis/build-essential）…');
-  await run(sandbox, 'mkdir -p ' + WORKDIR, 60);
+  await run(sandbox, 'sudo mkdir -p ' + WORKDIR + ' && sudo chown -R $(id -u):$(id -g) ' + WORKDIR, 60);
   await run(
     sandbox,
     'sudo apt-get update -y >/tmp/apt.log 2>&1 && ' +
