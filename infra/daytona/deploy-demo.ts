@@ -210,8 +210,9 @@ async function main() {
   // 5) 构建：npm ci + prisma generate + build；注入 .env
   console.log('[5/7] npm ci + prisma generate + build（首次约 3-6 分钟）…');
   await run(sandbox, 'npm ci --no-audit --no-fund >>/tmp/npm.log 2>&1 && echo NPM_OK', 1500, BACKEND);
-  await run(sandbox, 'npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && echo GEN_OK', 600, BACKEND);
+  await run(sandbox, 'for i in 1 2 3 4 5; do npx prisma generate --no-hints >>/tmp/npm.log 2>&1 && echo GEN_OK && break; sleep 5; done', 1500, BACKEND);
   await run(sandbox, 'npm run build >>/tmp/npm.log 2>&1 && echo BUILD_OK', 900, BACKEND);
+  await run(sandbox, 'test -d node_modules/.prisma/client && test -f dist/main.js && echo ARTIFACTS_OK', 60, BACKEND);
 
   // 运行时 .env（密钥 + 覆盖项；后置覆盖生效）
   const envLines = [
