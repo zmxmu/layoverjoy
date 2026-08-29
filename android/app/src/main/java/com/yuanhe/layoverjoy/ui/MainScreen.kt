@@ -145,7 +145,7 @@ fun MainScreen(appState: AppStateViewModel) {
         },
     ) { padding ->
         NavHost(nav, startDestination = Routes.HOME, modifier = Modifier.padding(padding)) {
-            composable(Routes.HOME) { HomeScreen(nav) }
+            composable(Routes.HOME) { HomeScreen(nav, appState) }
             composable(Routes.SEARCH) { SearchScreen(nav) }
             composable(Routes.TRIPS) { TripsScreen(nav) }
             composable(Routes.PROFILE) { ProfileScreen(nav, appState) }

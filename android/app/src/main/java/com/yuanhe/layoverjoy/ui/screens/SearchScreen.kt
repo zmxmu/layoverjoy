@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.Net
+import com.yuanhe.layoverjoy.data.SearchPrefill
 import com.yuanhe.layoverjoy.data.SearchPreferences
 import com.yuanhe.layoverjoy.data.SearchRequest
 import com.yuanhe.layoverjoy.data.apiCall
@@ -80,7 +81,8 @@ fun SearchScreen(nav: NavController) {
     val scope = rememberCoroutineScope()
 
     var origin by remember { mutableStateOf("SIN") }
-    var destination by remember { mutableStateOf("PVG") }
+    // 首页灵感卡点击后的一次性预填（取走即清空）。
+    var destination by remember { mutableStateOf(SearchPrefill.takeDestination() ?: "PVG") }
     var departMillis by remember { mutableLongStateOf(defaultDepartMillis()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var minStop by remember { mutableIntStateOf(1) }

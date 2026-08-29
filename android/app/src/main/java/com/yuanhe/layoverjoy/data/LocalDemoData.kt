@@ -14,6 +14,7 @@ data class LocalCityCard(
     val cityNameZh: String,
     val cityNameEn: String,
     val countryCode: String,
+    val iata: String,            // 点击灵感卡预填到搜索页的目的地码
     val entryLabelZh: String,    // 入境规则摘要（本地示例文案）
     val entryLabelEn: String,
     val joyScore: Int,
@@ -36,6 +37,7 @@ object LocalDemoData {
             cityNameZh = "吉隆坡",
             cityNameEn = "Kuala Lumpur",
             countryCode = "MY",
+            iata = "KUL",
             entryLabelZh = "中国普通护照免签停留 30 天",
             entryLabelEn = "Visa-free 30 days for CN ordinary passports",
             joyScore = 92,
@@ -48,6 +50,7 @@ object LocalDemoData {
             cityNameZh = "曼谷",
             cityNameEn = "Bangkok",
             countryCode = "TH",
+            iata = "BKK",
             entryLabelZh = "中泰互免签证 30 天",
             entryLabelEn = "Mutual CN–TH visa exemption, 30 days",
             joyScore = 88,
@@ -60,6 +63,7 @@ object LocalDemoData {
             cityNameZh = "中国香港",
             cityNameEn = "Hong Kong",
             countryCode = "HK",
+            iata = "HKG",
             entryLabelZh = "凭联程机票可过境停留 7 天",
             entryLabelEn = "7-day transit stay with an onward ticket",
             joyScore = 84,
@@ -85,4 +89,16 @@ object LocalDemoData {
         get() = if (L10n.current == AppLanguage.EN) activitiesEn else activitiesZh
 
     val demoRoute: String get() = if (L10n.current == AppLanguage.EN) "Singapore SIN → Shanghai PVG" else "新加坡 SIN → 上海 PVG"
+}
+
+/** 首页灵感卡 → 探索页的一次性预填（首页本身仍不发网络请求，保持本地契约）。 */
+object SearchPrefill {
+    @Volatile
+    var destination: String? = null
+
+    fun takeDestination(): String? {
+        val v = destination
+        destination = null
+        return v
+    }
 }
