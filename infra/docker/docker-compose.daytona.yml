@@ -1,0 +1,76 @@
+# LayoverJoy Daytona Demo 环境（08 文档 §5）。
+# 与本地 docker-compose.yml 使用同一应用镜像与迁移流程，仅差异：
+#   - 不暴露 5432/6379，只有 API 8080 可被 Preview 代理访问
+#   - RUNTIME_TARGET=daytona、NODE_ENV=production
+#   - 密钥来自同目录 .env（由 deploy-demo.ts 从本机 .secrets 生成后上传，绝不入库）
+# 在 Sandbox 内启动：docker compose -f docker-compose.daytona.yml up -d --build
+
+services:
+  db:
+    image: postgres:16.6-alpine3.20
+    environment:
+      POSTGRES_USER: layoverjoy
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:-layoverjoy_demo_only}
+      POSTGRES_DB: layoverjoy
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U layoverjoy -d layoverjoy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # 故意不映射端口：仅 Sandbox 内网可达
+
+  redis:
+    image: redis:7.4-alpine3.20
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # 故意不映射端口：仅 Sandbox 内网可达
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: postgresql://layoverjoy:${DEMO_DB_PASSWORD:-layoverjoy_demo_only}@db:5432/layoverjoy
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      RUNTIME_TARGET: daytona
+      PORT: 8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080" # 唯一公开端口，经由 Daytona Preview 代理
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  monitor-worker:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/Dockerfile
+    command: ["worker"]
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: postgresql://layoverjoy:${DEMO_DB_PASSWORD:-layoverjoy_demo_only}@db:5432/layoverjoy
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      RUNTIME_TARGET: daytona
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db-data:

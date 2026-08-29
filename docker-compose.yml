@@ -1,0 +1,78 @@
+# LayoverJoy 本地联调环境。
+# 真实密钥通过 env_file 从 ../.secrets/layoverjoy.env 注入，绝不复制进本文件。
+# 启动：docker compose up --build
+#   API: http://localhost:8080  Swagger: http://localhost:8080/docs
+#   Android Emulator 访问 API: http://10.0.2.2:8080
+
+services:
+  db:
+    image: postgres:16.6-alpine3.20
+    environment:
+      POSTGRES_USER: layoverjoy
+      POSTGRES_PASSWORD: layoverjoy_local_only
+      POSTGRES_DB: layoverjoy
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U layoverjoy -d layoverjoy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7.4-alpine3.20
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/Dockerfile
+    env_file:
+      - ../.secrets/layoverjoy.env
+    environment:
+      # 容器内网地址覆盖本机默认值
+      DATABASE_URL: postgresql://layoverjoy:layoverjoy_local_only@db:5432/layoverjoy
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      RUNTIME_TARGET: local
+      PORT: 8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  monitor-worker:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/Dockerfile
+    command: ["worker"]
+    env_file:
+      - ../.secrets/layoverjoy.env
+    environment:
+      DATABASE_URL: postgresql://layoverjoy:layoverjoy_local_only@db:5432/layoverjoy
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      RUNTIME_TARGET: local
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db-data:

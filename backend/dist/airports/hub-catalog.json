@@ -1,0 +1,176 @@
+{
+    "schemaVersion": "1.0",
+    "catalogType": "CURATED_MVP",
+    "notes": "城市和机场映射，不代表 Atlas Sandbox 路线已经实测。",
+    "cities": [
+        {
+            "cityId": "sg-singapore",
+            "cityNameZh": "新加坡",
+            "cityNameEn": "Singapore",
+            "countryCode": "SG",
+            "timezone": "Asia/Singapore",
+            "metroCode": "SIN",
+            "airports": [
+                { "iata": "SIN", "nameZh": "新加坡樟宜机场", "nameEn": "Singapore Changi Airport" }
+            ]
+        },
+        {
+            "cityId": "my-kuala-lumpur",
+            "cityNameZh": "吉隆坡",
+            "cityNameEn": "Kuala Lumpur",
+            "countryCode": "MY",
+            "timezone": "Asia/Kuala_Lumpur",
+            "metroCode": "KUL",
+            "airports": [
+                { "iata": "KUL", "nameZh": "吉隆坡国际机场", "nameEn": "Kuala Lumpur International Airport" },
+                { "iata": "SZB", "nameZh": "苏丹阿都阿兹沙机场", "nameEn": "Sultan Abdul Aziz Shah Airport" }
+            ]
+        },
+        {
+            "cityId": "my-penang",
+            "cityNameZh": "槟城",
+            "cityNameEn": "Penang",
+            "countryCode": "MY",
+            "timezone": "Asia/Kuala_Lumpur",
+            "metroCode": "PEN",
+            "airports": [
+                { "iata": "PEN", "nameZh": "槟城国际机场", "nameEn": "Penang International Airport" }
+            ]
+        },
+        {
+            "cityId": "th-bangkok",
+            "cityNameZh": "曼谷",
+            "cityNameEn": "Bangkok",
+            "countryCode": "TH",
+            "timezone": "Asia/Bangkok",
+            "metroCode": "BKK",
+            "airports": [
+                { "iata": "BKK", "nameZh": "素万那普机场", "nameEn": "Suvarnabhumi Airport" },
+                { "iata": "DMK", "nameZh": "廊曼国际机场", "nameEn": "Don Mueang International Airport" }
+            ]
+        },
+        {
+            "cityId": "hk-hong-kong",
+            "cityNameZh": "香港",
+            "cityNameEn": "Hong Kong",
+            "countryCode": "HK",
+            "timezone": "Asia/Hong_Kong",
+            "metroCode": "HKG",
+            "airports": [
+                { "iata": "HKG", "nameZh": "香港国际机场", "nameEn": "Hong Kong International Airport" }
+            ]
+        },
+        {
+            "cityId": "vn-ho-chi-minh-city",
+            "cityNameZh": "胡志明市",
+            "cityNameEn": "Ho Chi Minh City",
+            "countryCode": "VN",
+            "timezone": "Asia/Ho_Chi_Minh",
+            "metroCode": "SGN",
+            "airports": [
+                { "iata": "SGN", "nameZh": "新山一国际机场", "nameEn": "Tan Son Nhat International Airport" }
+            ]
+        },
+        {
+            "cityId": "vn-hanoi",
+            "cityNameZh": "河内",
+            "cityNameEn": "Hanoi",
+            "countryCode": "VN",
+            "timezone": "Asia/Ho_Chi_Minh",
+            "metroCode": "HAN",
+            "airports": [
+                { "iata": "HAN", "nameZh": "内排国际机场", "nameEn": "Noi Bai International Airport" }
+            ]
+        },
+        {
+            "cityId": "vn-da-nang",
+            "cityNameZh": "岘港",
+            "cityNameEn": "Da Nang",
+            "countryCode": "VN",
+            "timezone": "Asia/Ho_Chi_Minh",
+            "metroCode": "DAD",
+            "airports": [
+                { "iata": "DAD", "nameZh": "岘港国际机场", "nameEn": "Da Nang International Airport" }
+            ]
+        },
+        {
+            "cityId": "cn-shanghai",
+            "cityNameZh": "上海",
+            "cityNameEn": "Shanghai",
+            "countryCode": "CN",
+            "timezone": "Asia/Shanghai",
+            "metroCode": "SHA",
+            "airports": [
+                { "iata": "PVG", "nameZh": "上海浦东国际机场", "nameEn": "Shanghai Pudong International Airport" },
+                { "iata": "SHA", "nameZh": "上海虹桥国际机场", "nameEn": "Shanghai Hongqiao International Airport" }
+            ]
+        },
+        {
+            "cityId": "cn-guangzhou",
+            "cityNameZh": "广州",
+            "cityNameEn": "Guangzhou",
+            "countryCode": "CN",
+            "timezone": "Asia/Shanghai",
+            "metroCode": "CAN",
+            "airports": [
+                { "iata": "CAN", "nameZh": "广州白云国际机场", "nameEn": "Guangzhou Baiyun International Airport" }
+            ]
+        },
+        {
+            "cityId": "ph-manila",
+            "cityNameZh": "马尼拉",
+            "cityNameEn": "Manila",
+            "countryCode": "PH",
+            "timezone": "Asia/Manila",
+            "metroCode": "MNL",
+            "airports": [
+                { "iata": "MNL", "nameZh": "尼诺伊阿基诺国际机场", "nameEn": "Ninoy Aquino International Airport" }
+            ]
+        },
+        {
+            "cityId": "ph-cebu",
+            "cityNameZh": "宿务",
+            "cityNameEn": "Cebu",
+            "countryCode": "PH",
+            "timezone": "Asia/Manila",
+            "metroCode": "CEB",
+            "airports": [
+                { "iata": "CEB", "nameZh": "麦克坦宿务国际机场", "nameEn": "Mactan-Cebu International Airport" }
+            ]
+        },
+        {
+            "cityId": "id-jakarta",
+            "cityNameZh": "雅加达",
+            "cityNameEn": "Jakarta",
+            "countryCode": "ID",
+            "timezone": "Asia/Jakarta",
+            "metroCode": "JKT",
+            "airports": [
+                { "iata": "CGK", "nameZh": "苏加诺哈达国际机场", "nameEn": "Soekarno-Hatta International Airport" },
+                { "iata": "HLP", "nameZh": "哈利姆珀达纳库苏马机场", "nameEn": "Halim Perdanakusuma International Airport" }
+            ]
+        },
+        {
+            "cityId": "id-bali",
+            "cityNameZh": "巴厘岛",
+            "cityNameEn": "Bali",
+            "countryCode": "ID",
+            "timezone": "Asia/Makassar",
+            "metroCode": "DPS",
+            "airports": [
+                { "iata": "DPS", "nameZh": "伍拉赖国际机场", "nameEn": "I Gusti Ngurah Rai International Airport" }
+            ]
+        },
+        {
+            "cityId": "id-batam",
+            "cityNameZh": "巴淡岛",
+            "cityNameEn": "Batam",
+            "countryCode": "ID",
+            "timezone": "Asia/Jakarta",
+            "metroCode": "BTH",
+            "airports": [
+                { "iata": "BTH", "nameZh": "韩那丁国际机场", "nameEn": "Hang Nadim International Airport" }
+            ]
+        }
+    ]
+}

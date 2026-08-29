@@ -1,0 +1,391 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma.service';
+import { AtlasService } from '../atlas/atlas.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AppError } from '../common/errors';
+import { FIELD_CRYPTO } from '../core.module';
+import { FieldCrypto, maskLast4 } from '../common/crypto';
+import { loadEnv } from '../config/env';
+
+export interface CompositeOrderInput {
+  planId: string;
+  riskAckVersion: number;
+  passengers?: Array<{ givenName?: string; familyName?: string }>;
+  legBFailure?: boolean; // 演示注入：第二段下单失败（INVENTORY_CHANGED）
+}
+
+const SCHEMA_VERSION = 1;
+
+/**
+ * 双订单预订 Saga（07 文档 §6/§7）。
+ * 状态机：DRAFT -> BOTH_VERIFIED -> LEG_A_ORDERING -> LEG_A_ORDERED ->
+ *         LEG_B_ORDERING -> BOTH_ORDERED -> PAYMENT_PENDING -> COMPLETED
+ * 异常：PARTIAL_ORDER / SIMULATED_REFUND_PENDING / SIMULATED_REFUNDED / MANUAL_REVIEW / EXPIRED
+ *
+ * 执行原则：
+ * - 同时 Verify 两段，任一失败不创建订单；
+ * - Order/Pay 保存独立 idempotency key，但绝不自动重放；
+ * - 第一段成功、第二段失败 → 立即停止支付，进入 PARTIAL_ORDER；
+ * - 模拟退款必须标注“没有发生真实资金交易”。
+ */
+@Injectable()
+export class BookingsService {
+  private readonly logger = new Logger('BookingsService');
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly atlas: AtlasService,
+    private readonly notifications: NotificationsService,
+    @Inject(FIELD_CRYPTO) private readonly crypto: FieldCrypto,
+  ) {}
+
+  /** 创建复合订单：Verify 两段 → 依次下单 → PAYMENT_PENDING。 */
+  async createComposite(userId: string, input: CompositeOrderInput) {
+    if (!input.planId) throw AppError.validation(['planId']);
+    if (!input.riskAckVersion || input.riskAckVersion < 1) {
+      throw AppError.validation(['riskAckVersion'], '请先确认独立机票风险后再预订。');
+    }
+    const plan = await this.prisma.stopoverPlan.findFirst({ where: { id: input.planId, searchRun: { userId } } });
+    if (!plan) throw AppError.notFound('方案');
+
+    const legs = await this.prisma.flightOfferSnapshot.findMany({
+      where: { id: { in: (plan.legOfferIdsJson as string[]) ?? [] } },
+      orderBy: { legNo: 'asc' },
+    });
+    if (legs.length === 0) throw AppError.notFound('航段报价');
+
+    const intentKey = randomUUID();
+    const intent = await this.prisma.bookingIntent.create({
+      data: {
+        userId,
+        planId: plan.id,
+        schemaVersion: SCHEMA_VERSION,
+        planSnapshotJson: {
+          planId: plan.id,
+          planType: plan.planType,
+          stopoverCityId: plan.stopoverCityId,
+          stayDays: plan.stayDays,
+          airfareTotal: plan.airfareTotal,
+          currency: plan.currency,
+          costBreakdown: plan.costBreakdownJson,
+          joyScore: plan.joyScore,
+          legs: legs.map((l) => ({
+            legNo: l.legNo,
+            providerOfferId: l.providerOfferId,
+            origin: l.origin,
+            destination: l.destination,
+            departureAt: l.departureAt.toISOString(),
+            totalPrice: l.totalPrice,
+            sourceProvider: l.sourceProvider,
+          })),
+        } as any,
+        sourceEnvironment: plan.sourceProvider,
+        isSimulated: true,
+        status: 'DRAFT',
+        passengerJson: (input.passengers ?? []) as any,
+        acceptedTotal: plan.airfareTotal,
+        currency: plan.currency,
+        riskAckVersion: input.riskAckVersion,
+        idempotencyKey: intentKey,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // Atlas 未付款库存约 30 分钟自动释放
+      },
+    });
+
+    const transition = (status: string, extra: Record<string, unknown> = {}) =>
+      this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status, ...extra } });
+
+    // 1) 同时 Verify 两段（任一失败不创建订单）
+    const verifyResults = await Promise.allSettled(
+      legs.map(async (leg) => {
+        const verified = await this.atlas.verify.verify(leg.providerOfferId);
+        return { leg, verified };
+      }),
+    );
+    const failed = verifyResults.filter((r) => r.status === 'rejected');
+    if (failed.length > 0) {
+      const cause = (failed[0] as PromiseRejectedResult).reason as AppError;
+      await transition('EXPIRED', { verifyResultJson: { ok: false, error: cause.code || 'VERIFY_FAILED' } as any });
+      if (cause.code === 'PRICE_CHANGED') {
+        throw new AppError('PRICE_CHANGED', '价格已变化，请返回结果页刷新后重试。', 409, false, {
+          intentId: intent.id,
+        });
+      }
+      throw new AppError(cause.code || 'INVENTORY_UNAVAILABLE', cause.messageZh || '验价失败，请稍后重试。', 409, true, {
+        intentId: intent.id,
+      });
+    }
+
+    const verifiedLegs = verifyResults.map((r) => (r as PromiseFulfilledResult<any>).value);
+    const priceChanged = verifiedLegs.find((v: any) => v.verified.priceChanged);
+    const verifySummary = verifiedLegs.map((v: any) => ({
+      legNo: v.leg.legNo,
+      providerOfferId: v.leg.providerOfferId,
+      sessionId: v.verified.sessionId ?? null,
+      totalPrice: v.verified.totalPrice,
+      priceChanged: v.verified.priceChanged,
+      bookable: v.verified.bookable,
+    }));
+    if (priceChanged) {
+      await transition('EXPIRED', { verifyResultJson: { ok: false, verify: verifySummary } as any });
+      throw new AppError('PRICE_CHANGED', '价格已变化，请返回结果页刷新后重试。', 409, false, { intentId: intent.id });
+    }
+    await transition('BOTH_VERIFIED', {
+      verifyResultJson: { ok: true, verify: verifySummary } as any,
+      priceConfirmedAt: new Date(),
+    });
+
+    // 2) 依次下单。先下停留段（第二段通常库存风险更高），并记录原因。
+    //    演示注入：legBFailure 让第二段返回 INVENTORY_CHANGED。
+    const orderSequence = [...verifiedLegs].sort((a: any, b: any) => b.leg.legNo - a.leg.legNo);
+    let legAOrdered = false;
+
+    for (const item of orderSequence) {
+      const legNo = item.leg.legNo;
+      const orderingStatus = legNo === 1 ? 'LEG_A_ORDERING' : 'LEG_B_ORDERING';
+      const orderedStatus = legNo === 1 ? 'LEG_A_ORDERED' : 'BOTH_ORDERED';
+      await transition(orderingStatus);
+
+      if (input.legBFailure && legNo === 2) {
+        await this.recordOrderFailure(intent.id, legNo, 'INVENTORY_CHANGED');
+        await transition('PARTIAL_ORDER');
+        await this.notifications.notify({
+          userId,
+          kind: 'ORDER_EVENT',
+          title: '部分订单风险：第二段下单失败',
+          body: `第一段已创建订单，第二段库存变化（INVENTORY_CHANGED）。后续支付已停止，可执行模拟补偿退款。模拟退款，没有发生真实资金交易。`,
+          deepLink: `layoverjoy://bookings/${intent.id}`,
+          planId: plan.id,
+          isSimulated: true,
+        });
+        throw new AppError('PARTIAL_BOOKING', '第一段已下单，第二段库存变化导致下单失败。已停止支付，可执行模拟补偿。', 409, false, {
+          intentId: intent.id,
+          failedLeg: legNo,
+          providerCode: 'INVENTORY_CHANGED',
+        });
+      }
+
+      try {
+        const idemKey = `${intentKey}:leg${legNo}`;
+        const result = await this.atlas.order.createOrder({
+          bookingReference: item.verified.sessionId || item.leg.providerOfferId,
+          passengers: input.passengers ?? [],
+          idempotencyKey: idemKey,
+        });
+        await this.prisma.flightOrder.create({
+          data: {
+            bookingIntentId: intent.id,
+            legNo,
+            provider: this.atlas.providerLabel(this.atlas.order),
+            orderNoEnc: this.crypto.encrypt(result.orderNo),
+            verifySessionIdEnc: item.verified.sessionId ? this.crypto.encrypt(item.verified.sessionId) : null,
+            status: 'CREATED',
+            amount: result.amount ?? item.verified.totalPrice,
+            currency: result.currency ?? item.verified.currency,
+            idempotencyKey: idemKey,
+          },
+        });
+        this.logger.log(`intent ${intent.id} leg ${legNo} ordered: ${maskLast4(result.orderNo)}`);
+        legAOrdered = legAOrdered || legNo === 1;
+        await transition(orderedStatus);
+      } catch (e) {
+        const code = (e as AppError).code || 'ORDER_FAILED';
+        await this.recordOrderFailure(intent.id, legNo, code);
+        if (legAOrdered) {
+          // 第一段成功、第二段失败：立即停止后续支付
+          await transition('PARTIAL_ORDER');
+          throw new AppError('PARTIAL_BOOKING', '第一段已下单，第二段下单失败。已停止支付，可执行模拟补偿。', 409, false, {
+            intentId: intent.id,
+            failedLeg: legNo,
+            providerCode: code,
+          });
+        }
+        await transition('MANUAL_REVIEW');
+        throw new AppError(code, (e as Error).message || '下单失败，请稍后重试。', 409, false, {
+          intentId: intent.id,
+          failedLeg: legNo,
+        });
+      }
+    }
+
+    await transition('PAYMENT_PENDING');
+    return this.get(intent.id, userId);
+  }
+
+  private async recordOrderFailure(intentId: string, legNo: number, code: string) {
+    await this.prisma.auditEvent.create({
+      data: { action: 'ORDER_FAILED', entity: 'BookingIntent', entityId: intentId, detailJson: { legNo, code } as any },
+    });
+  }
+
+  /** 模拟支付：按订单顺序支付所有 CREATED 订单。Mock 通过订单号控制结果。 */
+  async mockPay(userId: string, intentId: string) {
+    const intent = await this.prisma.bookingIntent.findFirst({ where: { id: intentId, userId } });
+    if (!intent) throw AppError.notFound('订单');
+    if (intent.status !== 'PAYMENT_PENDING' && intent.status !== 'BOTH_ORDERED') {
+      throw new AppError('INVALID_BOOKING_STATE', `当前状态 ${intent.status} 不可支付。`, 409);
+    }
+    const orders = await this.prisma.flightOrder.findMany({
+      where: { bookingIntentId: intent.id, status: 'CREATED' },
+      orderBy: { legNo: 'asc' },
+    });
+    for (const order of orders) {
+      const orderNo = order.orderNoEnc ? this.crypto.decrypt(order.orderNoEnc) : '';
+      const idemKey = `${order.idempotencyKey}:pay`;
+      const result = await this.atlas.payment.pay({ orderNo, idempotencyKey: idemKey });
+      if (result.status === 'PAID') {
+        await this.prisma.flightOrder.update({
+          where: { id: order.id },
+          data: { status: 'PAID', lastProviderCode: result.providerCode ?? 'PAID' },
+        });
+      } else if (result.status === 'UNKNOWN') {
+        await this.prisma.flightOrder.update({ where: { id: order.id }, data: { lastProviderCode: 'UNKNOWN' } });
+        await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'MANUAL_REVIEW' } });
+        throw new AppError('PROVIDER_OUTCOME_UNKNOWN', '支付结果未知，已转入人工复核。请勿重复支付。', 409, false, {
+          intentId: intent.id,
+          legNo: order.legNo,
+        });
+      } else {
+        await this.prisma.flightOrder.update({
+          where: { id: order.id },
+          data: { status: 'FAILED', lastProviderCode: result.providerCode ?? 'PAY_FAILED' },
+        });
+        await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'PARTIAL_ORDER' } });
+        throw new AppError('PARTIAL_BOOKING', '支付失败，订单进入部分完成状态，可执行模拟补偿。', 409, false, {
+          intentId: intent.id,
+          legNo: order.legNo,
+        });
+      }
+    }
+    await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'COMPLETED' } });
+    await this.notifications.notify({
+      userId,
+      kind: 'ORDER_EVENT',
+      title: '预订模拟完成',
+      body: '两段模拟订单均已支付成功。这是 Atlas Sandbox 测试航班数据，不会产生真实出票或扣款。',
+      deepLink: `layoverjoy://bookings/${intent.id}`,
+      planId: intent.planId,
+      isSimulated: true,
+    });
+    return this.get(intentId, userId);
+  }
+
+  /** 演示注入：第二段下单失败（在已存在 DRAFT 意图时可用，否则仅标记）。 */
+  async simulateLegBFailure(userId: string, intentId: string) {
+    const intent = await this.prisma.bookingIntent.findFirst({ where: { id: intentId, userId } });
+    if (!intent) throw AppError.notFound('订单');
+    if (intent.status === 'PARTIAL_ORDER') return this.get(intentId, userId);
+    if (intent.status !== 'BOTH_ORDERED' && intent.status !== 'PAYMENT_PENDING') {
+      throw new AppError('INVALID_BOOKING_STATE', `当前状态 ${intent.status} 无法注入第二段失败。`, 409);
+    }
+    // 已下单场景：把第二段订单标记失败并转为 PARTIAL_ORDER
+    await this.prisma.flightOrder.updateMany({
+      where: { bookingIntentId: intent.id, legNo: 2 },
+      data: { status: 'FAILED', lastProviderCode: 'INVENTORY_CHANGED' },
+    });
+    await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'PARTIAL_ORDER' } });
+    await this.notifications.notify({
+      userId,
+      kind: 'ORDER_EVENT',
+      title: '部分订单风险：第二段下单失败',
+      body: '第二段库存变化（INVENTORY_CHANGED），后续支付已停止，可执行模拟补偿退款。模拟退款，没有发生真实资金交易。',
+      deepLink: `layoverjoy://bookings/${intent.id}`,
+      planId: intent.planId,
+      isSimulated: true,
+    });
+    return this.get(intentId, userId);
+  }
+
+  /** 模拟补偿退款：仅调用 MockRefundProvider，展示状态流转。 */
+  async mockRefund(userId: string, intentId: string) {
+    const intent = await this.prisma.bookingIntent.findFirst({ where: { id: intentId, userId } });
+    if (!intent) throw AppError.notFound('订单');
+    if (!['PARTIAL_ORDER', 'COMPLETED', 'MANUAL_REVIEW', 'PAYMENT_PENDING', 'BOTH_ORDERED'].includes(intent.status)) {
+      throw new AppError('INVALID_BOOKING_STATE', `当前状态 ${intent.status} 不可执行模拟补偿。`, 409);
+    }
+    await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'SIMULATED_REFUND_PENDING' } });
+
+    const orders = await this.prisma.flightOrder.findMany({
+      where: { bookingIntentId: intent.id, status: { in: ['CREATED', 'PAID', 'FAILED'] } },
+    });
+    for (const order of orders) {
+      const orderNo = order.orderNoEnc ? this.crypto.decrypt(order.orderNoEnc) : '';
+      const result = await this.atlas.refund.refund({ orderNo, reason: 'SIMULATED_COMPENSATION' });
+      await this.prisma.flightOrder.update({
+        where: { id: order.id },
+        data: { status: 'REFUNDED_SIMULATED', lastProviderCode: result.providerCode ?? result.status },
+      });
+    }
+    await this.prisma.bookingIntent.update({ where: { id: intent.id }, data: { status: 'SIMULATED_REFUNDED' } });
+    await this.prisma.auditEvent.create({
+      data: {
+        userId,
+        action: 'SIMULATED_REFUND_COMPLETED',
+        entity: 'BookingIntent',
+        entityId: intent.id,
+        detailJson: { orders: orders.length } as any,
+      },
+    });
+    await this.notifications.notify({
+      userId,
+      kind: 'ORDER_EVENT',
+      title: '模拟补偿已完成',
+      body: '模拟退款已完成，没有发生真实资金交易。已生成审计记录。',
+      deepLink: `layoverjoy://bookings/${intent.id}`,
+      planId: intent.planId,
+      isSimulated: true,
+    });
+    return this.get(intentId, userId);
+  }
+
+  async list(userId: string) {
+    const intents = await this.prisma.bookingIntent.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: { orders: { orderBy: { legNo: 'asc' } } },
+    });
+    return { bookings: intents.map((i) => this.toDto(i)) };
+  }
+
+  async get(intentId: string, userId: string) {
+    const intent = await this.prisma.bookingIntent.findFirst({
+      where: { id: intentId, userId },
+      include: { orders: { orderBy: { legNo: 'asc' } } },
+    });
+    if (!intent) throw AppError.notFound('订单');
+    return { booking: this.toDto(intent) };
+  }
+
+  private toDto(intent: any) {
+    return {
+      bookingId: intent.id,
+      planId: intent.planId,
+      status: intent.status,
+      sourceEnvironment: intent.sourceEnvironment,
+      isSimulated: intent.isSimulated,
+      acceptedTotal: intent.acceptedTotal,
+      currency: intent.currency,
+      riskAckVersion: intent.riskAckVersion,
+      expiresAt: intent.expiresAt?.toISOString() ?? null,
+      createdAt: intent.createdAt.toISOString(),
+      orders: (intent.orders ?? []).map((o: any) => ({
+        legNo: o.legNo,
+        provider: o.provider,
+        status: o.status,
+        orderNoLast4: o.orderNoEnc ? maskLast4(this.safeDecrypt(o.orderNoEnc)) : null,
+        amount: o.amount,
+        currency: o.currency,
+        lastProviderCode: o.lastProviderCode,
+      })),
+    };
+  }
+
+  private safeDecrypt(payload: string): string | null {
+    try {
+      return this.crypto.decrypt(payload);
+    } catch {
+      return null;
+    }
+  }
+}

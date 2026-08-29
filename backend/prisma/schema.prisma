@@ -1,0 +1,365 @@
+// LayoverJoy Prisma schema. PostgreSQL.
+// 安全约束：证件号、订单号、会话标识等可恢复 PII 一律应用层加密存储。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  passwordHash      String
+  displayName       String
+  residenceCountry  String?
+  timezone          String            @default("Asia/Shanghai")
+  status            String            @default("ACTIVE")
+  preferencesJson   Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  documents         TravelDocument[]
+  refreshTokens     RefreshToken[]
+  searchRuns        SearchRun[]
+  monitorRules      MonitorRule[]
+  notifications     Notification[]
+  bookingIntents    BookingIntent[]
+  planningJobs      PlanningJob[]
+  auditEvents       AuditEvent[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TravelDocument {
+  id               String    @id @default(cuid())
+  userId           String
+  kind             String    // PASSPORT | VISA | RESIDENCE
+  countryCode      String    // ISO 3166-1 alpha-2
+  passportType     String?   // ORDINARY | PUBLIC_AFFAIRS ...
+  visaType         String?
+  entryType        String?   // SINGLE | MULTIPLE
+  remainingEntries Int?
+  validFrom        DateTime? @db.Date
+  expiresOn        DateTime? @db.Date
+  isPrimary        Boolean   @default(false)
+  status           String    @default("ACTIVE") // ACTIVE | EXPIRED | REVOKED
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+}
+
+model EntryRule {
+  id                      String   @id // 稳定规则 ID，例如 CN-ORD-MY-VISA-FREE-2025
+  version                 String
+  passportCountry         String
+  passportType            String
+  transitCountry          String
+  candidateCitiesJson     Json     // IATA 城市/机场码数组
+  entryMode               String   // VISA_FREE | TRANSIT_PERMISSION | E_VISA_REQUIRED
+  maxStayDays             Int
+  maxCumulativeStayDays   Int?
+  cumulativeWindowDays    Int?
+  minPassportValidityMonths Int?
+  requiredEvidenceJson    Json
+  hardConditionsJson      Json
+  sourceUrl               String
+  sourceVersion           String
+  verifiedAt              DateTime
+  effectiveUntil          DateTime?
+  status                  String   @default("ACTIVE")
+  createdAt               DateTime @default(now())
+
+  @@index([passportCountry, passportType, transitCountry])
+}
+
+model SearchRun {
+  id                        String               @id @default(cuid())
+  userId                    String
+  originInput               String
+  destinationInput          String
+  originCode                String
+  destinationCode           String
+  departureDate             DateTime             @db.Date
+  minStopDays               Int
+  maxStopDays               Int
+  maxAirfareDelta           Float?
+  preferencesJson           Json?
+  status                    String               @default("PENDING") // PENDING|RUNNING|COMPLETED|PARTIAL|FAILED
+  resultStatus              String?              // COMPLETED | PARTIAL | FAILED
+  candidateCount            Int                  @default(0)
+  eligibilityRejectedCount  Int                  @default(0)
+  experienceRejectedCount   Int                  @default(0)
+  keptPlanCount             Int                  @default(0)
+  funnelJson                Json?
+  errorJson                 Json?
+  providerMode              String
+  startedAt                 DateTime?
+  completedAt               DateTime?
+  createdAt                 DateTime             @default(now())
+  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offers                    FlightOfferSnapshot[]
+  plans                     StopoverPlan[]
+
+  @@index([userId, createdAt])
+}
+
+model FlightOfferSnapshot {
+  id                    String    @id @default(cuid())
+  searchRunId           String
+  legNo                 Int       // 从 1 开始
+  role                  String    // DIRECT_BASELINE | LEG_1 | LEG_2
+  hubCityId             String?
+  sourceProvider        String    // ATLAS_SANDBOX | ATLAS_PRODUCTION | MOCK
+  providerOfferId       String    // opaque，不解析
+  routingIdentifierEnc  String?   // AES-256-GCM
+  origin                String
+  destination           String
+  departureAt           DateTime
+  arrivalAt             DateTime
+  carrier               String?
+  flightNumber          String?
+  currency              String
+  totalPrice            Float
+  priceStatus           String?   // current | reference
+  isSimulated           Boolean   @default(true)
+  baggageJson           Json?
+  rawHash               String?
+  capturedAt            DateTime  @default(now())
+  expiresAt             DateTime?
+  searchRun             SearchRun @relation(fields: [searchRunId], references: [id], onDelete: Cascade)
+
+  @@index([searchRunId, legNo])
+}
+
+model EligibilitySnapshot {
+  id                String   @id @default(cuid())
+  searchRunId       String
+  cityId            String
+  countryCode       String
+  status            String   // ELIGIBLE | NEEDS_INFO | INELIGIBLE
+  ruleId            String?
+  ruleVersion       String?
+  reasonCodesJson   Json
+  requiredDocsJson  Json?
+  sourceUrl         String?
+  verifiedAt        String?
+  evaluatedAt       DateTime @default(now())
+}
+
+model StopoverPlan {
+  id                            String    @id @default(cuid())
+  searchRunId                   String
+  planType                      String    // DIRECT | STOPOVER
+  stopoverCityId                String?
+  hubAirport                    String?
+  hubCountry                    String?
+  stayDays                      Int       @default(0)
+  legOfferIdsJson               Json      // 有序腿 snapshot id
+  baselineDirectOfferSnapshotId String?
+  airfareTotal                  Float
+  airfareDelta                  Float     @default(0)
+  currency                      String
+  costBreakdownJson             Json
+  joyScore                      Int
+  joyScoreBreakdownJson         Json
+  usableHours                   Float
+  riskLevel                     String    // LOW | MEDIUM | HIGH
+  riskFlagsJson                 Json?
+  eligibilitySnapshotId         String?
+  sourceProvider                String
+  isSimulated                   Boolean   @default(true)
+  status                        String    @default("ACTIVE")
+  createdAt                     DateTime  @default(now())
+  searchRun                     SearchRun @relation(fields: [searchRunId], references: [id], onDelete: Cascade)
+
+  @@index([searchRunId])
+}
+
+model PlanExplanation {
+  id          String   @id @default(cuid())
+  planId      String   @unique
+  provider    String   // NOSANA | MOCK | TEMPLATE
+  modelId     String?
+  payloadJson Json
+  createdAt   DateTime @default(now())
+}
+
+model MonitorRule {
+  id                String       @id @default(cuid())
+  userId            String
+  planId            String
+  searchRunId       String
+  routeLabel        String
+  targetAirfare     Float?
+  minJoyScore       Int?
+  notifyApp         Boolean      @default(true)
+  notifyEmail       Boolean      @default(true)
+  notifyPolicyChange Boolean     @default(true)
+  status            String       @default("ACTIVE") // ACTIVE | PAUSED | STOPPED
+  lastCheckedAt     DateTime?
+  lastTriggeredAt   DateTime?
+  lastTriggerReason String?
+  nextCheckAt       DateTime?
+  createdAt         DateTime     @default(now())
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextCheckAt])
+}
+
+model Notification {
+  id           String                 @id @default(cuid())
+  userId       String
+  kind         String                 // PRICE_ALERT | POLICY_CHANGE | ORDER_EVENT | SYSTEM
+  title        String
+  body         String
+  deepLink     String?
+  planId       String?
+  monitorId    String?
+  isSimulated  Boolean                @default(false)
+  readAt       DateTime?
+  createdAt    DateTime               @default(now())
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries   NotificationDelivery[]
+
+  @@index([userId, readAt])
+}
+
+model NotificationDelivery {
+  id             String       @id @default(cuid())
+  notificationId String
+  channel        String       // EMAIL | APP | PUSH
+  status         String       // PENDING | SENT | FAILED
+  attempts       Int          @default(0)
+  maskedTo       String?
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([status, channel])
+}
+
+model BookingIntent {
+  id                    String      @id @default(cuid())
+  userId                String
+  planId                String
+  schemaVersion         Int         @default(1)
+  planSnapshotJson      Json        // 完整不可变方案快照
+  sourceEnvironment     String      // ATLAS_SANDBOX | MOCK
+  isSimulated           Boolean     @default(true)
+  status                String      @default("DRAFT")
+  passengerJson         Json?       // 确认后的乘机人（加密敏感字段）
+  acceptedTotal         Float?
+  currency              String?
+  priceConfirmedAt      DateTime?
+  riskAckVersion        Int         @default(0)
+  verifyResultJson      Json?
+  idempotencyKey        String?     @unique
+  expiresAt             DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders                FlightOrder[]
+
+  @@index([userId, status])
+}
+
+model FlightOrder {
+  id                     String        @id @default(cuid())
+  bookingIntentId        String
+  legNo                  Int
+  provider               String        // ATLAS_SANDBOX | MOCK
+  orderNoEnc             String?       // AES-256-GCM
+  verifySessionIdEnc     String?
+  status                 String        // CREATED | PAID | TICKETED | FAILED | REFUND_PENDING | REFUNDED_SIMULATED
+  amount                 Float?
+  currency               String?
+  lastProviderCode       String?
+  idempotencyKey         String        @unique
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  bookingIntent          BookingIntent @relation(fields: [bookingIntentId], references: [id], onDelete: Cascade)
+
+  @@index([bookingIntentId])
+}
+
+model AtlasWebhookEvent {
+  id               String   @id @default(cuid())
+  notificationKey  String   @unique // provider:notificationId 或降级 sha256
+  eventType        String
+  cid              String?
+  orderNoLast4     String?
+  payloadEnc       String   // 加密原始 payload
+  processedAt      DateTime?
+  processingStatus String   @default("RECEIVED") // RECEIVED | PROCESSED | UNKNOWN
+  receivedAt       DateTime @default(now())
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  detailJson Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+}
+
+model PlanningJob {
+  id              String                 @id @default(cuid())
+  userId          String
+  status          String                 @default("QUEUED") // QUEUED|GENERATING_CANDIDATES|RUNNING_SANDBOXES|AGGREGATING|EXPLAINING|COMPLETED|PARTIAL|FAILED
+  requestJson     Json                   // 最小化输入（无证件号/姓名/邮箱）
+  resultJson      Json?
+  explanationJson Json?
+  runnerMode      String                 // local | daytona
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime               @default(now())
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidates      PlanningJobCandidate[]
+
+  @@index([userId, createdAt])
+}
+
+model PlanningJobCandidate {
+  id                 String      @id @default(cuid())
+  planningJobId      String
+  candidateCity      String
+  eligibility        String?
+  ruleIdsJson        Json?
+  flightOfferIdsJson Json?
+  totalCost          Float?
+  currency           String?
+  usableHours        Float?
+  riskFlagsJson      Json?
+  sandboxId          String?
+  durationMs         Int?
+  status             String      @default("PENDING") // PENDING|RUNNING|DONE|FAILED|CLEANED
+  evidenceJson       Json?
+  error              String?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  planningJob        PlanningJob @relation(fields: [planningJobId], references: [id], onDelete: Cascade)
+
+  @@index([planningJobId])
+}

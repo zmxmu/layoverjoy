@@ -1,0 +1,120 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { loadEnv } from '../config/env';
+
+export interface ExplanationRequest {
+  cityNameZh: string;
+  stayDays: number;
+  usableHours: number;
+  airfareDelta: number;
+  currency: string;
+  joyScore: number;
+  joyScoreBreakdown: unknown;
+  riskFlags: string[];
+  interests: string[];
+}
+
+export interface ExplanationResult {
+  provider: 'NOSANA' | 'TEMPLATE';
+  modelId?: string;
+  summary: string;
+  highlights: string[];
+  tips: string[];
+}
+
+/**
+ * Nosana 解释服务（09 文档 §6）：
+ * Nosana 只生成解释和体验建议，不生成航班、价格、签证结论或订单状态。
+ * 调用失败必须降级为本地模板解释，并在结果中标记 provider=TEMPLATE。
+ */
+@Injectable()
+export class NosanaService {
+  private readonly logger = new Logger('NosanaService');
+
+  /** 模板降级解释：不调用任何外部服务。 */
+  templateExplanation(req: ExplanationRequest): ExplanationResult {
+    const days = req.usableHours / 24;
+    const deltaText =
+      req.airfareDelta > 0
+        ? `相比直飞多花约 ${req.airfareDelta} ${req.currency}`
+        : req.airfareDelta < 0
+          ? `相比直飞节省约 ${Math.abs(req.airfareDelta)} ${req.currency}`
+          : '与直飞价格相当';
+    return {
+      provider: 'TEMPLATE',
+      summary: `在${req.cityNameZh}停留 ${req.stayDays} 天，大约有 ${days.toFixed(1)} 天有效游玩时间，${deltaText}。`,
+      highlights: [
+        `${req.stayDays} 天停留让转机变成一段真正的短途旅行`,
+        `JoyScore ${req.joyScore} 分：综合价格、游玩时间、舒适度与风险`,
+      ],
+      tips: [
+        '两张独立机票：请为转机预留充足时间，行李需要重新托运',
+        '预订前请再次查看官方入境规则来源',
+      ],
+    };
+  }
+
+  /** 调用 Nosana OpenAI-compatible Chat Completion（非流式、JSON 输出）。 */
+  async explain(req: ExplanationRequest): Promise<ExplanationResult> {
+    const env = loadEnv();
+    if (env.INFERENCE_PROVIDER !== 'nosana' || !env.NOSANA_API_KEY || !env.NOSANA_OPENAI_BASE_URL) {
+      return this.templateExplanation(req);
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), env.NOSANA_TIMEOUT_MS);
+    try {
+      const systemPrompt = [
+        '你是 LayoverJoy 的旅行体验解说员。只解释已给出的结构化方案，不生成新的航班、价格、签证结论或订单状态。',
+        '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
+        '语言：简体中文；summary 不超过 80 字；highlights 2-3 条；tips 1-3 条。',
+      ].join('\n');
+      const userPrompt = JSON.stringify({
+        city: req.cityNameZh,
+        stayDays: req.stayDays,
+        usableHours: req.usableHours,
+        airfareDelta: req.airfareDelta,
+        currency: req.currency,
+        joyScore: req.joyScore,
+        joyScoreBreakdown: req.joyScoreBreakdown,
+        riskFlags: req.riskFlags,
+        interests: req.interests,
+      });
+      const res = await fetch(`${env.NOSANA_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${env.NOSANA_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: env.NOSANA_MODEL,
+          stream: false,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Nosana HTTP ${res.status}; falling back to template explanation`);
+        return this.templateExplanation(req);
+      }
+      const data: any = await res.json();
+      const content: string = data?.choices?.[0]?.message?.content ?? '';
+      const parsed = JSON.parse(content);
+      if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
+      return {
+        provider: 'NOSANA',
+        modelId: data?.model || env.NOSANA_MODEL,
+        summary: parsed.summary,
+        highlights: Array.isArray(parsed.highlights) ? parsed.highlights.slice(0, 4) : [],
+        tips: Array.isArray(parsed.tips) ? parsed.tips.slice(0, 4) : [],
+      };
+    } catch (e) {
+      this.logger.warn(`Nosana call failed (${(e as Error).message}); falling back to template explanation`);
+      return this.templateExplanation(req);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}

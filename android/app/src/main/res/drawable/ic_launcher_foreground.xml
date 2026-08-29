@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 简洁转机符号：两道弧线 + 一架小飞机 -->
+    <path
+        android:pathData="M30,66 Q54,42 78,66"
+        android:strokeColor="#F17350"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M36,74 Q54,56 72,74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M54,30 l4,10 l10,3 l-10,3 l-4,10 l-4,-10 l-10,-3 l10,-3 z"
+        android:fillColor="#FFFFFF" />
+</vector>

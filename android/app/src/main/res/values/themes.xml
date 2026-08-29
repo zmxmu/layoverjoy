@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_primary">#0C6D5D</color>
+    <color name="brand_background">#F3EFE5</color>
+    <style name="Theme.LayoverJoy" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand_background</item>
+        <item name="android:statusBarColor">@color/brand_background</item>
+    </style>
+</resources>
