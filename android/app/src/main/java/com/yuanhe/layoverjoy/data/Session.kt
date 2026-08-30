@@ -24,6 +24,7 @@ class SessionStore(private val context: Context) {
         val baseUrl = stringPreferencesKey("base_url")
         val previewToken = stringPreferencesKey("preview_token")
         val userEmail = stringPreferencesKey("user_email")
+        val userId = stringPreferencesKey("user_id")
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val localPassportCountry = stringPreferencesKey("local_passport_country")
         val localPassportType = stringPreferencesKey("local_passport_type")
@@ -36,6 +37,7 @@ class SessionStore(private val context: Context) {
     val baseUrl: Flow<String?> = context.dataStore.data.map { it[Keys.baseUrl] }
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[Keys.onboardingDone] ?: false }
     val userEmail: Flow<String?> = context.dataStore.data.map { it[Keys.userEmail] }
+    val userId: Flow<String?> = context.dataStore.data.map { it[Keys.userId] }
 
     suspend fun snapshot(): SessionSnapshot {
         val p = context.dataStore.data.first()
@@ -45,6 +47,7 @@ class SessionStore(private val context: Context) {
             baseUrl = p[Keys.baseUrl],
             previewToken = p[Keys.previewToken],
             userEmail = p[Keys.userEmail],
+            userId = p[Keys.userId],
             onboardingDone = p[Keys.onboardingDone] ?: false,
             paySimFail = p[Keys.paySimFail] ?: false,
         )
@@ -60,6 +63,15 @@ class SessionStore(private val context: Context) {
     }
 
     suspend fun setEmail(email: String) = context.dataStore.edit { it[Keys.userEmail] = email }
+
+    /**
+     * 缓存服务端用户 id，供搜索偏好按 userId 隔离命名空间（`GET /v1/me` 的 user.id）。
+     * 传 null/空串表示回到未登录命名空间（登出时调用），不删除已存的偏好。
+     */
+    suspend fun setUserId(id: String?) = context.dataStore.edit {
+        val v = id?.trim()?.ifBlank { null }
+        if (v == null) it.remove(Keys.userId) else it[Keys.userId] = v
+    }
 
     suspend fun setBaseUrl(url: String) = context.dataStore.edit { it[Keys.baseUrl] = url }
 
@@ -96,8 +108,33 @@ class SessionStore(private val context: Context) {
             prefs.remove(Keys.accessToken)
             prefs.remove(Keys.refreshToken)
             prefs.remove(Keys.userEmail)
+            prefs.remove(Keys.userId)
             prefs.remove(Keys.onboardingDone)
+            // 注意：不删 search_preferences_v1_* —— 登出后重新登录仍要能恢复该用户的非敏感搜索偏好。
         }
+    }
+}
+
+/**
+ * 搜索偏好的落盘通道：复用【同一个】 Preferences DataStore 文件（layoverjoy_session），
+ * 不开第二套存储。抽成接口是为了让编解码与日期推算法能在纯 JVM 单测里用内存实现跑。
+ */
+interface StringPrefStore {
+    suspend fun read(key: String): String?
+    suspend fun write(key: String, value: String)
+    suspend fun delete(key: String)
+}
+
+class SessionStringPrefStore(private val context: Context) : StringPrefStore {
+    override suspend fun read(key: String): String? =
+        context.dataStore.data.first()[stringPreferencesKey(key)]
+
+    override suspend fun write(key: String, value: String) {
+        context.dataStore.edit { it[stringPreferencesKey(key)] = value }
+    }
+
+    override suspend fun delete(key: String) {
+        context.dataStore.edit { it.remove(stringPreferencesKey(key)) }
     }
 }
 
@@ -107,6 +144,7 @@ data class SessionSnapshot(
     val baseUrl: String?,
     val previewToken: String?,
     val userEmail: String?,
+    val userId: String?,
     val onboardingDone: Boolean,
     val paySimFail: Boolean = false,
 )

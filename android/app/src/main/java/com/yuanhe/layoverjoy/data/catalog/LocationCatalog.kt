@@ -15,7 +15,16 @@ data class LocationSelection(
 )
 
 @Serializable
-data class CatalogAirport(val iata: String, val nameZh: String, val nameEn: String)
+data class CatalogAirport(
+    val iata: String,
+    val nameZh: String,
+    val nameEn: String,
+    /** 机场基准点经纬度（catalog 2.1.0 起提供；旧副本为 null，仅影响附近机场匹配）。 */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    /** 该机场可作为 Atlas Search 入参（目录即搜索能力边界，与后端 airports.controller 一致）。 */
+    val atlasSearchEnabled: Boolean = false,
+)
 
 @Serializable
 data class CatalogCity(
@@ -25,6 +34,9 @@ data class CatalogCity(
     val nameEn: String,
     val searchAliases: List<String> = emptyList(),
     val timezone: String = "",
+    /** 城市中心经纬度（近似值，只用于本机「附近机场」匹配，不上传也不落盘）。 */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val metroCode: String? = null,
     val defaultAirportIata: String = "",
     val airports: List<CatalogAirport>,
@@ -143,9 +155,25 @@ object LocationCatalog {
     }
 
     fun city(cityId: String?): CatalogCity? = cityId?.let { cityById[it] }
+
+    /**
+     * 按 IATA 城市码（metroCode）反查城市；无 metroCode 的城市退到主门户机场码。
+     * 城市码优先于机场码，保证搜索偏好缓存（存 metro 码）能稳定恢复到同一个城市。
+     */
+    fun cityByCode(code: String?): CatalogCity? {
+        val c = code?.trim()?.uppercase()?.ifBlank { null } ?: return null
+        if (!ready) return null
+        return allCities.firstOrNull { it.metroCode?.uppercase() == c } ?: iataToCity[c]
+    }
     fun country(code: String?): CatalogCountry? = code?.let { countryByCode[it] }
     fun countryOf(city: CatalogCity): CatalogCountry? = countryByCity[city.cityId]
     fun continentOf(city: CatalogCity): CatalogContinent? = continentByCity[city.cityId]
+
+    /** 全量城市快照（附近机场匹配遍历用）；未 init 成功时返回空表。 */
+    fun cities(): List<CatalogCity> = if (ready) allCities else emptyList()
+
+    /** 热门榜名次（popularCityIds 序号，越小越热；不在榜上返回 999）。 */
+    fun popularityRank(cityId: String): Int = popularRank[cityId] ?: 999
 
     fun popularCities(limit: Int = 12): List<CatalogCity> =
         popularCityIds.mapNotNull { cityById[it] }.take(limit)

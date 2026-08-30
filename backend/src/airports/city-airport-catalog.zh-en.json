@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "2.0.0",
+  "schemaVersion": "2.1.0",
   "catalogType": "CURATED_HACKATHON",
   "updatedAt": "2026-08-30",
   "defaultLocale": "zh-CN",
@@ -29,25 +29,53 @@
       "nameZh": "亚洲",
       "nameEn": "Asia",
       "sortOrder": 1,
-      "popularCityIds": ["sg-singapore", "my-kuala-lumpur", "th-bangkok", "hk-hong-kong", "cn-shanghai", "jp-tokyo", "kr-seoul", "tw-taipei", "id-bali", "ae-dubai"],
+      "popularCityIds": [
+        "sg-singapore",
+        "my-kuala-lumpur",
+        "th-bangkok",
+        "hk-hong-kong",
+        "cn-shanghai",
+        "jp-tokyo",
+        "kr-seoul",
+        "tw-taipei",
+        "id-bali",
+        "ae-dubai"
+      ],
       "countries": [
         {
           "countryCode": "SG",
           "nameZh": "新加坡",
           "nameEn": "Singapore",
-          "popularCityIds": ["sg-singapore"],
+          "popularCityIds": [
+            "sg-singapore"
+          ],
           "cities": [
             {
               "cityId": "sg-singapore",
               "countryCode": "SG",
               "nameZh": "新加坡",
               "nameEn": "Singapore",
-              "searchAliases": ["xinjiapo", "xjp", "sing", "changi", "樟宜"],
+              "searchAliases": [
+                "xinjiapo",
+                "xjp",
+                "sing",
+                "changi",
+                "樟宜"
+              ],
               "timezone": "Asia/Singapore",
               "metroCode": "SIN",
               "defaultAirportIata": "SIN",
+              "latitude": 1.3521,
+              "longitude": 103.8198,
               "airports": [
-                { "iata": "SIN", "nameZh": "新加坡樟宜机场", "nameEn": "Singapore Changi Airport" }
+                {
+                  "iata": "SIN",
+                  "nameZh": "新加坡樟宜机场",
+                  "nameEn": "Singapore Changi Airport",
+                  "latitude": 1.3644,
+                  "longitude": 103.9915,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -56,20 +84,45 @@
           "countryCode": "MY",
           "nameZh": "马来西亚",
           "nameEn": "Malaysia",
-          "popularCityIds": ["my-kuala-lumpur", "my-penang"],
+          "popularCityIds": [
+            "my-kuala-lumpur",
+            "my-penang"
+          ],
           "cities": [
             {
               "cityId": "my-kuala-lumpur",
               "countryCode": "MY",
               "nameZh": "吉隆坡",
               "nameEn": "Kuala Lumpur",
-              "searchAliases": ["jilongpo", "jlp", "kl", "klia", "吉隆"],
+              "searchAliases": [
+                "jilongpo",
+                "jlp",
+                "kl",
+                "klia",
+                "吉隆"
+              ],
               "timezone": "Asia/Kuala_Lumpur",
               "metroCode": "KUL",
               "defaultAirportIata": "KUL",
+              "latitude": 3.139,
+              "longitude": 101.6869,
               "airports": [
-                { "iata": "KUL", "nameZh": "吉隆坡国际机场", "nameEn": "Kuala Lumpur International Airport" },
-                { "iata": "SZB", "nameZh": "苏丹阿都阿兹沙机场", "nameEn": "Sultan Abdul Aziz Shah Airport" }
+                {
+                  "iata": "KUL",
+                  "nameZh": "吉隆坡国际机场",
+                  "nameEn": "Kuala Lumpur International Airport",
+                  "latitude": 2.7456,
+                  "longitude": 101.7099,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "SZB",
+                  "nameZh": "苏丹阿都阿兹沙机场",
+                  "nameEn": "Sultan Abdul Aziz Shah Airport",
+                  "latitude": 3.1297,
+                  "longitude": 101.552,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -77,12 +130,26 @@
               "countryCode": "MY",
               "nameZh": "槟城",
               "nameEn": "Penang",
-              "searchAliases": ["bincheng", "bc", "georgetown", "乔治市"],
+              "searchAliases": [
+                "bincheng",
+                "bc",
+                "georgetown",
+                "乔治市"
+              ],
               "timezone": "Asia/Kuala_Lumpur",
               "metroCode": "PEN",
               "defaultAirportIata": "PEN",
+              "latitude": 5.4141,
+              "longitude": 100.3288,
               "airports": [
-                { "iata": "PEN", "nameZh": "槟城国际机场", "nameEn": "Penang International Airport" }
+                {
+                  "iata": "PEN",
+                  "nameZh": "槟城国际机场",
+                  "nameEn": "Penang International Airport",
+                  "latitude": 5.2971,
+                  "longitude": 100.2769,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -91,20 +158,46 @@
           "countryCode": "TH",
           "nameZh": "泰国",
           "nameEn": "Thailand",
-          "popularCityIds": ["th-bangkok", "th-phuket"],
+          "popularCityIds": [
+            "th-bangkok",
+            "th-phuket"
+          ],
           "cities": [
             {
               "cityId": "th-bangkok",
               "countryCode": "TH",
               "nameZh": "曼谷",
               "nameEn": "Bangkok",
-              "searchAliases": ["mangu", "mg", "suvarnabhumi", "donmueang", "素万那普", "廊曼"],
+              "searchAliases": [
+                "mangu",
+                "mg",
+                "suvarnabhumi",
+                "donmueang",
+                "素万那普",
+                "廊曼"
+              ],
               "timezone": "Asia/Bangkok",
               "metroCode": "BKK",
               "defaultAirportIata": "BKK",
+              "latitude": 13.7563,
+              "longitude": 100.5018,
               "airports": [
-                { "iata": "BKK", "nameZh": "素万那普机场", "nameEn": "Suvarnabhumi Airport" },
-                { "iata": "DMK", "nameZh": "廊曼国际机场", "nameEn": "Don Mueang International Airport" }
+                {
+                  "iata": "BKK",
+                  "nameZh": "素万那普机场",
+                  "nameEn": "Suvarnabhumi Airport",
+                  "latitude": 13.69,
+                  "longitude": 100.7501,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "DMK",
+                  "nameZh": "廊曼国际机场",
+                  "nameEn": "Don Mueang International Airport",
+                  "latitude": 13.9125,
+                  "longitude": 100.6067,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -112,12 +205,26 @@
               "countryCode": "TH",
               "nameZh": "普吉岛",
               "nameEn": "Phuket",
-              "searchAliases": ["pujidao", "pjd", "puji", "普吉"],
+              "searchAliases": [
+                "pujidao",
+                "pjd",
+                "puji",
+                "普吉"
+              ],
               "timezone": "Asia/Bangkok",
               "metroCode": "HKT",
               "defaultAirportIata": "HKT",
+              "latitude": 7.8804,
+              "longitude": 98.3923,
               "airports": [
-                { "iata": "HKT", "nameZh": "普吉国际机场", "nameEn": "Phuket International Airport" }
+                {
+                  "iata": "HKT",
+                  "nameZh": "普吉国际机场",
+                  "nameEn": "Phuket International Airport",
+                  "latitude": 8.1132,
+                  "longitude": 98.3068,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -126,19 +233,36 @@
           "countryCode": "HK",
           "nameZh": "中国香港",
           "nameEn": "Hong Kong SAR",
-          "popularCityIds": ["hk-hong-kong"],
+          "popularCityIds": [
+            "hk-hong-kong"
+          ],
           "cities": [
             {
               "cityId": "hk-hong-kong",
               "countryCode": "HK",
               "nameZh": "香港",
               "nameEn": "Hong Kong",
-              "searchAliases": ["xianggang", "xg", "hongkong", "cheklapkok", "赤鱲角"],
+              "searchAliases": [
+                "xianggang",
+                "xg",
+                "hongkong",
+                "cheklapkok",
+                "赤鱲角"
+              ],
               "timezone": "Asia/Hong_Kong",
               "metroCode": "HKG",
               "defaultAirportIata": "HKG",
+              "latitude": 22.3193,
+              "longitude": 114.1694,
               "airports": [
-                { "iata": "HKG", "nameZh": "香港国际机场", "nameEn": "Hong Kong International Airport" }
+                {
+                  "iata": "HKG",
+                  "nameZh": "香港国际机场",
+                  "nameEn": "Hong Kong International Airport",
+                  "latitude": 22.308,
+                  "longitude": 113.9185,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -147,19 +271,34 @@
           "countryCode": "MO",
           "nameZh": "中国澳门",
           "nameEn": "Macao SAR",
-          "popularCityIds": ["mo-macau"],
+          "popularCityIds": [
+            "mo-macau"
+          ],
           "cities": [
             {
               "cityId": "mo-macau",
               "countryCode": "MO",
               "nameZh": "澳门",
               "nameEn": "Macao",
-              "searchAliases": ["aomen", "am", "macau"],
+              "searchAliases": [
+                "aomen",
+                "am",
+                "macau"
+              ],
               "timezone": "Asia/Macau",
               "metroCode": "MFM",
               "defaultAirportIata": "MFM",
+              "latitude": 22.1987,
+              "longitude": 113.5439,
               "airports": [
-                { "iata": "MFM", "nameZh": "澳门国际机场", "nameEn": "Macau International Airport" }
+                {
+                  "iata": "MFM",
+                  "nameZh": "澳门国际机场",
+                  "nameEn": "Macau International Airport",
+                  "latitude": 22.1496,
+                  "longitude": 113.5912,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -168,20 +307,49 @@
           "countryCode": "CN",
           "nameZh": "中国",
           "nameEn": "China",
-          "popularCityIds": ["cn-shanghai", "cn-beijing", "cn-guangzhou", "cn-shenzhen", "cn-chengdu"],
+          "popularCityIds": [
+            "cn-shanghai",
+            "cn-beijing",
+            "cn-guangzhou",
+            "cn-shenzhen",
+            "cn-chengdu"
+          ],
           "cities": [
             {
               "cityId": "cn-beijing",
               "countryCode": "CN",
               "nameZh": "北京",
               "nameEn": "Beijing",
-              "searchAliases": ["beijing", "bj", "shoudu", "daxing", "首都", "大兴"],
+              "searchAliases": [
+                "beijing",
+                "bj",
+                "shoudu",
+                "daxing",
+                "首都",
+                "大兴"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "BJS",
               "defaultAirportIata": "PEK",
+              "latitude": 39.9042,
+              "longitude": 116.4074,
               "airports": [
-                { "iata": "PEK", "nameZh": "北京首都国际机场", "nameEn": "Beijing Capital International Airport" },
-                { "iata": "PKX", "nameZh": "北京大兴国际机场", "nameEn": "Beijing Daxing International Airport" }
+                {
+                  "iata": "PEK",
+                  "nameZh": "北京首都国际机场",
+                  "nameEn": "Beijing Capital International Airport",
+                  "latitude": 40.0799,
+                  "longitude": 116.6031,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "PKX",
+                  "nameZh": "北京大兴国际机场",
+                  "nameEn": "Beijing Daxing International Airport",
+                  "latitude": 39.509,
+                  "longitude": 116.4106,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -189,13 +357,36 @@
               "countryCode": "CN",
               "nameZh": "上海",
               "nameEn": "Shanghai",
-              "searchAliases": ["shanghai", "sh", "pudong", "hongqiao", "浦东", "虹桥"],
+              "searchAliases": [
+                "shanghai",
+                "sh",
+                "pudong",
+                "hongqiao",
+                "浦东",
+                "虹桥"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "SHA",
               "defaultAirportIata": "PVG",
+              "latitude": 31.2304,
+              "longitude": 121.4737,
               "airports": [
-                { "iata": "PVG", "nameZh": "上海浦东国际机场", "nameEn": "Shanghai Pudong International Airport" },
-                { "iata": "SHA", "nameZh": "上海虹桥国际机场", "nameEn": "Shanghai Hongqiao International Airport" }
+                {
+                  "iata": "PVG",
+                  "nameZh": "上海浦东国际机场",
+                  "nameEn": "Shanghai Pudong International Airport",
+                  "latitude": 31.1443,
+                  "longitude": 121.8083,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "SHA",
+                  "nameZh": "上海虹桥国际机场",
+                  "nameEn": "Shanghai Hongqiao International Airport",
+                  "latitude": 31.1979,
+                  "longitude": 121.3363,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -203,12 +394,27 @@
               "countryCode": "CN",
               "nameZh": "广州",
               "nameEn": "Guangzhou",
-              "searchAliases": ["guangzhou", "gz", "canton", "baiyun", "白云"],
+              "searchAliases": [
+                "guangzhou",
+                "gz",
+                "canton",
+                "baiyun",
+                "白云"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "CAN",
               "defaultAirportIata": "CAN",
+              "latitude": 23.1291,
+              "longitude": 113.2644,
               "airports": [
-                { "iata": "CAN", "nameZh": "广州白云国际机场", "nameEn": "Guangzhou Baiyun International Airport" }
+                {
+                  "iata": "CAN",
+                  "nameZh": "广州白云国际机场",
+                  "nameEn": "Guangzhou Baiyun International Airport",
+                  "latitude": 23.3924,
+                  "longitude": 113.2988,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -216,12 +422,26 @@
               "countryCode": "CN",
               "nameZh": "深圳",
               "nameEn": "Shenzhen",
-              "searchAliases": ["shenzhen", "sz", "baoan", "宝安"],
+              "searchAliases": [
+                "shenzhen",
+                "sz",
+                "baoan",
+                "宝安"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "SZX",
               "defaultAirportIata": "SZX",
+              "latitude": 22.5431,
+              "longitude": 114.0579,
               "airports": [
-                { "iata": "SZX", "nameZh": "深圳宝安国际机场", "nameEn": "Shenzhen Bao'an International Airport" }
+                {
+                  "iata": "SZX",
+                  "nameZh": "深圳宝安国际机场",
+                  "nameEn": "Shenzhen Bao'an International Airport",
+                  "latitude": 22.6393,
+                  "longitude": 113.8108,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -229,13 +449,36 @@
               "countryCode": "CN",
               "nameZh": "成都",
               "nameEn": "Chengdu",
-              "searchAliases": ["chengdu", "cd", "tianfu", "shuangliu", "天府", "双流"],
+              "searchAliases": [
+                "chengdu",
+                "cd",
+                "tianfu",
+                "shuangliu",
+                "天府",
+                "双流"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "CTU",
               "defaultAirportIata": "TFU",
+              "latitude": 30.5728,
+              "longitude": 104.0668,
               "airports": [
-                { "iata": "TFU", "nameZh": "成都天府国际机场", "nameEn": "Chengdu Tianfu International Airport" },
-                { "iata": "CTU", "nameZh": "成都双流国际机场", "nameEn": "Chengdu Shuangliu International Airport" }
+                {
+                  "iata": "TFU",
+                  "nameZh": "成都天府国际机场",
+                  "nameEn": "Chengdu Tianfu International Airport",
+                  "latitude": 30.3125,
+                  "longitude": 104.4413,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "CTU",
+                  "nameZh": "成都双流国际机场",
+                  "nameEn": "Chengdu Shuangliu International Airport",
+                  "latitude": 30.5785,
+                  "longitude": 103.9474,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -243,12 +486,27 @@
               "countryCode": "CN",
               "nameZh": "厦门",
               "nameEn": "Xiamen",
-              "searchAliases": ["xiamen", "xm", "gao qi", "gaoqi", "高崎"],
+              "searchAliases": [
+                "xiamen",
+                "xm",
+                "gao qi",
+                "gaoqi",
+                "高崎"
+              ],
               "timezone": "Asia/Shanghai",
               "metroCode": "XMN",
               "defaultAirportIata": "XMN",
+              "latitude": 24.4798,
+              "longitude": 118.0894,
               "airports": [
-                { "iata": "XMN", "nameZh": "厦门高崎国际机场", "nameEn": "Xiamen Gaoqi International Airport" }
+                {
+                  "iata": "XMN",
+                  "nameZh": "厦门高崎国际机场",
+                  "nameEn": "Xiamen Gaoqi International Airport",
+                  "latitude": 24.544,
+                  "longitude": 118.1277,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -257,20 +515,46 @@
           "countryCode": "JP",
           "nameZh": "日本",
           "nameEn": "Japan",
-          "popularCityIds": ["jp-tokyo", "jp-osaka"],
+          "popularCityIds": [
+            "jp-tokyo",
+            "jp-osaka"
+          ],
           "cities": [
             {
               "cityId": "jp-tokyo",
               "countryCode": "JP",
               "nameZh": "东京",
               "nameEn": "Tokyo",
-              "searchAliases": ["dongjing", "dj", "haneda", "narita", "羽田", "成田"],
+              "searchAliases": [
+                "dongjing",
+                "dj",
+                "haneda",
+                "narita",
+                "羽田",
+                "成田"
+              ],
               "timezone": "Asia/Tokyo",
               "metroCode": "TYO",
               "defaultAirportIata": "HND",
+              "latitude": 35.6762,
+              "longitude": 139.6503,
               "airports": [
-                { "iata": "HND", "nameZh": "东京羽田机场", "nameEn": "Tokyo Haneda Airport" },
-                { "iata": "NRT", "nameZh": "成田国际机场", "nameEn": "Narita International Airport" }
+                {
+                  "iata": "HND",
+                  "nameZh": "东京羽田机场",
+                  "nameEn": "Tokyo Haneda Airport",
+                  "latitude": 35.5533,
+                  "longitude": 139.7811,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "NRT",
+                  "nameZh": "成田国际机场",
+                  "nameEn": "Narita International Airport",
+                  "latitude": 35.772,
+                  "longitude": 140.3929,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -278,13 +562,36 @@
               "countryCode": "JP",
               "nameZh": "大阪",
               "nameEn": "Osaka",
-              "searchAliases": ["daban", "db", "kansai", "itami", "关西", "伊丹"],
+              "searchAliases": [
+                "daban",
+                "db",
+                "kansai",
+                "itami",
+                "关西",
+                "伊丹"
+              ],
               "timezone": "Asia/Tokyo",
               "metroCode": "OSA",
               "defaultAirportIata": "KIX",
+              "latitude": 34.6937,
+              "longitude": 135.5023,
               "airports": [
-                { "iata": "KIX", "nameZh": "关西国际机场", "nameEn": "Kansai International Airport" },
-                { "iata": "ITM", "nameZh": "大阪国际机场", "nameEn": "Osaka International Airport" }
+                {
+                  "iata": "KIX",
+                  "nameZh": "关西国际机场",
+                  "nameEn": "Kansai International Airport",
+                  "latitude": 34.4342,
+                  "longitude": 135.244,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "ITM",
+                  "nameZh": "大阪国际机场",
+                  "nameEn": "Osaka International Airport",
+                  "latitude": 34.7852,
+                  "longitude": 135.4682,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -293,20 +600,46 @@
           "countryCode": "KR",
           "nameZh": "韩国",
           "nameEn": "South Korea",
-          "popularCityIds": ["kr-seoul"],
+          "popularCityIds": [
+            "kr-seoul"
+          ],
           "cities": [
             {
               "cityId": "kr-seoul",
               "countryCode": "KR",
               "nameZh": "首尔",
               "nameEn": "Seoul",
-              "searchAliases": ["shouer", "se", "seoul", "incheon", "gimpo", "仁川", "金浦"],
+              "searchAliases": [
+                "shouer",
+                "se",
+                "seoul",
+                "incheon",
+                "gimpo",
+                "仁川",
+                "金浦"
+              ],
               "timezone": "Asia/Seoul",
               "metroCode": "SEL",
               "defaultAirportIata": "ICN",
+              "latitude": 37.5665,
+              "longitude": 126.978,
               "airports": [
-                { "iata": "ICN", "nameZh": "仁川国际机场", "nameEn": "Incheon International Airport" },
-                { "iata": "GMP", "nameZh": "金浦国际机场", "nameEn": "Gimpo International Airport" }
+                {
+                  "iata": "ICN",
+                  "nameZh": "仁川国际机场",
+                  "nameEn": "Incheon International Airport",
+                  "latitude": 37.4602,
+                  "longitude": 126.4407,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "GMP",
+                  "nameZh": "金浦国际机场",
+                  "nameEn": "Gimpo International Airport",
+                  "latitude": 37.5596,
+                  "longitude": 126.8004,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -315,20 +648,45 @@
           "countryCode": "TW",
           "nameZh": "中国台湾",
           "nameEn": "Taiwan, China",
-          "popularCityIds": ["tw-taipei"],
+          "popularCityIds": [
+            "tw-taipei"
+          ],
           "cities": [
             {
               "cityId": "tw-taipei",
               "countryCode": "TW",
               "nameZh": "台北",
               "nameEn": "Taipei",
-              "searchAliases": ["taibei", "tb", "taoyuan", "songshan", "桃园", "松山"],
+              "searchAliases": [
+                "taibei",
+                "tb",
+                "taoyuan",
+                "songshan",
+                "桃园",
+                "松山"
+              ],
               "timezone": "Asia/Taipei",
               "metroCode": "TPE",
               "defaultAirportIata": "TPE",
+              "latitude": 25.033,
+              "longitude": 121.5654,
               "airports": [
-                { "iata": "TPE", "nameZh": "台湾桃园国际机场", "nameEn": "Taiwan Taoyuan International Airport" },
-                { "iata": "TSA", "nameZh": "台北松山机场", "nameEn": "Taipei Songshan Airport" }
+                {
+                  "iata": "TPE",
+                  "nameZh": "台湾桃园国际机场",
+                  "nameEn": "Taiwan Taoyuan International Airport",
+                  "latitude": 25.0821,
+                  "longitude": 121.2341,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "TSA",
+                  "nameZh": "台北松山机场",
+                  "nameEn": "Taipei Songshan Airport",
+                  "latitude": 25.0676,
+                  "longitude": 121.5526,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -337,19 +695,38 @@
           "countryCode": "VN",
           "nameZh": "越南",
           "nameEn": "Vietnam",
-          "popularCityIds": ["vn-ho-chi-minh-city", "vn-hanoi", "vn-da-nang"],
+          "popularCityIds": [
+            "vn-ho-chi-minh-city",
+            "vn-hanoi",
+            "vn-da-nang"
+          ],
           "cities": [
             {
               "cityId": "vn-ho-chi-minh-city",
               "countryCode": "VN",
               "nameZh": "胡志明市",
               "nameEn": "Ho Chi Minh City",
-              "searchAliases": ["huzhimingshi", "hzms", "saigon", "xigong", "西贡"],
+              "searchAliases": [
+                "huzhimingshi",
+                "hzms",
+                "saigon",
+                "xigong",
+                "西贡"
+              ],
               "timezone": "Asia/Ho_Chi_Minh",
               "metroCode": "SGN",
               "defaultAirportIata": "SGN",
+              "latitude": 10.8231,
+              "longitude": 106.6297,
               "airports": [
-                { "iata": "SGN", "nameZh": "新山一国际机场", "nameEn": "Tan Son Nhat International Airport" }
+                {
+                  "iata": "SGN",
+                  "nameZh": "新山一国际机场",
+                  "nameEn": "Tan Son Nhat International Airport",
+                  "latitude": 10.8188,
+                  "longitude": 106.652,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -357,12 +734,26 @@
               "countryCode": "VN",
               "nameZh": "河内",
               "nameEn": "Hanoi",
-              "searchAliases": ["henei", "hn", "noibai", "内排"],
+              "searchAliases": [
+                "henei",
+                "hn",
+                "noibai",
+                "内排"
+              ],
               "timezone": "Asia/Ho_Chi_Minh",
               "metroCode": "HAN",
               "defaultAirportIata": "HAN",
+              "latitude": 21.0278,
+              "longitude": 105.8342,
               "airports": [
-                { "iata": "HAN", "nameZh": "内排国际机场", "nameEn": "Noi Bai International Airport" }
+                {
+                  "iata": "HAN",
+                  "nameZh": "内排国际机场",
+                  "nameEn": "Noi Bai International Airport",
+                  "latitude": 21.2222,
+                  "longitude": 105.8,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -370,12 +761,26 @@
               "countryCode": "VN",
               "nameZh": "岘港",
               "nameEn": "Da Nang",
-              "searchAliases": ["xiangang", "xg", "danang", "da nang"],
+              "searchAliases": [
+                "xiangang",
+                "xg",
+                "danang",
+                "da nang"
+              ],
               "timezone": "Asia/Ho_Chi_Minh",
               "metroCode": "DAD",
               "defaultAirportIata": "DAD",
+              "latitude": 16.0544,
+              "longitude": 108.2022,
               "airports": [
-                { "iata": "DAD", "nameZh": "岘港国际机场", "nameEn": "Da Nang International Airport" }
+                {
+                  "iata": "DAD",
+                  "nameZh": "岘港国际机场",
+                  "nameEn": "Da Nang International Airport",
+                  "latitude": 16.0436,
+                  "longitude": 108.1996,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -384,20 +789,45 @@
           "countryCode": "ID",
           "nameZh": "印度尼西亚",
           "nameEn": "Indonesia",
-          "popularCityIds": ["id-bali", "id-jakarta"],
+          "popularCityIds": [
+            "id-bali",
+            "id-jakarta"
+          ],
           "cities": [
             {
               "cityId": "id-jakarta",
               "countryCode": "ID",
               "nameZh": "雅加达",
               "nameEn": "Jakarta",
-              "searchAliases": ["yajiada", "yjd", "soekarnohatta", "halim", "苏加诺哈达"],
+              "searchAliases": [
+                "yajiada",
+                "yjd",
+                "soekarnohatta",
+                "halim",
+                "苏加诺哈达"
+              ],
               "timezone": "Asia/Jakarta",
               "metroCode": "JKT",
               "defaultAirportIata": "CGK",
+              "latitude": -6.2088,
+              "longitude": 106.8456,
               "airports": [
-                { "iata": "CGK", "nameZh": "苏加诺哈达国际机场", "nameEn": "Soekarno-Hatta International Airport" },
-                { "iata": "HLP", "nameZh": "哈利姆珀达纳库苏马机场", "nameEn": "Halim Perdanakusuma International Airport" }
+                {
+                  "iata": "CGK",
+                  "nameZh": "苏加诺哈达国际机场",
+                  "nameEn": "Soekarno-Hatta International Airport",
+                  "latitude": -6.1256,
+                  "longitude": 106.6538,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "HLP",
+                  "nameZh": "哈利姆珀达纳库苏马机场",
+                  "nameEn": "Halim Perdanakusuma International Airport",
+                  "latitude": -6.2236,
+                  "longitude": 106.894,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -405,12 +835,27 @@
               "countryCode": "ID",
               "nameZh": "巴厘岛",
               "nameEn": "Bali",
-              "searchAliases": ["balidao", "bld", "denpasar", "dengbasar", "登巴萨"],
+              "searchAliases": [
+                "balidao",
+                "bld",
+                "denpasar",
+                "dengbasar",
+                "登巴萨"
+              ],
               "timezone": "Asia/Makassar",
               "metroCode": "DPS",
               "defaultAirportIata": "DPS",
+              "latitude": -8.6705,
+              "longitude": 115.2126,
               "airports": [
-                { "iata": "DPS", "nameZh": "伍拉赖国际机场", "nameEn": "I Gusti Ngurah Rai International Airport" }
+                {
+                  "iata": "DPS",
+                  "nameZh": "伍拉赖国际机场",
+                  "nameEn": "I Gusti Ngurah Rai International Airport",
+                  "latitude": -8.7481,
+                  "longitude": 115.1672,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -419,19 +864,36 @@
           "countryCode": "PH",
           "nameZh": "菲律宾",
           "nameEn": "Philippines",
-          "popularCityIds": ["ph-manila", "ph-cebu"],
+          "popularCityIds": [
+            "ph-manila",
+            "ph-cebu"
+          ],
           "cities": [
             {
               "cityId": "ph-manila",
               "countryCode": "PH",
               "nameZh": "马尼拉",
               "nameEn": "Manila",
-              "searchAliases": ["manila", "mnl", "ninoy", "马尼拉"],
+              "searchAliases": [
+                "manila",
+                "mnl",
+                "ninoy",
+                "马尼拉"
+              ],
               "timezone": "Asia/Manila",
               "metroCode": "MNL",
               "defaultAirportIata": "MNL",
+              "latitude": 14.5995,
+              "longitude": 120.9842,
               "airports": [
-                { "iata": "MNL", "nameZh": "尼诺伊阿基诺国际机场", "nameEn": "Ninoy Aquino International Airport" }
+                {
+                  "iata": "MNL",
+                  "nameZh": "尼诺伊阿基诺国际机场",
+                  "nameEn": "Ninoy Aquino International Airport",
+                  "latitude": 14.5086,
+                  "longitude": 121.0199,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -439,12 +901,27 @@
               "countryCode": "PH",
               "nameZh": "宿务",
               "nameEn": "Cebu",
-              "searchAliases": ["suwu", "sw", "cebu", "mactan", "麦克坦"],
+              "searchAliases": [
+                "suwu",
+                "sw",
+                "cebu",
+                "mactan",
+                "麦克坦"
+              ],
               "timezone": "Asia/Manila",
               "metroCode": "CEB",
               "defaultAirportIata": "CEB",
+              "latitude": 10.3157,
+              "longitude": 123.8854,
               "airports": [
-                { "iata": "CEB", "nameZh": "麦克坦宿务国际机场", "nameEn": "Mactan-Cebu International Airport" }
+                {
+                  "iata": "CEB",
+                  "nameZh": "麦克坦宿务国际机场",
+                  "nameEn": "Mactan-Cebu International Airport",
+                  "latitude": 10.3075,
+                  "longitude": 123.9794,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -453,20 +930,45 @@
           "countryCode": "AE",
           "nameZh": "阿联酋",
           "nameEn": "United Arab Emirates",
-          "popularCityIds": ["ae-dubai", "ae-abu-dhabi"],
+          "popularCityIds": [
+            "ae-dubai",
+            "ae-abu-dhabi"
+          ],
           "cities": [
             {
               "cityId": "ae-dubai",
               "countryCode": "AE",
               "nameZh": "迪拜",
               "nameEn": "Dubai",
-              "searchAliases": ["dibai", "db", "dubai", "almaktoum", "马克图姆"],
+              "searchAliases": [
+                "dibai",
+                "db",
+                "dubai",
+                "almaktoum",
+                "马克图姆"
+              ],
               "timezone": "Asia/Dubai",
               "metroCode": "DXB",
               "defaultAirportIata": "DXB",
+              "latitude": 25.2048,
+              "longitude": 55.2708,
               "airports": [
-                { "iata": "DXB", "nameZh": "迪拜国际机场", "nameEn": "Dubai International Airport" },
-                { "iata": "DWC", "nameZh": "阿勒马克图姆国际机场", "nameEn": "Al Maktoum International Airport" }
+                {
+                  "iata": "DXB",
+                  "nameZh": "迪拜国际机场",
+                  "nameEn": "Dubai International Airport",
+                  "latitude": 25.2532,
+                  "longitude": 55.3657,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "DWC",
+                  "nameZh": "阿勒马克图姆国际机场",
+                  "nameEn": "Al Maktoum International Airport",
+                  "latitude": 24.8964,
+                  "longitude": 55.1614,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -474,12 +976,26 @@
               "countryCode": "AE",
               "nameZh": "阿布扎比",
               "nameEn": "Abu Dhabi",
-              "searchAliases": ["abuzhabi", "abz", "zayed", "扎耶德"],
+              "searchAliases": [
+                "abuzhabi",
+                "abz",
+                "zayed",
+                "扎耶德"
+              ],
               "timezone": "Asia/Dubai",
               "metroCode": "AUH",
               "defaultAirportIata": "AUH",
+              "latitude": 24.4539,
+              "longitude": 54.3773,
               "airports": [
-                { "iata": "AUH", "nameZh": "扎耶德国际机场", "nameEn": "Zayed International Airport" }
+                {
+                  "iata": "AUH",
+                  "nameZh": "扎耶德国际机场",
+                  "nameEn": "Zayed International Airport",
+                  "latitude": 24.433,
+                  "longitude": 54.6511,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -488,19 +1004,35 @@
           "countryCode": "QA",
           "nameZh": "卡塔尔",
           "nameEn": "Qatar",
-          "popularCityIds": ["qa-doha"],
+          "popularCityIds": [
+            "qa-doha"
+          ],
           "cities": [
             {
               "cityId": "qa-doha",
               "countryCode": "QA",
               "nameZh": "多哈",
               "nameEn": "Doha",
-              "searchAliases": ["duoha", "dh", "hamad", "哈马德"],
+              "searchAliases": [
+                "duoha",
+                "dh",
+                "hamad",
+                "哈马德"
+              ],
               "timezone": "Asia/Qatar",
               "metroCode": "DOH",
               "defaultAirportIata": "DOH",
+              "latitude": 25.2854,
+              "longitude": 51.531,
               "airports": [
-                { "iata": "DOH", "nameZh": "哈马德国际机场", "nameEn": "Hamad International Airport" }
+                {
+                  "iata": "DOH",
+                  "nameZh": "哈马德国际机场",
+                  "nameEn": "Hamad International Airport",
+                  "latitude": 25.2731,
+                  "longitude": 51.608,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -509,20 +1041,44 @@
           "countryCode": "TR",
           "nameZh": "土耳其",
           "nameEn": "Türkiye",
-          "popularCityIds": ["tr-istanbul"],
+          "popularCityIds": [
+            "tr-istanbul"
+          ],
           "cities": [
             {
               "cityId": "tr-istanbul",
               "countryCode": "TR",
               "nameZh": "伊斯坦布尔",
               "nameEn": "Istanbul",
-              "searchAliases": ["yisitanbuer", "ystbe", "istanbul", "sabiha", "萨比哈"],
+              "searchAliases": [
+                "yisitanbuer",
+                "ystbe",
+                "istanbul",
+                "sabiha",
+                "萨比哈"
+              ],
               "timezone": "Europe/Istanbul",
               "metroCode": "IST",
               "defaultAirportIata": "IST",
+              "latitude": 41.0082,
+              "longitude": 28.9784,
               "airports": [
-                { "iata": "IST", "nameZh": "伊斯坦布尔机场", "nameEn": "Istanbul Airport" },
-                { "iata": "SAW", "nameZh": "萨比哈格克琴国际机场", "nameEn": "Sabiha Gokcen International Airport" }
+                {
+                  "iata": "IST",
+                  "nameZh": "伊斯坦布尔机场",
+                  "nameEn": "Istanbul Airport",
+                  "latitude": 41.2753,
+                  "longitude": 28.7519,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "SAW",
+                  "nameZh": "萨比哈格克琴国际机场",
+                  "nameEn": "Sabiha Gokcen International Airport",
+                  "latitude": 40.8985,
+                  "longitude": 29.3092,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -534,28 +1090,75 @@
       "nameZh": "欧洲",
       "nameEn": "Europe",
       "sortOrder": 2,
-      "popularCityIds": ["gb-london", "fr-paris", "nl-amsterdam", "de-frankfurt", "it-rome", "es-barcelona", "ch-zurich"],
+      "popularCityIds": [
+        "gb-london",
+        "fr-paris",
+        "nl-amsterdam",
+        "de-frankfurt",
+        "it-rome",
+        "es-barcelona",
+        "ch-zurich"
+      ],
       "countries": [
         {
           "countryCode": "GB",
           "nameZh": "英国",
           "nameEn": "United Kingdom",
-          "popularCityIds": ["gb-london"],
+          "popularCityIds": [
+            "gb-london"
+          ],
           "cities": [
             {
               "cityId": "gb-london",
               "countryCode": "GB",
               "nameZh": "伦敦",
               "nameEn": "London",
-              "searchAliases": ["lundun", "ld", "heathrow", "gatwick", "希思罗", "盖特威克"],
+              "searchAliases": [
+                "lundun",
+                "ld",
+                "heathrow",
+                "gatwick",
+                "希思罗",
+                "盖特威克"
+              ],
               "timezone": "Europe/London",
               "metroCode": "LON",
               "defaultAirportIata": "LHR",
+              "latitude": 51.5074,
+              "longitude": -0.1278,
               "airports": [
-                { "iata": "LHR", "nameZh": "伦敦希思罗机场", "nameEn": "London Heathrow Airport" },
-                { "iata": "LGW", "nameZh": "伦敦盖特威克机场", "nameEn": "London Gatwick Airport" },
-                { "iata": "LCY", "nameZh": "伦敦城市机场", "nameEn": "London City Airport" },
-                { "iata": "STN", "nameZh": "伦敦斯坦斯特德机场", "nameEn": "London Stansted Airport" }
+                {
+                  "iata": "LHR",
+                  "nameZh": "伦敦希思罗机场",
+                  "nameEn": "London Heathrow Airport",
+                  "latitude": 51.47,
+                  "longitude": -0.4543,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "LGW",
+                  "nameZh": "伦敦盖特威克机场",
+                  "nameEn": "London Gatwick Airport",
+                  "latitude": 51.1537,
+                  "longitude": -0.1821,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "LCY",
+                  "nameZh": "伦敦城市机场",
+                  "nameEn": "London City Airport",
+                  "latitude": 51.5053,
+                  "longitude": 0.0235,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "STN",
+                  "nameZh": "伦敦斯坦斯特德机场",
+                  "nameEn": "London Stansted Airport",
+                  "latitude": 51.885,
+                  "longitude": 0.235,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -564,20 +1167,45 @@
           "countryCode": "FR",
           "nameZh": "法国",
           "nameEn": "France",
-          "popularCityIds": ["fr-paris"],
+          "popularCityIds": [
+            "fr-paris"
+          ],
           "cities": [
             {
               "cityId": "fr-paris",
               "countryCode": "FR",
               "nameZh": "巴黎",
               "nameEn": "Paris",
-              "searchAliases": ["bali-paris", "bl", "charlesdegaulle", "orly", "戴高乐", "奥利"],
+              "searchAliases": [
+                "bali-paris",
+                "bl",
+                "charlesdegaulle",
+                "orly",
+                "戴高乐",
+                "奥利"
+              ],
               "timezone": "Europe/Paris",
               "metroCode": "PAR",
               "defaultAirportIata": "CDG",
+              "latitude": 48.8566,
+              "longitude": 2.3522,
               "airports": [
-                { "iata": "CDG", "nameZh": "巴黎夏尔·戴高乐机场", "nameEn": "Paris Charles de Gaulle Airport" },
-                { "iata": "ORY", "nameZh": "巴黎奥利机场", "nameEn": "Paris Orly Airport" }
+                {
+                  "iata": "CDG",
+                  "nameZh": "巴黎夏尔·戴高乐机场",
+                  "nameEn": "Paris Charles de Gaulle Airport",
+                  "latitude": 49.0097,
+                  "longitude": 2.5479,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "ORY",
+                  "nameZh": "巴黎奥利机场",
+                  "nameEn": "Paris Orly Airport",
+                  "latitude": 48.7239,
+                  "longitude": 2.3796,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -586,19 +1214,35 @@
           "countryCode": "NL",
           "nameZh": "荷兰",
           "nameEn": "Netherlands",
-          "popularCityIds": ["nl-amsterdam"],
+          "popularCityIds": [
+            "nl-amsterdam"
+          ],
           "cities": [
             {
               "cityId": "nl-amsterdam",
               "countryCode": "NL",
               "nameZh": "阿姆斯特丹",
               "nameEn": "Amsterdam",
-              "searchAliases": ["amusitedan", "amstd", "schiphol", "史基浦"],
+              "searchAliases": [
+                "amusitedan",
+                "amstd",
+                "schiphol",
+                "史基浦"
+              ],
               "timezone": "Europe/Amsterdam",
               "metroCode": "AMS",
               "defaultAirportIata": "AMS",
+              "latitude": 52.3676,
+              "longitude": 4.9041,
               "airports": [
-                { "iata": "AMS", "nameZh": "阿姆斯特丹史基浦机场", "nameEn": "Amsterdam Airport Schiphol" }
+                {
+                  "iata": "AMS",
+                  "nameZh": "阿姆斯特丹史基浦机场",
+                  "nameEn": "Amsterdam Airport Schiphol",
+                  "latitude": 52.3105,
+                  "longitude": 4.7683,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -607,19 +1251,35 @@
           "countryCode": "DE",
           "nameZh": "德国",
           "nameEn": "Germany",
-          "popularCityIds": ["de-frankfurt", "de-munich"],
+          "popularCityIds": [
+            "de-frankfurt",
+            "de-munich"
+          ],
           "cities": [
             {
               "cityId": "de-frankfurt",
               "countryCode": "DE",
               "nameZh": "法兰克福",
               "nameEn": "Frankfurt",
-              "searchAliases": ["falankefu", "flkf", "frankfurt"],
+              "searchAliases": [
+                "falankefu",
+                "flkf",
+                "frankfurt"
+              ],
               "timezone": "Europe/Berlin",
               "metroCode": "FRA",
               "defaultAirportIata": "FRA",
+              "latitude": 50.1109,
+              "longitude": 8.6821,
               "airports": [
-                { "iata": "FRA", "nameZh": "法兰克福机场", "nameEn": "Frankfurt Airport" }
+                {
+                  "iata": "FRA",
+                  "nameZh": "法兰克福机场",
+                  "nameEn": "Frankfurt Airport",
+                  "latitude": 50.0374,
+                  "longitude": 8.5622,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -627,12 +1287,26 @@
               "countryCode": "DE",
               "nameZh": "慕尼黑",
               "nameEn": "Munich",
-              "searchAliases": ["munihei", "mnh", "munchen", "慕尼黑"],
+              "searchAliases": [
+                "munihei",
+                "mnh",
+                "munchen",
+                "慕尼黑"
+              ],
               "timezone": "Europe/Berlin",
               "metroCode": "MUC",
               "defaultAirportIata": "MUC",
+              "latitude": 48.1351,
+              "longitude": 11.582,
               "airports": [
-                { "iata": "MUC", "nameZh": "慕尼黑机场", "nameEn": "Munich Airport" }
+                {
+                  "iata": "MUC",
+                  "nameZh": "慕尼黑机场",
+                  "nameEn": "Munich Airport",
+                  "latitude": 48.3538,
+                  "longitude": 11.7861,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -641,20 +1315,45 @@
           "countryCode": "IT",
           "nameZh": "意大利",
           "nameEn": "Italy",
-          "popularCityIds": ["it-rome", "it-milan"],
+          "popularCityIds": [
+            "it-rome",
+            "it-milan"
+          ],
           "cities": [
             {
               "cityId": "it-rome",
               "countryCode": "IT",
               "nameZh": "罗马",
               "nameEn": "Rome",
-              "searchAliases": ["luoma", "lm", "fiumicino", "ciampino", "菲乌米奇诺"],
+              "searchAliases": [
+                "luoma",
+                "lm",
+                "fiumicino",
+                "ciampino",
+                "菲乌米奇诺"
+              ],
               "timezone": "Europe/Rome",
               "metroCode": "ROM",
               "defaultAirportIata": "FCO",
+              "latitude": 41.9028,
+              "longitude": 12.4964,
               "airports": [
-                { "iata": "FCO", "nameZh": "罗马菲乌米奇诺机场", "nameEn": "Rome Fiumicino Airport" },
-                { "iata": "CIA", "nameZh": "罗马钱皮诺机场", "nameEn": "Rome Ciampino Airport" }
+                {
+                  "iata": "FCO",
+                  "nameZh": "罗马菲乌米奇诺机场",
+                  "nameEn": "Rome Fiumicino Airport",
+                  "latitude": 41.8015,
+                  "longitude": 12.2519,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "CIA",
+                  "nameZh": "罗马钱皮诺机场",
+                  "nameEn": "Rome Ciampino Airport",
+                  "latitude": 41.7994,
+                  "longitude": 12.5949,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -662,14 +1361,43 @@
               "countryCode": "IT",
               "nameZh": "米兰",
               "nameEn": "Milan",
-              "searchAliases": ["milan", "ml", "malpensa", "linate", "马尔彭萨"],
+              "searchAliases": [
+                "milan",
+                "ml",
+                "malpensa",
+                "linate",
+                "马尔彭萨"
+              ],
               "timezone": "Europe/Rome",
               "metroCode": "MIL",
               "defaultAirportIata": "MXP",
+              "latitude": 45.4642,
+              "longitude": 9.19,
               "airports": [
-                { "iata": "MXP", "nameZh": "米兰马尔彭萨机场", "nameEn": "Milan Malpensa Airport" },
-                { "iata": "LIN", "nameZh": "米兰利纳特机场", "nameEn": "Milan Linate Airport" },
-                { "iata": "BGY", "nameZh": "米兰贝加莫机场", "nameEn": "Milan Bergamo Airport" }
+                {
+                  "iata": "MXP",
+                  "nameZh": "米兰马尔彭萨机场",
+                  "nameEn": "Milan Malpensa Airport",
+                  "latitude": 45.6306,
+                  "longitude": 8.7281,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "LIN",
+                  "nameZh": "米兰利纳特机场",
+                  "nameEn": "Milan Linate Airport",
+                  "latitude": 45.4451,
+                  "longitude": 9.2567,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "BGY",
+                  "nameZh": "米兰贝加莫机场",
+                  "nameEn": "Milan Bergamo Airport",
+                  "latitude": 45.6739,
+                  "longitude": 9.7041,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -678,19 +1406,36 @@
           "countryCode": "ES",
           "nameZh": "西班牙",
           "nameEn": "Spain",
-          "popularCityIds": ["es-barcelona", "es-madrid"],
+          "popularCityIds": [
+            "es-barcelona",
+            "es-madrid"
+          ],
           "cities": [
             {
               "cityId": "es-madrid",
               "countryCode": "ES",
               "nameZh": "马德里",
               "nameEn": "Madrid",
-              "searchAliases": ["madeli", "mdl", "barajas", "巴拉哈斯"],
+              "searchAliases": [
+                "madeli",
+                "mdl",
+                "barajas",
+                "巴拉哈斯"
+              ],
               "timezone": "Europe/Madrid",
               "metroCode": "MAD",
               "defaultAirportIata": "MAD",
+              "latitude": 40.4168,
+              "longitude": -3.7038,
               "airports": [
-                { "iata": "MAD", "nameZh": "马德里巴拉哈斯机场", "nameEn": "Adolfo Suarez Madrid-Barajas Airport" }
+                {
+                  "iata": "MAD",
+                  "nameZh": "马德里巴拉哈斯机场",
+                  "nameEn": "Adolfo Suarez Madrid-Barajas Airport",
+                  "latitude": 40.4719,
+                  "longitude": -3.5626,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -698,12 +1443,26 @@
               "countryCode": "ES",
               "nameZh": "巴塞罗那",
               "nameEn": "Barcelona",
-              "searchAliases": ["basailuona", "bsln", "elprat", "埃尔普拉特"],
+              "searchAliases": [
+                "basailuona",
+                "bsln",
+                "elprat",
+                "埃尔普拉特"
+              ],
               "timezone": "Europe/Madrid",
               "metroCode": "BCN",
               "defaultAirportIata": "BCN",
+              "latitude": 41.3851,
+              "longitude": 2.1734,
               "airports": [
-                { "iata": "BCN", "nameZh": "巴塞罗那埃尔普拉特机场", "nameEn": "Barcelona-El Prat Airport" }
+                {
+                  "iata": "BCN",
+                  "nameZh": "巴塞罗那埃尔普拉特机场",
+                  "nameEn": "Barcelona-El Prat Airport",
+                  "latitude": 41.2971,
+                  "longitude": 2.0785,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -712,19 +1471,34 @@
           "countryCode": "CH",
           "nameZh": "瑞士",
           "nameEn": "Switzerland",
-          "popularCityIds": ["ch-zurich"],
+          "popularCityIds": [
+            "ch-zurich"
+          ],
           "cities": [
             {
               "cityId": "ch-zurich",
               "countryCode": "CH",
               "nameZh": "苏黎世",
               "nameEn": "Zurich",
-              "searchAliases": ["sulishi", "sls", "zuerich"],
+              "searchAliases": [
+                "sulishi",
+                "sls",
+                "zuerich"
+              ],
               "timezone": "Europe/Zurich",
               "metroCode": "ZRH",
               "defaultAirportIata": "ZRH",
+              "latitude": 47.3769,
+              "longitude": 8.5417,
               "airports": [
-                { "iata": "ZRH", "nameZh": "苏黎世机场", "nameEn": "Zurich Airport" }
+                {
+                  "iata": "ZRH",
+                  "nameZh": "苏黎世机场",
+                  "nameEn": "Zurich Airport",
+                  "latitude": 47.4596,
+                  "longitude": 8.5516,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -733,19 +1507,34 @@
           "countryCode": "AT",
           "nameZh": "奥地利",
           "nameEn": "Austria",
-          "popularCityIds": ["at-vienna"],
+          "popularCityIds": [
+            "at-vienna"
+          ],
           "cities": [
             {
               "cityId": "at-vienna",
               "countryCode": "AT",
               "nameZh": "维也纳",
               "nameEn": "Vienna",
-              "searchAliases": ["weiyena", "wyn", "wien"],
+              "searchAliases": [
+                "weiyena",
+                "wyn",
+                "wien"
+              ],
               "timezone": "Europe/Vienna",
               "metroCode": "VIE",
               "defaultAirportIata": "VIE",
+              "latitude": 48.2082,
+              "longitude": 16.3738,
               "airports": [
-                { "iata": "VIE", "nameZh": "维也纳国际机场", "nameEn": "Vienna International Airport" }
+                {
+                  "iata": "VIE",
+                  "nameZh": "维也纳国际机场",
+                  "nameEn": "Vienna International Airport",
+                  "latitude": 48.1103,
+                  "longitude": 16.5697,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -754,19 +1543,34 @@
           "countryCode": "PT",
           "nameZh": "葡萄牙",
           "nameEn": "Portugal",
-          "popularCityIds": ["pt-lisbon"],
+          "popularCityIds": [
+            "pt-lisbon"
+          ],
           "cities": [
             {
               "cityId": "pt-lisbon",
               "countryCode": "PT",
               "nameZh": "里斯本",
               "nameEn": "Lisbon",
-              "searchAliases": ["lisiben", "lsb", "lisboa"],
+              "searchAliases": [
+                "lisiben",
+                "lsb",
+                "lisboa"
+              ],
               "timezone": "Europe/Lisbon",
               "metroCode": "LIS",
               "defaultAirportIata": "LIS",
+              "latitude": 38.7223,
+              "longitude": -9.1393,
               "airports": [
-                { "iata": "LIS", "nameZh": "里斯本温贝托德尔加多机场", "nameEn": "Humberto Delgado Airport" }
+                {
+                  "iata": "LIS",
+                  "nameZh": "里斯本温贝托德尔加多机场",
+                  "nameEn": "Humberto Delgado Airport",
+                  "latitude": 38.7742,
+                  "longitude": -9.1342,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -778,27 +1582,72 @@
       "nameZh": "北美洲",
       "nameEn": "North America",
       "sortOrder": 3,
-      "popularCityIds": ["us-new-york", "us-los-angeles", "us-san-francisco", "ca-toronto", "ca-vancouver", "mx-mexico-city", "mx-cancun"],
+      "popularCityIds": [
+        "us-new-york",
+        "us-los-angeles",
+        "us-san-francisco",
+        "ca-toronto",
+        "ca-vancouver",
+        "mx-mexico-city",
+        "mx-cancun"
+      ],
       "countries": [
         {
           "countryCode": "US",
           "nameZh": "美国",
           "nameEn": "United States",
-          "popularCityIds": ["us-new-york", "us-los-angeles", "us-san-francisco", "us-chicago", "us-seattle", "us-honolulu"],
+          "popularCityIds": [
+            "us-new-york",
+            "us-los-angeles",
+            "us-san-francisco",
+            "us-chicago",
+            "us-seattle",
+            "us-honolulu"
+          ],
           "cities": [
             {
               "cityId": "us-new-york",
               "countryCode": "US",
               "nameZh": "纽约",
               "nameEn": "New York",
-              "searchAliases": ["niuyue", "ny", "nyc", "jfk", "newark", "纽瓦克"],
+              "searchAliases": [
+                "niuyue",
+                "ny",
+                "nyc",
+                "jfk",
+                "newark",
+                "纽瓦克"
+              ],
               "timezone": "America/New_York",
               "metroCode": "NYC",
               "defaultAirportIata": "JFK",
+              "latitude": 40.7128,
+              "longitude": -74.006,
               "airports": [
-                { "iata": "JFK", "nameZh": "纽约肯尼迪国际机场", "nameEn": "John F. Kennedy International Airport" },
-                { "iata": "EWR", "nameZh": "纽瓦克自由国际机场", "nameEn": "Newark Liberty International Airport" },
-                { "iata": "LGA", "nameZh": "纽约拉瓜迪亚机场", "nameEn": "LaGuardia Airport" }
+                {
+                  "iata": "JFK",
+                  "nameZh": "纽约肯尼迪国际机场",
+                  "nameEn": "John F. Kennedy International Airport",
+                  "latitude": 40.6413,
+                  "longitude": -73.7781,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "EWR",
+                  "nameZh": "纽瓦克自由国际机场",
+                  "nameEn": "Newark Liberty International Airport",
+                  "latitude": 40.6895,
+                  "longitude": -74.1745,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "LGA",
+                  "nameZh": "纽约拉瓜迪亚机场",
+                  "nameEn": "LaGuardia Airport",
+                  "latitude": 40.7769,
+                  "longitude": -73.874,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -806,12 +1655,26 @@
               "countryCode": "US",
               "nameZh": "洛杉矶",
               "nameEn": "Los Angeles",
-              "searchAliases": ["luoshanji", "lsj", "la", "losangeles"],
+              "searchAliases": [
+                "luoshanji",
+                "lsj",
+                "la",
+                "losangeles"
+              ],
               "timezone": "America/Los_Angeles",
               "metroCode": "LAX",
               "defaultAirportIata": "LAX",
+              "latitude": 34.0522,
+              "longitude": -118.2437,
               "airports": [
-                { "iata": "LAX", "nameZh": "洛杉矶国际机场", "nameEn": "Los Angeles International Airport" }
+                {
+                  "iata": "LAX",
+                  "nameZh": "洛杉矶国际机场",
+                  "nameEn": "Los Angeles International Airport",
+                  "latitude": 33.9416,
+                  "longitude": -118.4085,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -819,12 +1682,26 @@
               "countryCode": "US",
               "nameZh": "旧金山",
               "nameEn": "San Francisco",
-              "searchAliases": ["jiujinshan", "jjs", "sanfrancisco", "sf"],
+              "searchAliases": [
+                "jiujinshan",
+                "jjs",
+                "sanfrancisco",
+                "sf"
+              ],
               "timezone": "America/Los_Angeles",
               "metroCode": "SFO",
               "defaultAirportIata": "SFO",
+              "latitude": 37.7749,
+              "longitude": -122.4194,
               "airports": [
-                { "iata": "SFO", "nameZh": "旧金山国际机场", "nameEn": "San Francisco International Airport" }
+                {
+                  "iata": "SFO",
+                  "nameZh": "旧金山国际机场",
+                  "nameEn": "San Francisco International Airport",
+                  "latitude": 37.6213,
+                  "longitude": -122.379,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -832,13 +1709,35 @@
               "countryCode": "US",
               "nameZh": "芝加哥",
               "nameEn": "Chicago",
-              "searchAliases": ["zhijiage", "zjg", "ohare", "midway", "奥黑尔"],
+              "searchAliases": [
+                "zhijiage",
+                "zjg",
+                "ohare",
+                "midway",
+                "奥黑尔"
+              ],
               "timezone": "America/Chicago",
               "metroCode": "CHI",
               "defaultAirportIata": "ORD",
+              "latitude": 41.8781,
+              "longitude": -87.6298,
               "airports": [
-                { "iata": "ORD", "nameZh": "芝加哥奥黑尔国际机场", "nameEn": "O'Hare International Airport" },
-                { "iata": "MDW", "nameZh": "芝加哥中途国际机场", "nameEn": "Chicago Midway International Airport" }
+                {
+                  "iata": "ORD",
+                  "nameZh": "芝加哥奥黑尔国际机场",
+                  "nameEn": "O'Hare International Airport",
+                  "latitude": 41.9742,
+                  "longitude": -87.9073,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "MDW",
+                  "nameZh": "芝加哥中途国际机场",
+                  "nameEn": "Chicago Midway International Airport",
+                  "latitude": 41.7868,
+                  "longitude": -87.7522,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -846,12 +1745,26 @@
               "countryCode": "US",
               "nameZh": "西雅图",
               "nameEn": "Seattle",
-              "searchAliases": ["xiyatu", "xyt", "seatac", "塔科马"],
+              "searchAliases": [
+                "xiyatu",
+                "xyt",
+                "seatac",
+                "塔科马"
+              ],
               "timezone": "America/Los_Angeles",
               "metroCode": "SEA",
               "defaultAirportIata": "SEA",
+              "latitude": 47.6062,
+              "longitude": -122.3321,
               "airports": [
-                { "iata": "SEA", "nameZh": "西雅图塔科马国际机场", "nameEn": "Seattle-Tacoma International Airport" }
+                {
+                  "iata": "SEA",
+                  "nameZh": "西雅图塔科马国际机场",
+                  "nameEn": "Seattle-Tacoma International Airport",
+                  "latitude": 47.4502,
+                  "longitude": -122.3088,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -859,12 +1772,26 @@
               "countryCode": "US",
               "nameZh": "檀香山",
               "nameEn": "Honolulu",
-              "searchAliases": ["tanxiangshan", "txs", "honolulu", "檀香山"],
+              "searchAliases": [
+                "tanxiangshan",
+                "txs",
+                "honolulu",
+                "檀香山"
+              ],
               "timezone": "Pacific/Honolulu",
               "metroCode": "HNL",
               "defaultAirportIata": "HNL",
+              "latitude": 21.3069,
+              "longitude": -157.8583,
               "airports": [
-                { "iata": "HNL", "nameZh": "丹尼尔·井上国际机场", "nameEn": "Daniel K. Inouye International Airport" }
+                {
+                  "iata": "HNL",
+                  "nameZh": "丹尼尔·井上国际机场",
+                  "nameEn": "Daniel K. Inouye International Airport",
+                  "latitude": 21.3206,
+                  "longitude": -157.9242,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -873,20 +1800,45 @@
           "countryCode": "CA",
           "nameZh": "加拿大",
           "nameEn": "Canada",
-          "popularCityIds": ["ca-toronto", "ca-vancouver"],
+          "popularCityIds": [
+            "ca-toronto",
+            "ca-vancouver"
+          ],
           "cities": [
             {
               "cityId": "ca-toronto",
               "countryCode": "CA",
               "nameZh": "多伦多",
               "nameEn": "Toronto",
-              "searchAliases": ["duolunduo", "dld", "pearson", "billybishop", "皮尔逊"],
+              "searchAliases": [
+                "duolunduo",
+                "dld",
+                "pearson",
+                "billybishop",
+                "皮尔逊"
+              ],
               "timezone": "America/Toronto",
               "metroCode": "YTO",
               "defaultAirportIata": "YYZ",
+              "latitude": 43.6532,
+              "longitude": -79.3832,
               "airports": [
-                { "iata": "YYZ", "nameZh": "多伦多皮尔逊国际机场", "nameEn": "Toronto Pearson International Airport" },
-                { "iata": "YTZ", "nameZh": "比利毕晓普多伦多市机场", "nameEn": "Billy Bishop Toronto City Airport" }
+                {
+                  "iata": "YYZ",
+                  "nameZh": "多伦多皮尔逊国际机场",
+                  "nameEn": "Toronto Pearson International Airport",
+                  "latitude": 43.6777,
+                  "longitude": -79.6248,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "YTZ",
+                  "nameZh": "比利毕晓普多伦多市机场",
+                  "nameEn": "Billy Bishop Toronto City Airport",
+                  "latitude": 43.6275,
+                  "longitude": -79.3962,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -894,12 +1846,25 @@
               "countryCode": "CA",
               "nameZh": "温哥华",
               "nameEn": "Vancouver",
-              "searchAliases": ["wengehua", "wgh", "vancouver"],
+              "searchAliases": [
+                "wengehua",
+                "wgh",
+                "vancouver"
+              ],
               "timezone": "America/Vancouver",
               "metroCode": "YVR",
               "defaultAirportIata": "YVR",
+              "latitude": 49.2827,
+              "longitude": -123.1207,
               "airports": [
-                { "iata": "YVR", "nameZh": "温哥华国际机场", "nameEn": "Vancouver International Airport" }
+                {
+                  "iata": "YVR",
+                  "nameZh": "温哥华国际机场",
+                  "nameEn": "Vancouver International Airport",
+                  "latitude": 49.1965,
+                  "longitude": -123.1798,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -908,19 +1873,37 @@
           "countryCode": "MX",
           "nameZh": "墨西哥",
           "nameEn": "Mexico",
-          "popularCityIds": ["mx-mexico-city", "mx-cancun"],
+          "popularCityIds": [
+            "mx-mexico-city",
+            "mx-cancun"
+          ],
           "cities": [
             {
               "cityId": "mx-mexico-city",
               "countryCode": "MX",
               "nameZh": "墨西哥城",
               "nameEn": "Mexico City",
-              "searchAliases": ["moxigecheng", "mxgc", "cdmx", "juarez", "胡亚雷斯"],
+              "searchAliases": [
+                "moxigecheng",
+                "mxgc",
+                "cdmx",
+                "juarez",
+                "胡亚雷斯"
+              ],
               "timezone": "America/Mexico_City",
               "metroCode": "MEX",
               "defaultAirportIata": "MEX",
+              "latitude": 19.4326,
+              "longitude": -99.1332,
               "airports": [
-                { "iata": "MEX", "nameZh": "墨西哥城国际机场", "nameEn": "Mexico City International Airport" }
+                {
+                  "iata": "MEX",
+                  "nameZh": "墨西哥城国际机场",
+                  "nameEn": "Mexico City International Airport",
+                  "latitude": 19.4363,
+                  "longitude": -99.0721,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -928,12 +1911,25 @@
               "countryCode": "MX",
               "nameZh": "坎昆",
               "nameEn": "Cancun",
-              "searchAliases": ["kankun", "kk", "cancun"],
+              "searchAliases": [
+                "kankun",
+                "kk",
+                "cancun"
+              ],
               "timezone": "America/Cancun",
               "metroCode": "CUN",
               "defaultAirportIata": "CUN",
+              "latitude": 21.1619,
+              "longitude": -86.8515,
               "airports": [
-                { "iata": "CUN", "nameZh": "坎昆国际机场", "nameEn": "Cancun International Airport" }
+                {
+                  "iata": "CUN",
+                  "nameZh": "坎昆国际机场",
+                  "nameEn": "Cancun International Airport",
+                  "latitude": 21.0365,
+                  "longitude": -86.8771,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -945,25 +1941,50 @@
       "nameZh": "大洋洲",
       "nameEn": "Oceania",
       "sortOrder": 4,
-      "popularCityIds": ["au-sydney", "au-melbourne", "au-brisbane", "au-perth", "nz-auckland"],
+      "popularCityIds": [
+        "au-sydney",
+        "au-melbourne",
+        "au-brisbane",
+        "au-perth",
+        "nz-auckland"
+      ],
       "countries": [
         {
           "countryCode": "AU",
           "nameZh": "澳大利亚",
           "nameEn": "Australia",
-          "popularCityIds": ["au-sydney", "au-melbourne", "au-brisbane", "au-perth"],
+          "popularCityIds": [
+            "au-sydney",
+            "au-melbourne",
+            "au-brisbane",
+            "au-perth"
+          ],
           "cities": [
             {
               "cityId": "au-sydney",
               "countryCode": "AU",
               "nameZh": "悉尼",
               "nameEn": "Sydney",
-              "searchAliases": ["xini", "xn", "kingsfordsmith", "金斯福德史密斯"],
+              "searchAliases": [
+                "xini",
+                "xn",
+                "kingsfordsmith",
+                "金斯福德史密斯"
+              ],
               "timezone": "Australia/Sydney",
               "metroCode": "SYD",
               "defaultAirportIata": "SYD",
+              "latitude": -33.8688,
+              "longitude": 151.2093,
               "airports": [
-                { "iata": "SYD", "nameZh": "悉尼金斯福德史密斯机场", "nameEn": "Sydney Kingsford Smith Airport" }
+                {
+                  "iata": "SYD",
+                  "nameZh": "悉尼金斯福德史密斯机场",
+                  "nameEn": "Sydney Kingsford Smith Airport",
+                  "latitude": -33.9399,
+                  "longitude": 151.1753,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -971,12 +1992,26 @@
               "countryCode": "AU",
               "nameZh": "墨尔本",
               "nameEn": "Melbourne",
-              "searchAliases": ["moerben", "meb", "tullamarine", "图拉马林"],
+              "searchAliases": [
+                "moerben",
+                "meb",
+                "tullamarine",
+                "图拉马林"
+              ],
               "timezone": "Australia/Melbourne",
               "metroCode": "MEL",
               "defaultAirportIata": "MEL",
+              "latitude": -37.8136,
+              "longitude": 144.9631,
               "airports": [
-                { "iata": "MEL", "nameZh": "墨尔本机场", "nameEn": "Melbourne Airport" }
+                {
+                  "iata": "MEL",
+                  "nameZh": "墨尔本机场",
+                  "nameEn": "Melbourne Airport",
+                  "latitude": -37.669,
+                  "longitude": 144.841,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -984,12 +2019,25 @@
               "countryCode": "AU",
               "nameZh": "布里斯班",
               "nameEn": "Brisbane",
-              "searchAliases": ["bulisiban", "blsb", "brisbane"],
+              "searchAliases": [
+                "bulisiban",
+                "blsb",
+                "brisbane"
+              ],
               "timezone": "Australia/Brisbane",
               "metroCode": "BNE",
               "defaultAirportIata": "BNE",
+              "latitude": -27.4698,
+              "longitude": 153.0251,
               "airports": [
-                { "iata": "BNE", "nameZh": "布里斯班机场", "nameEn": "Brisbane Airport" }
+                {
+                  "iata": "BNE",
+                  "nameZh": "布里斯班机场",
+                  "nameEn": "Brisbane Airport",
+                  "latitude": -27.3897,
+                  "longitude": 153.1261,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -997,12 +2045,25 @@
               "countryCode": "AU",
               "nameZh": "珀斯",
               "nameEn": "Perth",
-              "searchAliases": ["posi", "ps", "perth"],
+              "searchAliases": [
+                "posi",
+                "ps",
+                "perth"
+              ],
               "timezone": "Australia/Perth",
               "metroCode": "PER",
               "defaultAirportIata": "PER",
+              "latitude": -31.9505,
+              "longitude": 115.8605,
               "airports": [
-                { "iata": "PER", "nameZh": "珀斯机场", "nameEn": "Perth Airport" }
+                {
+                  "iata": "PER",
+                  "nameZh": "珀斯机场",
+                  "nameEn": "Perth Airport",
+                  "latitude": -31.9403,
+                  "longitude": 115.9669,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1011,19 +2072,34 @@
           "countryCode": "NZ",
           "nameZh": "新西兰",
           "nameEn": "New Zealand",
-          "popularCityIds": ["nz-auckland"],
+          "popularCityIds": [
+            "nz-auckland"
+          ],
           "cities": [
             {
               "cityId": "nz-auckland",
               "countryCode": "NZ",
               "nameZh": "奥克兰",
               "nameEn": "Auckland",
-              "searchAliases": ["aokelan", "akl", "auckland"],
+              "searchAliases": [
+                "aokelan",
+                "akl",
+                "auckland"
+              ],
               "timezone": "Pacific/Auckland",
               "metroCode": "AKL",
               "defaultAirportIata": "AKL",
+              "latitude": -36.8485,
+              "longitude": 174.7633,
               "airports": [
-                { "iata": "AKL", "nameZh": "奥克兰机场", "nameEn": "Auckland Airport" }
+                {
+                  "iata": "AKL",
+                  "nameZh": "奥克兰机场",
+                  "nameEn": "Auckland Airport",
+                  "latitude": -37.0081,
+                  "longitude": 174.7917,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1035,25 +2111,49 @@
       "nameZh": "非洲",
       "nameEn": "Africa",
       "sortOrder": 5,
-      "popularCityIds": ["za-johannesburg", "za-cape-town", "eg-cairo", "ma-casablanca", "et-addis-ababa", "ke-nairobi"],
+      "popularCityIds": [
+        "za-johannesburg",
+        "za-cape-town",
+        "eg-cairo",
+        "ma-casablanca",
+        "et-addis-ababa",
+        "ke-nairobi"
+      ],
       "countries": [
         {
           "countryCode": "ZA",
           "nameZh": "南非",
           "nameEn": "South Africa",
-          "popularCityIds": ["za-johannesburg", "za-cape-town"],
+          "popularCityIds": [
+            "za-johannesburg",
+            "za-cape-town"
+          ],
           "cities": [
             {
               "cityId": "za-johannesburg",
               "countryCode": "ZA",
               "nameZh": "约翰内斯堡",
               "nameEn": "Johannesburg",
-              "searchAliases": ["yuehanneisibao", "yhnsb", "ortambo", "坦博"],
+              "searchAliases": [
+                "yuehanneisibao",
+                "yhnsb",
+                "ortambo",
+                "坦博"
+              ],
               "timezone": "Africa/Johannesburg",
               "metroCode": "JNB",
               "defaultAirportIata": "JNB",
+              "latitude": -26.2041,
+              "longitude": 28.0473,
               "airports": [
-                { "iata": "JNB", "nameZh": "奥利弗·坦博国际机场", "nameEn": "O. R. Tambo International Airport" }
+                {
+                  "iata": "JNB",
+                  "nameZh": "奥利弗·坦博国际机场",
+                  "nameEn": "O. R. Tambo International Airport",
+                  "latitude": -26.1392,
+                  "longitude": 28.246,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -1061,12 +2161,25 @@
               "countryCode": "ZA",
               "nameZh": "开普敦",
               "nameEn": "Cape Town",
-              "searchAliases": ["kaipudun", "kpd", "capetown"],
+              "searchAliases": [
+                "kaipudun",
+                "kpd",
+                "capetown"
+              ],
               "timezone": "Africa/Johannesburg",
               "metroCode": "CPT",
               "defaultAirportIata": "CPT",
+              "latitude": -33.9249,
+              "longitude": 18.4241,
               "airports": [
-                { "iata": "CPT", "nameZh": "开普敦国际机场", "nameEn": "Cape Town International Airport" }
+                {
+                  "iata": "CPT",
+                  "nameZh": "开普敦国际机场",
+                  "nameEn": "Cape Town International Airport",
+                  "latitude": -33.9676,
+                  "longitude": 18.6009,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1075,19 +2188,34 @@
           "countryCode": "EG",
           "nameZh": "埃及",
           "nameEn": "Egypt",
-          "popularCityIds": ["eg-cairo"],
+          "popularCityIds": [
+            "eg-cairo"
+          ],
           "cities": [
             {
               "cityId": "eg-cairo",
               "countryCode": "EG",
               "nameZh": "开罗",
               "nameEn": "Cairo",
-              "searchAliases": ["kailuo", "kl", "cairo"],
+              "searchAliases": [
+                "kailuo",
+                "kl",
+                "cairo"
+              ],
               "timezone": "Africa/Cairo",
               "metroCode": "CAI",
               "defaultAirportIata": "CAI",
+              "latitude": 30.0444,
+              "longitude": 31.2357,
               "airports": [
-                { "iata": "CAI", "nameZh": "开罗国际机场", "nameEn": "Cairo International Airport" }
+                {
+                  "iata": "CAI",
+                  "nameZh": "开罗国际机场",
+                  "nameEn": "Cairo International Airport",
+                  "latitude": 30.1219,
+                  "longitude": 31.4056,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1096,19 +2224,35 @@
           "countryCode": "MA",
           "nameZh": "摩洛哥",
           "nameEn": "Morocco",
-          "popularCityIds": ["ma-casablanca"],
+          "popularCityIds": [
+            "ma-casablanca"
+          ],
           "cities": [
             {
               "cityId": "ma-casablanca",
               "countryCode": "MA",
               "nameZh": "卡萨布兰卡",
               "nameEn": "Casablanca",
-              "searchAliases": ["kasabulanka", "ksblk", "mohammedv", "穆罕默德五世"],
+              "searchAliases": [
+                "kasabulanka",
+                "ksblk",
+                "mohammedv",
+                "穆罕默德五世"
+              ],
               "timezone": "Africa/Casablanca",
               "metroCode": "CAS",
               "defaultAirportIata": "CMN",
+              "latitude": 33.5731,
+              "longitude": -7.5898,
               "airports": [
-                { "iata": "CMN", "nameZh": "穆罕默德五世国际机场", "nameEn": "Mohammed V International Airport" }
+                {
+                  "iata": "CMN",
+                  "nameZh": "穆罕默德五世国际机场",
+                  "nameEn": "Mohammed V International Airport",
+                  "latitude": 33.5678,
+                  "longitude": -7.6564,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1117,19 +2261,35 @@
           "countryCode": "ET",
           "nameZh": "埃塞俄比亚",
           "nameEn": "Ethiopia",
-          "popularCityIds": ["et-addis-ababa"],
+          "popularCityIds": [
+            "et-addis-ababa"
+          ],
           "cities": [
             {
               "cityId": "et-addis-ababa",
               "countryCode": "ET",
               "nameZh": "亚的斯亚贝巴",
               "nameEn": "Addis Ababa",
-              "searchAliases": ["yadesiyabeiba", "ydsybb", "bole", "博莱"],
+              "searchAliases": [
+                "yadesiyabeiba",
+                "ydsybb",
+                "bole",
+                "博莱"
+              ],
               "timezone": "Africa/Addis_Ababa",
               "metroCode": "ADD",
               "defaultAirportIata": "ADD",
+              "latitude": 9.0192,
+              "longitude": 38.7525,
               "airports": [
-                { "iata": "ADD", "nameZh": "亚的斯亚贝巴博莱国际机场", "nameEn": "Addis Ababa Bole International Airport" }
+                {
+                  "iata": "ADD",
+                  "nameZh": "亚的斯亚贝巴博莱国际机场",
+                  "nameEn": "Addis Ababa Bole International Airport",
+                  "latitude": 8.9779,
+                  "longitude": 38.7993,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1138,19 +2298,35 @@
           "countryCode": "KE",
           "nameZh": "肯尼亚",
           "nameEn": "Kenya",
-          "popularCityIds": ["ke-nairobi"],
+          "popularCityIds": [
+            "ke-nairobi"
+          ],
           "cities": [
             {
               "cityId": "ke-nairobi",
               "countryCode": "KE",
               "nameZh": "内罗毕",
               "nameEn": "Nairobi",
-              "searchAliases": ["neiluobi", "nlb", "jomo", "乔莫肯雅塔"],
+              "searchAliases": [
+                "neiluobi",
+                "nlb",
+                "jomo",
+                "乔莫肯雅塔"
+              ],
               "timezone": "Africa/Nairobi",
               "metroCode": "NBO",
               "defaultAirportIata": "NBO",
+              "latitude": -1.2864,
+              "longitude": 36.8172,
               "airports": [
-                { "iata": "NBO", "nameZh": "乔莫·肯雅塔国际机场", "nameEn": "Jomo Kenyatta International Airport" }
+                {
+                  "iata": "NBO",
+                  "nameZh": "乔莫·肯雅塔国际机场",
+                  "nameEn": "Jomo Kenyatta International Airport",
+                  "latitude": -1.3192,
+                  "longitude": 36.9278,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1162,26 +2338,57 @@
       "nameZh": "南美洲",
       "nameEn": "South America",
       "sortOrder": 6,
-      "popularCityIds": ["br-sao-paulo", "br-rio-de-janeiro", "ar-buenos-aires", "cl-santiago", "pe-lima"],
+      "popularCityIds": [
+        "br-sao-paulo",
+        "br-rio-de-janeiro",
+        "ar-buenos-aires",
+        "cl-santiago",
+        "pe-lima"
+      ],
       "countries": [
         {
           "countryCode": "BR",
           "nameZh": "巴西",
           "nameEn": "Brazil",
-          "popularCityIds": ["br-sao-paulo", "br-rio-de-janeiro"],
+          "popularCityIds": [
+            "br-sao-paulo",
+            "br-rio-de-janeiro"
+          ],
           "cities": [
             {
               "cityId": "br-sao-paulo",
               "countryCode": "BR",
               "nameZh": "圣保罗",
               "nameEn": "São Paulo",
-              "searchAliases": ["shengbaoluo", "sbl", "saopaulo", "guarulhos", "瓜鲁柳斯"],
+              "searchAliases": [
+                "shengbaoluo",
+                "sbl",
+                "saopaulo",
+                "guarulhos",
+                "瓜鲁柳斯"
+              ],
               "timezone": "America/Sao_Paulo",
               "metroCode": "SAO",
               "defaultAirportIata": "GRU",
+              "latitude": -23.5505,
+              "longitude": -46.6333,
               "airports": [
-                { "iata": "GRU", "nameZh": "圣保罗瓜鲁柳斯国际机场", "nameEn": "São Paulo/Guarulhos International Airport" },
-                { "iata": "CGH", "nameZh": "圣保罗孔戈尼亚斯机场", "nameEn": "São Paulo/Congonhas Airport" }
+                {
+                  "iata": "GRU",
+                  "nameZh": "圣保罗瓜鲁柳斯国际机场",
+                  "nameEn": "São Paulo/Guarulhos International Airport",
+                  "latitude": -23.4356,
+                  "longitude": -46.4731,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "CGH",
+                  "nameZh": "圣保罗孔戈尼亚斯机场",
+                  "nameEn": "São Paulo/Congonhas Airport",
+                  "latitude": -23.6266,
+                  "longitude": -46.6555,
+                  "atlasSearchEnabled": true
+                }
               ]
             },
             {
@@ -1189,13 +2396,35 @@
               "countryCode": "BR",
               "nameZh": "里约热内卢",
               "nameEn": "Rio de Janeiro",
-              "searchAliases": ["liyuereneilu", "lyrnl", "rio", "galeao", "加利昂"],
+              "searchAliases": [
+                "liyuereneilu",
+                "lyrnl",
+                "rio",
+                "galeao",
+                "加利昂"
+              ],
               "timezone": "America/Sao_Paulo",
               "metroCode": "RIO",
               "defaultAirportIata": "GIG",
+              "latitude": -22.9068,
+              "longitude": -43.1729,
               "airports": [
-                { "iata": "GIG", "nameZh": "里约热内卢加利昂国际机场", "nameEn": "Rio de Janeiro/Galeão International Airport" },
-                { "iata": "SDU", "nameZh": "里约热内卢桑托斯杜蒙机场", "nameEn": "Santos Dumont Airport" }
+                {
+                  "iata": "GIG",
+                  "nameZh": "里约热内卢加利昂国际机场",
+                  "nameEn": "Rio de Janeiro/Galeão International Airport",
+                  "latitude": -22.8099,
+                  "longitude": -43.2506,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "SDU",
+                  "nameZh": "里约热内卢桑托斯杜蒙机场",
+                  "nameEn": "Santos Dumont Airport",
+                  "latitude": -22.9104,
+                  "longitude": -43.1631,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1204,20 +2433,43 @@
           "countryCode": "AR",
           "nameZh": "阿根廷",
           "nameEn": "Argentina",
-          "popularCityIds": ["ar-buenos-aires"],
+          "popularCityIds": [
+            "ar-buenos-aires"
+          ],
           "cities": [
             {
               "cityId": "ar-buenos-aires",
               "countryCode": "AR",
               "nameZh": "布宜诺斯艾利斯",
               "nameEn": "Buenos Aires",
-              "searchAliases": ["buyinuosiailisi", "bynsals", "ezeiza", "埃塞萨"],
+              "searchAliases": [
+                "buyinuosiailisi",
+                "bynsals",
+                "ezeiza",
+                "埃塞萨"
+              ],
               "timezone": "America/Argentina/Buenos_Aires",
               "metroCode": "BUE",
               "defaultAirportIata": "EZE",
+              "latitude": -34.6037,
+              "longitude": -58.3816,
               "airports": [
-                { "iata": "EZE", "nameZh": "埃塞萨皮斯塔里尼部长国际机场", "nameEn": "Ministro Pistarini International Airport" },
-                { "iata": "AEP", "nameZh": "豪尔赫纽伯里机场", "nameEn": "Aeroparque Jorge Newbery" }
+                {
+                  "iata": "EZE",
+                  "nameZh": "埃塞萨皮斯塔里尼部长国际机场",
+                  "nameEn": "Ministro Pistarini International Airport",
+                  "latitude": -34.8222,
+                  "longitude": -58.5358,
+                  "atlasSearchEnabled": true
+                },
+                {
+                  "iata": "AEP",
+                  "nameZh": "豪尔赫纽伯里机场",
+                  "nameEn": "Aeroparque Jorge Newbery",
+                  "latitude": -34.5592,
+                  "longitude": -58.5376,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1226,19 +2478,35 @@
           "countryCode": "CL",
           "nameZh": "智利",
           "nameEn": "Chile",
-          "popularCityIds": ["cl-santiago"],
+          "popularCityIds": [
+            "cl-santiago"
+          ],
           "cities": [
             {
               "cityId": "cl-santiago",
               "countryCode": "CL",
               "nameZh": "圣地亚哥",
               "nameEn": "Santiago",
-              "searchAliases": ["shengdiyage", "sdyg", "arturo", "阿图罗"],
+              "searchAliases": [
+                "shengdiyage",
+                "sdyg",
+                "arturo",
+                "阿图罗"
+              ],
               "timezone": "America/Santiago",
               "metroCode": "SCL",
               "defaultAirportIata": "SCL",
+              "latitude": -33.4489,
+              "longitude": -70.6693,
               "airports": [
-                { "iata": "SCL", "nameZh": "圣地亚哥阿图罗·梅里诺·贝尼特斯机场", "nameEn": "Arturo Merino Benitez International Airport" }
+                {
+                  "iata": "SCL",
+                  "nameZh": "圣地亚哥阿图罗·梅里诺·贝尼特斯机场",
+                  "nameEn": "Arturo Merino Benitez International Airport",
+                  "latitude": -33.393,
+                  "longitude": -70.7858,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
@@ -1247,24 +2515,42 @@
           "countryCode": "PE",
           "nameZh": "秘鲁",
           "nameEn": "Peru",
-          "popularCityIds": ["pe-lima"],
+          "popularCityIds": [
+            "pe-lima"
+          ],
           "cities": [
             {
               "cityId": "pe-lima",
               "countryCode": "PE",
               "nameZh": "利马",
               "nameEn": "Lima",
-              "searchAliases": ["lima", "lm", "jorgechavez", "豪尔赫查韦斯"],
+              "searchAliases": [
+                "lima",
+                "lm",
+                "jorgechavez",
+                "豪尔赫查韦斯"
+              ],
               "timezone": "America/Lima",
               "metroCode": "LIM",
               "defaultAirportIata": "LIM",
+              "latitude": -12.0464,
+              "longitude": -77.0428,
               "airports": [
-                { "iata": "LIM", "nameZh": "豪尔赫·查韦斯国际机场", "nameEn": "Jorge Chávez International Airport" }
+                {
+                  "iata": "LIM",
+                  "nameZh": "豪尔赫·查韦斯国际机场",
+                  "nameEn": "Jorge Chávez International Airport",
+                  "latitude": -12.0219,
+                  "longitude": -77.1143,
+                  "atlasSearchEnabled": true
+                }
               ]
             }
           ]
         }
       ]
     }
-  ]
+  ],
+  "geoNoteZh": "经纬度为城市中心与机场基准点的近似值，仅用于本机“附近机场”匹配与排序，不代表可售库存或入境资格。",
+  "geoNoteEn": "Coordinates are approximate city-centre and airport reference points, used only for on-device nearby-airport matching; they never imply inventory or entry eligibility."
 }

@@ -40,6 +40,29 @@ const EnvSchema = z.object({
   NOSANA_DEPLOYMENT_ID: z.string().optional().default(''),
   INFERENCE_PROVIDER: z.enum(['mock', 'nosana']).default('nosana'),
 
+  // ---------- 流式 AI 推荐（Qwen2.5-1.5B 新部署） ----------
+  // 一键回滚：置 false 即回到旧 3B 非流式链路（SSE 接口仍可用，直接回模板结构）。
+  NOSANA_STREAMING_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v === 'true' || v === '1'),
+  /** 流式专用 endpoint（可带或不带 /v1）；为空时回退到 NOSANA_OPENAI_BASE_URL（旧 3B）。 */
+  NOSANA_STREAM_BASE_URL: z.string().optional().default(''),
+  /** vLLM served model name；启动时仍会用 /v1/models 的实际 id 覆盖，此值仅作兜底。 */
+  NOSANA_SERVED_MODEL: z.string().default('layoverjoy-qwen2.5-1.5b'),
+  /** Hugging Face 仓库名：仅用于诊断日志，不得作为请求的 model 值。 */
+  NOSANA_HF_MODEL: z.string().default('Qwen/Qwen2.5-1.5B-Instruct-AWQ'),
+  NOSANA_STREAM_DEPLOYMENT_ID: z.string().optional().default(''),
+  NOSANA_MAX_TOKENS: z.coerce.number().int().min(64).max(4096).default(480),
+  NOSANA_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.2),
+  NOSANA_TOP_P: z.coerce.number().min(0).max(1).default(0.8),
+  NOSANA_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(1000).default(8000),
+  NOSANA_TOTAL_TIMEOUT_MS: z.coerce.number().int().min(2000).default(20000),
+  NOSANA_FALLBACK_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v === 'true' || v === '1'),
+
   DAYTONA_MODE: z.enum(['mock', 'local-runner', 'live']).default('local-runner'),
   DAYTONA_API_KEY: z.string().optional().default(''),
   DAYTONA_API_URL: z.string().default('https://app.daytona.io/api'),

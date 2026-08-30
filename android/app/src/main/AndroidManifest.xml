@@ -4,6 +4,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- 「使用当前城市」：仅前台大概位置（单次），不申请后台定位、不申请精确定位。 -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- 无定位硬件的设备仍可安装（入口会自动降级为手动选择）。 -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <!-- 调试期访问本地 Docker(10.0.2.2) 使用 http 明文；正式部署切换 https 后可移除 -->
     <application
         android:name=".LayoverJoyApp"

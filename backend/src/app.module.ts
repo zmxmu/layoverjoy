@@ -14,6 +14,8 @@ import { SearchController } from './search/search.controller';
 import { PlansService } from './plans/plans.service';
 import { PlansController } from './plans/plans.controller';
 import { NosanaService } from './explanations/nosana.service';
+import { NosanaStreamService } from './explanations/nosana-stream.service';
+import { AiInsightStreamService } from './explanations/ai-insight-stream.service';
 import { NotificationsService } from './notifications/notifications.service';
 import { NotificationsController, MonitorsController } from './notifications/notifications.controller';
 import { MonitorsService } from './monitors/monitors.service';
@@ -50,6 +52,8 @@ import { HomeModule } from './home/home.module';
     SearchService,
     PlansService,
     NosanaService,
+    NosanaStreamService,
+    AiInsightStreamService,
     NotificationsService,
     MonitorsService,
     BookingsService,

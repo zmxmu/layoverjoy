@@ -161,9 +161,16 @@ interface ApiService {
 class ApiClient(initialBaseUrl: String) {
     @Volatile private var baseUrl: String = normalize(initialBaseUrl)
     @Volatile private var previewToken: String? = null
+    @Volatile private var httpClient: OkHttpClient = buildClient()
     @Volatile private var retrofit: Retrofit = build(baseUrl)
 
     val api: ApiService get() = retrofit.create(ApiService::class.java)
+
+    /**
+     * 流式请求（SSE）专用客户端：复用同一套拦截器（Authorization / 预览 Token / 401 轮换），
+     * 但关掉读超时——SSE 连接在两个事件之间本来就是长时间无数据的。
+     */
+    fun sseClient(): OkHttpClient = httpClient.newBuilder().readTimeout(0, TimeUnit.MILLISECONDS).build()
 
     fun switchBaseUrl(url: String) {
         val normalized = normalize(url)
@@ -178,6 +185,7 @@ class ApiClient(initialBaseUrl: String) {
         val t = token?.trim()?.ifBlank { null }
         if (t != previewToken) {
             previewToken = t
+            httpClient = buildClient()
             retrofit = build(baseUrl)
         }
     }
@@ -188,7 +196,14 @@ class ApiClient(initialBaseUrl: String) {
     private fun normalize(url: String): String =
         if (url.endsWith("/")) url else "$url/"
 
-    private fun build(base: String): Retrofit {
+    private fun build(base: String): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(base)
+            .client(httpClient)
+            .addConverterFactory(AppJson.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    private fun buildClient(): OkHttpClient {
         val token = previewToken
         val headers = Interceptor { chain ->
             var req = chain.request()
@@ -227,17 +242,13 @@ class ApiClient(initialBaseUrl: String) {
         }
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            // Nosana 推理可达 60~90 秒，读超时须覆盖后端超时上限。
+            // Nosana 推理可达 60~90 秒，读超时须覆盖后端超时上限（SSE 另用 sseClient() 关读超时）。
             .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(headers)
             .authenticator(authenticator)
             .build()
-        return Retrofit.Builder()
-            .baseUrl(base)
-            .client(client)
-            .addConverterFactory(AppJson.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return client
     }
 
     private fun priorResponseCount(response: okhttp3.Response): Int {

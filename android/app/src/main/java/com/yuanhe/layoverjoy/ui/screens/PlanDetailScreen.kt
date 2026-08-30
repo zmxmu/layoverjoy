@@ -2,6 +2,7 @@ package com.yuanhe.layoverjoy.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +32,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yuanhe.layoverjoy.data.insight.AiInsightStreamState
+import com.yuanhe.layoverjoy.data.insight.AiInsightStreamViewModel
+import com.yuanhe.layoverjoy.data.insight.AiInsightV2Dto
+import com.yuanhe.layoverjoy.data.insight.InsightSections
+import com.yuanhe.layoverjoy.data.insight.InsightStages
+import com.yuanhe.layoverjoy.data.insight.RichInsightV2Draft
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,8 +97,6 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
     val scope = rememberCoroutineScope()
     var detail by remember { mutableStateOf<PlanDetailDto?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var explaining by remember { mutableStateOf(false) }
-    var autoRequested by remember { mutableStateOf(false) }
 
     suspend fun load() {
         when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
@@ -109,15 +118,6 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
 
     LaunchedEffect(planId, L10n.current) {
         load()
-        // AI-11：无推荐时自动生成，不需点击；后端失败也返回丰富模板，页面不停错误态。
-        val cur = detail
-        if (cur != null && cur.explanation == null && !autoRequested) {
-            autoRequested = true
-            explaining = true
-            apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
-            load()
-            explaining = false
-        }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -229,40 +229,16 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                                     "prompt=${meta?.promptVersion ?: ""}",
                             )
                         }
-                        when {
-                            payload != null && payload.schemaVersion == "2.0" -> RichNarrativeCard(payload)
-                            payload != null -> {
-                                Text(payload.summary, style = MaterialTheme.typography.bodyMedium)
-                                if (payload.highlights.isNotEmpty()) {
-                                    Spacer(Modifier.height(8.dp))
-                                    payload.highlights.forEach { Text("· $it", style = MaterialTheme.typography.bodySmall) }
-                                }
-                            }
-                            explaining -> NarrativeSkeleton()
-                            else -> Text(L10n.t("detail.why_empty"), style = MaterialTheme.typography.bodySmall)
-                        }
+                        // 流式 AI 推荐：进页即自动生成，分阶段进度 + 逐区块增量展示。
+                        // 旧非流式快照（explanation.payload）仍作为回滚与兼容展示保留。
+                        AiInsightStreamCard(planId = planId, legacy = payload)
                         Spacer(Modifier.height(10.dp))
-                        if (payload != null) {
-                            Text(L10n.t("detail.smart_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
-                            Spacer(Modifier.height(8.dp))
-                            SecondaryButton(
-                                text = L10n.t("detail.adjust_prefs"),
-                                onClick = { nav.popBackStack(Routes.SEARCH, false) },
-                            )
-                        } else {
-                            SecondaryButton(
-                                text = if (explaining) L10n.t("detail.why_generating") else L10n.t("detail.why_generate"),
-                                enabled = !explaining,
-                                onClick = {
-                                    explaining = true
-                                    scope.launch {
-                                        apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
-                                        load()
-                                        explaining = false
-                                    }
-                                },
-                            )
-                        }
+                        Text(L10n.t("detail.smart_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                        Spacer(Modifier.height(8.dp))
+                        SecondaryButton(
+                            text = L10n.t("detail.adjust_prefs"),
+                            onClick = { nav.popBackStack(Routes.SEARCH, false) },
+                        )
                     }
                 }
 
@@ -452,21 +428,150 @@ private fun easeLevelText(level: String, en: Boolean): String = when (level) {
 /** 与最终卡结构一致的 Skeleton（AI-11）。 */
 @Composable
 private fun NarrativeSkeleton() {
-    val box = Modifier
+    val line = Modifier
         .fillMaxWidth()
         .height(14.dp)
         .clip(RoundedCornerShape(7.dp))
         .background(BrandInkSoft.copy(alpha = 0.15f))
-    val tallBox = Modifier
+    val block = Modifier
         .fillMaxWidth()
         .height(48.dp)
         .clip(RoundedCornerShape(7.dp))
         .background(BrandInkSoft.copy(alpha = 0.15f))
     Column {
-        box
+        Box(line)
         Spacer(Modifier.height(8.dp))
-        box
+        Box(line)
         Spacer(Modifier.height(8.dp))
-        tallBox
+        Box(block)
     }
+}
+
+// ---------------- 流式 AI 推荐卡（Qwen2.5-1.5B streaming） ----------------
+
+/**
+ * AI 推荐卡：进入页面自动开始生成，按区块增量展示。
+ *
+ * 防重复生成：ViewModel 以 `planId + 语言` 为 key 绑定到当前导航条目——
+ * Compose 重组与横竖屏切换都拿到同一个实例（不会重新请求），离开页面时随条目销毁并取消 SSE。
+ *
+ * UI 只出现产品化状态与正文，绝不出现供应商、模型名、GPU、Deployment 或推理耗时。
+ */
+@Composable
+private fun AiInsightStreamCard(planId: String, legacy: ExplanationPayload?) {
+    val lang = L10n.current.tag
+    val vm: AiInsightStreamViewModel = viewModel(key = "ai-insight:$planId:$lang")
+    LaunchedEffect(planId, lang) { vm.start(planId, lang) }
+    val state by vm.state.collectAsStateWithLifecycle()
+
+    when (val s = state) {
+        is AiInsightStreamState.Idle, is AiInsightStreamState.Connecting -> {
+            StageRow(L10n.t("insight.stage.checking_visa"))
+            Spacer(Modifier.height(8.dp))
+            NarrativeSkeleton()
+        }
+        is AiInsightStreamState.Analyzing -> {
+            StageRow(stageText(s.stage, s.message))
+            Spacer(Modifier.height(8.dp))
+            NarrativeSkeleton()
+        }
+        is AiInsightStreamState.Streaming -> {
+            StageRow(stageText(s.stage, ""))
+            Spacer(Modifier.height(8.dp))
+            InsightDraftSections(draft = s.content)
+        }
+        is AiInsightStreamState.Completed -> InsightBody(s.content)
+        is AiInsightStreamState.Fallback -> InsightBody(s.content)
+        is AiInsightStreamState.Failed -> {
+            // 结构化降级仍不可用时：回落到旧非流式快照，最后才是可重试提示（绝不空白卡）。
+            if (legacy != null && legacy.schemaVersion == "2.0") {
+                RichNarrativeCard(legacy)
+            } else {
+                Text(L10n.t("insight.unavailable"), style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+            }
+            if (s.recoverable) {
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = { vm.retry() }) { Text(L10n.t("common.retry"), color = BrandPrimary) }
+            }
+        }
+    }
+}
+
+/** 进度行：小圆圈 + 产品化阶段文案。 */
+@Composable
+private fun StageRow(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = BrandPrimary)
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, color = BrandPrimary)
+    }
+}
+
+/** 阶段码 → 本地化文案；未知阶段用后端英文原文兜底。 */
+@Composable
+private fun stageText(stage: String, fallback: String): String = when (stage) {
+    InsightStages.CHECKING_VISA -> L10n.t("insight.stage.checking_visa")
+    InsightStages.COMPARING_COST -> L10n.t("insight.stage.comparing_cost")
+    InsightStages.BUILDING_PLAN -> L10n.t("insight.stage.building_plan")
+    InsightStages.FINALIZING -> L10n.t("insight.stage.finalizing")
+    else -> fallback.ifBlank { L10n.t("insight.stage.building_plan") }
+}
+
+/** 流式中：按后端区块顺序渲染已到达的内容。 */
+@Composable
+private fun InsightDraftSections(draft: RichInsightV2Draft) {
+    Column {
+        InsightSections.ORDER.forEach { section ->
+            val text = draft.texts[section]
+            val items = draft.items[section]
+            if (text.isNullOrBlank() && items.isNullOrEmpty()) return@forEach
+            SectionBlock(
+                title = sectionTitle(section),
+                text = text,
+                items = items,
+                score = if (section == InsightSections.CONVENIENCE) draft.convenienceScore else null,
+            )
+        }
+    }
+}
+
+/** 终态：完整的 v2 八区块。 */
+@Composable
+private fun InsightBody(insight: AiInsightV2Dto) {
+    Column {
+        SectionBlock(sectionTitle(InsightSections.CITY_ADVANTAGES), insight.cityAdvantages, null, null)
+        SectionBlock(sectionTitle(InsightSections.INTEREST_MATCH), insight.interestMatch, null, null)
+        SectionBlock(sectionTitle(InsightSections.SCHEDULE_FIT), insight.scheduleFit, null, null)
+        SectionBlock(sectionTitle(InsightSections.MINI_ITINERARY), null, insight.miniItinerary, null)
+        SectionBlock(sectionTitle(InsightSections.CONVENIENCE), null, insight.convenienceReasons, insight.convenienceScore)
+        SectionBlock(sectionTitle(InsightSections.TRAVELER_GAINS), null, insight.travelerGains, null)
+        SectionBlock(sectionTitle(InsightSections.TRAVELER_ACCEPTS), null, insight.travelerAccepts, null)
+    }
+}
+
+@Composable
+private fun SectionBlock(title: String, text: String?, items: List<String>?, score: Int?) {
+    if (text.isNullOrBlank() && items.isNullOrEmpty()) return
+    Spacer(Modifier.height(10.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.labelMedium, color = BrandInkSoft, modifier = Modifier.weight(1f))
+        if (score != null) {
+            Text("$score / 100", style = MaterialTheme.typography.labelMedium, color = BrandPrimary, fontWeight = FontWeight.Bold)
+        }
+    }
+    if (!text.isNullOrBlank()) {
+        Text(text, style = MaterialTheme.typography.bodySmall)
+    }
+    items?.forEach { Text("· $it", style = MaterialTheme.typography.bodySmall) }
+}
+
+@Composable
+private fun sectionTitle(section: String): String = when (section) {
+    InsightSections.CITY_ADVANTAGES -> L10n.t("insight.section.city_advantages")
+    InsightSections.INTEREST_MATCH -> L10n.t("insight.section.interest_match")
+    InsightSections.SCHEDULE_FIT -> L10n.t("insight.section.schedule_fit")
+    InsightSections.MINI_ITINERARY -> L10n.t("insight.section.mini_itinerary")
+    InsightSections.CONVENIENCE -> L10n.t("insight.section.convenience")
+    InsightSections.TRAVELER_GAINS -> L10n.t("insight.section.traveler_gains")
+    else -> L10n.t("insight.section.traveler_accepts")
 }

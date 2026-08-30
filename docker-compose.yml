@@ -51,6 +51,22 @@ services:
       NOSANA_OPENAI_BASE_URL: ${NOSANA_OPENAI_BASE_URL:-https://3F7ZoStUp94NqH11NnjzoR55EooG9gtnLBKerABNFS4v.node.k8s.prd.nos.ci/v1}
       NOSANA_DEPLOYMENT_ID: ${NOSANA_DEPLOYMENT_ID:-DfQoerNYzsD3PSqngPKX1P7BffHU9k2i6oc3XW5811vR}
       NOSANA_MODEL: ${NOSANA_MODEL:-layoverjoy-qwen2.5-3b}
+      # 流式 AI 推荐（Qwen2.5-1.5B-Instruct-AWQ 新部署）。
+      # 一键回滚：NOSANA_STREAMING_ENABLED=false docker compose up -d --force-recreate api
+      # → SSE 接口仍在，但直接返回模板结果；旧 3B 非流式解释接口不受影响。
+      NOSANA_STREAMING_ENABLED: ${NOSANA_STREAMING_ENABLED:-true}
+      NOSANA_STREAM_BASE_URL: ${NOSANA_STREAM_BASE_URL:-https://2F4cK5iT3Kngu4ayvM4ETKBq153chTkG7Xa7sASMg4jM.node.k8s.prd.nos.ci}
+      NOSANA_STREAM_DEPLOYMENT_ID: ${NOSANA_STREAM_DEPLOYMENT_ID:-5XksocRPS2cPrjRittPfGxFNUDxJobfDCcr5Ax9EZR1e}
+      # 请求的 model 值以 /v1/models 的实际 id 为准，此处仅作探测失败时的兜底。
+      NOSANA_SERVED_MODEL: ${NOSANA_SERVED_MODEL:-layoverjoy-qwen2.5-1.5b}
+      # Hugging Face 仓库名只进诊断日志，绝不作为请求参数。
+      NOSANA_HF_MODEL: ${NOSANA_HF_MODEL:-Qwen/Qwen2.5-1.5B-Instruct-AWQ}
+      NOSANA_MAX_TOKENS: ${NOSANA_MAX_TOKENS:-480}
+      NOSANA_TEMPERATURE: ${NOSANA_TEMPERATURE:-0.2}
+      NOSANA_TOP_P: ${NOSANA_TOP_P:-0.8}
+      NOSANA_FIRST_TOKEN_TIMEOUT_MS: ${NOSANA_FIRST_TOKEN_TIMEOUT_MS:-8000}
+      NOSANA_TOTAL_TIMEOUT_MS: ${NOSANA_TOTAL_TIMEOUT_MS:-20000}
+      NOSANA_FALLBACK_ENABLED: ${NOSANA_FALLBACK_ENABLED:-true}
       PORT: 8080
     depends_on:
       db:

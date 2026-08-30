@@ -78,5 +78,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
+    // 「使用当前城市」单次前台大概定位：只取 FusedLocationProviderClient，
+    // 不引入 Maps/Places SDK（本功能不需要任何 Google API Key，见 docs/城市选择缓存与当前位置实施方案.md §3）。
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     testImplementation("junit:junit:4.13.2")
 }

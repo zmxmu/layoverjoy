@@ -207,8 +207,12 @@ export class PlansService {
     }
   }
 
-  /** v2 丰富解读（14 号方案）：缓存键 = plan+lang+行程+兴趣+pace+资料版本+prompt版本。 */
-  async explain(userId: string, planId: string, lang: 'zh' | 'en' = 'zh') {
+  /**
+   * 方案 → 确定性体验上下文（非流式解释与流式 AI 推荐共用）。
+   * 资格结论在这里取自 eligibilitySnapshot（本地确定性规则引擎的落库结果），
+   * AI 只能解释这个结论，不参与裁决。
+   */
+  async planExperienceContext(userId: string, planId: string) {
     const plan = await this.prisma.stopoverPlan.findFirst({
       where: { id: planId, searchRun: { userId } },
     });
@@ -244,6 +248,13 @@ export class PlansService {
     });
 
     const itineraryPart = offers.map((o) => `${o.origin}${o.destination}${o.departureAt}${o.arrivalAt}`).join('~');
+    return { plan, ctx, interests, pace, itineraryPart };
+  }
+
+  /** v2 丰富解读（14 号方案）：缓存键 = plan+lang+行程+兴趣+pace+资料版本+prompt版本。 */
+  async explain(userId: string, planId: string, lang: 'zh' | 'en' = 'zh') {
+    const { plan, ctx, interests, pace, itineraryPart } = await this.planExperienceContext(userId, planId);
+
     const cacheKey = createHash('sha256')
       .update([planId, lang, itineraryPart, [...interests].sort().join(','), pace, EXPERIENCE_CATALOG_VERSION, PROMPT_VERSION].join('|'))
       .digest('hex')

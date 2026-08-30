@@ -79,16 +79,22 @@ fun locationSubtitle(city: CatalogCity, sel: LocationSelection): String {
     return "$country · $scope"
 }
 
-private fun returnSelection(context: android.content.Context, nav: NavController, sel: LocationSelection, role: String) {
+private fun returnSelection(
+    context: android.content.Context,
+    nav: NavController,
+    sel: LocationSelection,
+    role: String,
+    originSource: String? = null,
+) {
     LocationCatalog.record(context, sel)
     // 结果直写搜索页 handle，并从任意层级（picker/洲/国家）一步回到搜索页。
     // 旧实现写 previousBackStackEntry 且只 pop 一层：深层浏览链下结果写错 handle、
     // 且只回到 picker，表现为“选完城市自动返回上一页且选择丢失”。
     val target = runCatching { nav.getBackStackEntry(Routes.SEARCH) }.getOrNull()
-    (target?.savedStateHandle ?: nav.previousBackStackEntry?.savedStateHandle)?.set(
-        "location_selection_$role",
-        resultJson.encodeToString(LocationSelection.serializer(), sel),
-    )
+    val handle = (target?.savedStateHandle ?: nav.previousBackStackEntry?.savedStateHandle) ?: return
+    handle.set("location_selection_$role", resultJson.encodeToString(LocationSelection.serializer(), sel))
+    // 出发地来源（仅「使用当前城市」会写）：搜索页据此记 originSelectionSource，不存经纬度。
+    if (role == "ORIGIN") handle.set("location_origin_source", originSource ?: "MANUAL")
     if (!nav.popBackStack(Routes.SEARCH, false)) nav.popBackStack()
 }
 
@@ -122,6 +128,11 @@ fun LocationPickerScreen(nav: NavController, role: String) {
             singleLine = true,
         )
         androidx.compose.runtime.LaunchedEffect(Unit) { try { focusRequester.requestFocus() } catch (_: Exception) {} }
+
+        // 「使用当前城市」只在出发地页出现（方案 §6.1）；目的地页不展示该入口。
+        if (role == "ORIGIN") {
+            CurrentCityOriginEntry(onConfirm = { sel, source -> returnSelection(context, nav, sel, role, source) })
+        }
 
         val hits = remember(query) { if (query.isBlank()) emptyList() else LocationCatalog.search(query) }
         val recent = remember { LocationCatalog.recent(context) }
