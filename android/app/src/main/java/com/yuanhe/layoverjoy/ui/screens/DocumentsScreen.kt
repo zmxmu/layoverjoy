@@ -46,6 +46,7 @@ import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
 import com.yuanhe.layoverjoy.ui.PrimaryButton
+import com.yuanhe.layoverjoy.ui.countryDisplayName
 import com.yuanhe.layoverjoy.ui.fmtDate
 import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
@@ -57,6 +58,13 @@ import kotlinx.coroutines.launch
 /** 护照类型：code 传后端，label 走 i18n。 */
 private val PASSPORT_TYPES = listOf("ORDINARY" to "docs.pt.ordinary", "DIPLOMATIC" to "docs.pt.diplomatic", "OFFICIAL" to "docs.pt.official")
 private val VISA_TYPES = listOf("TOURIST" to "docs.vt.tourist", "BUSINESS" to "docs.vt.business", "TRANSIT" to "docs.vt.transit")
+
+/** 类型 code → 本地化文案；未知类型不展示原始 code 缩写。 */
+private fun passportTypeLabel(code: String?): String? =
+    code?.let { c -> PASSPORT_TYPES.firstOrNull { it.first == c }?.second?.let { L10n.t(it) } }
+
+private fun visaTypeLabel(code: String?): String? =
+    code?.let { c -> VISA_TYPES.firstOrNull { it.first == c }?.second?.let { L10n.t(it) } }
 
 /** 证件钱包：只保存签发国家、类型与有效期；无号码、无照片。 */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -135,7 +143,7 @@ private fun DocumentCard(d: DocumentDto, onDelete: () -> Unit) {
     JoyCard(Modifier.padding(vertical = 5.dp)) {
         Row(Modifier.fillMaxWidth()) {
             Text(
-                if (d.kind == "PASSPORT") L10n.t("docs.passport_of", d.countryCode) else L10n.t("docs.visa_of", d.countryCode),
+                if (d.kind == "PASSPORT") L10n.t("docs.passport_of", countryDisplayName(d.countryCode)) else L10n.t("docs.visa_of", countryDisplayName(d.countryCode)),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
@@ -143,8 +151,8 @@ private fun DocumentCard(d: DocumentDto, onDelete: () -> Unit) {
         }
         Text(
             buildString {
-                d.passportType?.let { append(L10n.t("docs.type_prefix", it)) }
-                d.visaType?.let { append(L10n.t("docs.visa_type_prefix", it)) }
+                passportTypeLabel(d.passportType)?.let { append(L10n.t("docs.type_prefix", it)) }
+                visaTypeLabel(d.visaType)?.let { append(L10n.t("docs.visa_type_prefix", it)) }
                 append(L10n.t("docs.expiry_prefix", d.expiresOn?.let { fmtDate(it) } ?: L10n.t("docs.expiry_na")))
             },
             style = MaterialTheme.typography.bodySmall,

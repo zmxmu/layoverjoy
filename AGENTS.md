@@ -33,7 +33,7 @@
 - AI 推理：Nosana
 - 航班能力：Atlas/ATRIP Sandbox
 - 邮件收件人：当前认证用户的 users.email
-- 支付：Sandbox 或明确标识的模拟支付
+- 支付：Sandbox 余额支付（`/pay.do` `paymentMethod:1`，明确标识的 Sandbox 测试支付）或明确标识的模拟支付；默认开发 Profile 为 Mock，只有显式配置 `ATLAS_MODE=sandbox` + `ATLAS_ORDER_PROVIDER=sandbox` + `ATLAS_PAYMENT_PROVIDER=sandbox` 才启用 Sandbox 交易闭环
 - 不实现生产部署和真实信用卡支付
 
 ## 3. Atlas 数据真实性
@@ -91,12 +91,16 @@ Provider 由环境变量选择。外部服务不可用时返回可解释降级�
 
 ## 8. 预订约束
 
-- 多日 Stopover 由两张独立单程订单组成。
-- Order 和 Pay 不自动重试。
+- 多日 Stopover 由两张独立单程订单组成（各自独立 orderNo、sessionId、价格与状态）。
+- Order 和 Pay 不自动重试；结果未知时只允许 `queryOrderDetails` 查询，绝不重复创建或重复支付。
 - 第一张成功、第二张失败时进入 PARTIAL_BOOKING。
-- MVP 补偿只执行明确标识的模拟退款或人工处理状态。
+- Sandbox 没有退款 API：补偿只执行明确标识的模拟退款（REFUND_PENDING_SIMULATED / REFUNDED_SIMULATED）或人工处理状态（MANUAL_ACTION_REQUIRED），UI 必须明示「模拟退款」，不得伪装成 Atlas 真实退款。
 - 不承诺独立机票的联程保护。
-- 每次价格上涨都需要用户重新确认。
+- 每次价格上涨都需要用户重新确认；付款按钮必须包含准确金额与币种（如「确认 Sandbox 支付 USD 31.84」），禁止含糊文案。
+- 创建订单前必须重新 Verify；报价过期（上游 `expireTime`）后不得 Verify、Order 或 Payment。
+- `paymentConfirmationId` 是 LayoverJoy 后端签发的一次性付款确认令牌（绑定用户/订单/金额/币种/环境代际），不是 Atlas 字段，禁止发送给 Atlas。
+- 2026-08-30 用户授权更新：`ATLAS_ORDER_PROVIDER` / `ATLAS_PAYMENT_PROVIDER` 支持 `mock | sandbox`；`ATLAS_REFUND_PROVIDER` 保持只允许 `mock`。Production 的 Order、Payment、Refund 永远禁止；仅当 `ATLAS_MODE=sandbox` 时才允许 Order/Payment 配置为 sandbox，违反的组合必须使后端启动失败。
+- Sandbox 测试预订只允许虚构乘机人（如 TEST/TRAVELER）；Android 永远不接触 Atlas 服务端密钥或 Token。
 
 ## 9. UI 约束
 

@@ -59,6 +59,7 @@ import com.yuanhe.layoverjoy.ui.PrimaryButton
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SecondaryButton
 import com.yuanhe.layoverjoy.ui.SectionTitle
+import com.yuanhe.layoverjoy.ui.cityDisplayName
 import com.yuanhe.layoverjoy.ui.fmtDateTime
 import com.yuanhe.layoverjoy.ui.fmtPrice
 import com.yuanhe.layoverjoy.ui.theme.BrandAccent
@@ -199,7 +200,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                             if (i > 0) Spacer(Modifier.height(10.dp))
                             Text(L10n.t("common.leg_no", leg.legNo), style = MaterialTheme.typography.labelSmall, color = BrandPrimary, fontWeight = FontWeight.SemiBold)
                             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                Text("${leg.origin} → ${leg.destination}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                                Text("${cityDisplayName(leg.origin)} → ${cityDisplayName(leg.destination)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                                 Text(fmtPrice(leg.totalPrice, leg.currency), style = MaterialTheme.typography.bodyMedium, color = BrandPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Text(L10n.t("detail.leg_time", fmtDateTime(leg.departureAt), fmtDateTime(leg.arrivalAt)) + " · ${leg.carrier ?: ""} ${leg.flightNumber ?: ""}", style = MaterialTheme.typography.labelSmall)

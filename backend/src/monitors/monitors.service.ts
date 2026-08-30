@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { HUB_CATALOG } from '../airports/catalog';
+import { CityEntry, HUB_CATALOG, resolveLocation, ResolvedLocation } from '../airports/catalog';
 import { AppError } from '../common/errors';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 价格监控检查间隔 30 分钟
@@ -36,7 +36,8 @@ export class MonitorsService {
     }
     const run = await this.prisma.searchRun.findUnique({ where: { id: plan.searchRunId } });
     const city = HUB_CATALOG.find((c) => c.cityId === plan.stopoverCityId);
-    const routeLabel = `${run?.originCode ?? ''} → ${city?.cityNameZh ?? plan.stopoverCityId ?? ''} → ${run?.destinationCode ?? ''}`;
+    // 路线标签统一用完整城市名，不展示三字码缩写；落库存中文版，列表接口按语言重建。
+    const routeLabel = this.buildRouteLabel(run, city, 'zh');
 
     const rule = await this.prisma.monitorRule.create({
       data: {
@@ -54,26 +55,62 @@ export class MonitorsService {
     return { monitorId: rule.id, status: rule.status };
   }
 
-  async list(userId: string) {
+  async list(userId: string, lang: 'zh' | 'en' = 'zh') {
     const rules = await this.prisma.monitorRule.findMany({
       where: { userId, status: { in: ['ACTIVE', 'PAUSED'] } },
       orderBy: { createdAt: 'desc' },
     });
-    return {
-      monitors: rules.map((r) => ({
-        monitorId: r.id,
-        planId: r.planId,
-        routeLabel: r.routeLabel,
-        targetAirfare: r.targetAirfare,
-        minJoyScore: r.minJoyScore,
-        notifyEmail: r.notifyEmail,
-        notifyApp: r.notifyApp,
-        status: r.status,
-        lastCheckedAt: r.lastCheckedAt?.toISOString() ?? null,
-        lastTriggeredAt: r.lastTriggeredAt?.toISOString() ?? null,
-        lastTriggerReason: r.lastTriggerReason,
-      })),
+    const monitors = await Promise.all(
+      rules.map(async (r) => {
+        // 历史数据的 routeLabel 可能含三字码：按当前语言从目录重建完整城市名标签。
+        let routeLabel = r.routeLabel;
+        try {
+          const plan = await this.prisma.stopoverPlan.findUnique({
+            where: { id: r.planId },
+            select: { stopoverCityId: true, searchRunId: true },
+          });
+          const run = plan ? await this.prisma.searchRun.findUnique({ where: { id: plan.searchRunId } }) : null;
+          if (plan && run) {
+            const city = HUB_CATALOG.find((c) => c.cityId === plan.stopoverCityId);
+            routeLabel = this.buildRouteLabel(run, city, lang);
+          }
+        } catch {
+          /* 重建失败时保留已存标签 */
+        }
+        return {
+          monitorId: r.id,
+          planId: r.planId,
+          routeLabel,
+          targetAirfare: r.targetAirfare,
+          minJoyScore: r.minJoyScore,
+          notifyEmail: r.notifyEmail,
+          notifyApp: r.notifyApp,
+          status: r.status,
+          lastCheckedAt: r.lastCheckedAt?.toISOString() ?? null,
+          lastTriggeredAt: r.lastTriggeredAt?.toISOString() ?? null,
+          lastTriggerReason: r.lastTriggerReason,
+        };
+      }),
+    );
+    return { monitors };
+  }
+
+  /** 路线标签：出发地 → 中转城市 → 目的地，全部用完整城市名（中/英）。 */
+  private buildRouteLabel(run: any, city: CityEntry | undefined, lang: 'zh' | 'en'): string {
+    const pick = (loc: ResolvedLocation | null, fallback: string): string => {
+      if (!loc) return fallback;
+      return lang === 'en' ? loc.cityNameEn || loc.cityNameZh : loc.cityNameZh || loc.cityNameEn;
     };
+    const origin = pick(
+      resolveLocation(run?.originCode ?? '') ?? resolveLocation(run?.originInput ?? ''),
+      run?.originCode ?? '',
+    );
+    const dest = pick(
+      resolveLocation(run?.destinationCode ?? '') ?? resolveLocation(run?.destinationInput ?? ''),
+      run?.destinationCode ?? '',
+    );
+    const hub = city ? (lang === 'en' ? city.cityNameEn || city.cityNameZh : city.cityNameZh || city.cityNameEn) : '';
+    return `${origin} → ${hub} → ${dest}`;
   }
 
   async setStatus(userId: string, monitorId: string, status: 'ACTIVE' | 'PAUSED' | 'STOPPED') {
@@ -84,6 +121,15 @@ export class MonitorsService {
       data: { status, nextCheckAt: status === 'ACTIVE' ? new Date() : null },
     });
     return { monitorId: rule.id, status };
+  }
+
+  /** 删除监控：归属校验后物理删除；已产生的历史通知保留（monitorId 无外键约束）。 */
+  async remove(userId: string, monitorId: string) {
+    const rule = await this.prisma.monitorRule.findFirst({ where: { id: monitorId, userId } });
+    if (!rule) throw AppError.notFound('监控规则');
+    await this.prisma.monitorRule.delete({ where: { id: rule.id } });
+    this.logger.log(`monitor ${rule.id} deleted by user ${userId}`);
+    return { monitorId: rule.id, deleted: true };
   }
 
   /** Worker 入口：检查到期的监控规则。 */

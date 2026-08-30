@@ -67,14 +67,14 @@ fun cityName(city: CatalogCity): String =
 fun airportName(a: com.yuanhe.layoverjoy.data.catalog.CatalogAirport): String =
     if (L10n.current == AppLanguage.EN) a.nameEn.ifBlank { a.nameZh } else a.nameZh.ifBlank { a.nameEn }
 
-/** 地点副文案：国家/地区 · 范围（代码）。 */
+/** 地点副文案：国家/地区 · 机场范围（完整名称，不展示三字码）。 */
 fun locationSubtitle(city: CatalogCity, sel: LocationSelection): String {
     val country = LocationCatalog.countryOf(city)?.let { if (L10n.current == AppLanguage.EN) it.nameEn else it.nameZh } ?: city.countryCode
     val scope = if (sel.mode == LocationSelectionMode.AIRPORT) {
         val ap = city.airports.firstOrNull { it.iata == sel.airportIata }
-        "${ap?.let { airportName(it) } ?: sel.airportIata}（${sel.airportIata}）"
+        ap?.let { airportName(it) } ?: L10n.t("loc.all_airports")
     } else {
-        "${L10n.t("loc.all_airports")}（${city.airports.joinToString(" / ") { it.iata }}）"
+        L10n.t("loc.all_airports")
     }
     return "$country · $scope"
 }
@@ -228,34 +228,34 @@ fun LocationPickerScreen(nav: NavController, role: String) {
                 TextButton(onClick = {
                     sheetCity = null
                     pick(LocationSelection(city.cityId, LocationSelectionMode.ALL_AIRPORTS))
-                }) { Text("${L10n.t("loc.all_airports")}（${city.airports.joinToString(" / ") { it.iata }}）", color = BrandPrimary) }
+                }) { Text(L10n.t("loc.all_airports"), color = BrandPrimary) }
                 city.airports.forEach { a ->
                     TextButton(onClick = {
                         sheetCity = null
                         pick(LocationSelection(city.cityId, LocationSelectionMode.AIRPORT, a.iata))
-                    }) { Text("${airportName(a)}（${a.iata}）", color = BrandPrimary) }
+                    }) { Text(airportName(a), color = BrandPrimary) }
                 }
             }
         }
     }
 
-    // 城市码与机场码同码消歧（SHA/KUL/BKK）：不替用户猜
+    // 城市码与机场码同码消歧（SHA/KUL/BKK）：不替用户猜；弹窗文案只用完整城市/机场名
     ambiguous?.let { city ->
         val iata = city.metroCode!!
         AlertDialog(
             onDismissRequest = { ambiguous = null },
-            title = { Text(L10n.t("loc.disambig_title", city.metroCode!!)) },
+            title = { Text(L10n.t("loc.disambig_title", cityName(city))) },
             text = {
                 Column {
                     TextButton(onClick = {
                         ambiguous = null
                         pick(LocationSelection(city.cityId, LocationSelectionMode.ALL_AIRPORTS))
-                    }) { Text("${cityName(city)} · ${L10n.t("loc.all_airports")}（${city.airports.joinToString(" / ") { it.iata }}）") }
+                    }) { Text("${cityName(city)} · ${L10n.t("loc.all_airports")}") }
                     TextButton(onClick = {
                         ambiguous = null
                         pick(LocationSelection(city.cityId, LocationSelectionMode.AIRPORT, iata))
                     }) {
-                        Text("${airportName(city.airports.first { it.iata == iata })}（$iata）")
+                        Text(airportName(city.airports.first { it.iata == iata }))
                     }
                 }
             },
@@ -283,8 +283,6 @@ fun ContinentCountriesScreen(nav: NavController, continentCode: String, role: St
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(if (L10n.current == AppLanguage.EN) ctry.nameEn else ctry.nameZh, style = MaterialTheme.typography.titleSmall)
-                            Spacer(Modifier.height(2.dp))
-                            Text(ctry.countryCode, style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
                         }
                         Text(L10n.t("loc.city_count", ctry.cities.size), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
                     }
@@ -332,35 +330,35 @@ fun CountryCitiesScreen(nav: NavController, countryCode: String, role: String) {
                 TextButton(onClick = {
                     sheetCity = null
                     pick(LocationSelection(city.cityId, LocationSelectionMode.ALL_AIRPORTS))
-                }) { Text("${L10n.t("loc.all_airports")}（${city.airports.joinToString(" / ") { it.iata }}）", color = BrandPrimary) }
+                }) { Text(L10n.t("loc.all_airports"), color = BrandPrimary) }
                 city.airports.forEach { a ->
                     TextButton(onClick = {
                         sheetCity = null
                         pick(LocationSelection(city.cityId, LocationSelectionMode.AIRPORT, a.iata))
-                    }) { Text("${airportName(a)}（${a.iata}）", color = BrandPrimary) }
+                    }) { Text(airportName(a), color = BrandPrimary) }
                 }
             }
         }
     }
 }
 
-/** 城市行：城市名 + 国家/地区 + 城市码 + 机场摘要；命中机场时第二行解释。 */
+/** 城市行：城市名 + 国家/地区；命中机场时第二行解释（不展示三字码缩写）。 */
 @Composable
 private fun CityRow(city: CatalogCity, matchedAirport: String?, ambiguous: Boolean, onClick: () -> Unit, onPickAirport: () -> Unit) {
     JoyCard(modifier = Modifier.padding(vertical = 4.dp).clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("${cityName(city)}  ·  ${city.metroCode ?: city.defaultAirportIata}", style = MaterialTheme.typography.titleSmall)
+                Text(cityName(city), style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "${LocationCatalog.countryOf(city)?.let { if (L10n.current == AppLanguage.EN) it.nameEn else it.nameZh } ?: city.countryCode} · ${city.airports.joinToString(" / ") { it.iata }}",
+                    LocationCatalog.countryOf(city)?.let { if (L10n.current == AppLanguage.EN) it.nameEn else it.nameZh } ?: city.countryCode,
                     style = MaterialTheme.typography.labelSmall,
                     color = BrandInkSoft,
                 )
                 if (matchedAirport != null && !ambiguous) {
                     Spacer(Modifier.height(4.dp))
                     val ap = city.airports.firstOrNull { it.iata == matchedAirport }
-                    Text(L10n.t("loc.matched_airport", "${ap?.let { airportName(it) } ?: matchedAirport} $matchedAirport"), style = MaterialTheme.typography.labelSmall, color = BrandPrimary)
+                    Text(L10n.t("loc.matched_airport", ap?.let { airportName(it) } ?: matchedAirport), style = MaterialTheme.typography.labelSmall, color = BrandPrimary)
                 }
             }
             if (city.airports.size > 1) {

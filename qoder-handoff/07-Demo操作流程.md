@@ -44,8 +44,8 @@ curl -s -o /dev/null -w 'nosana /models = %{http_code} in %{time_total}s\n' -m 1
 | 7 | 停留 1–2 秒 | AI 推荐卡自动生成（先 Skeleton）：headline、城市优势（兴趣加权）、抵达日/完整游玩日/离境日三时段小行程、便利度分（如 51/100 · 需规划）、你得到 / 需要接受、消费者提示，footer「智能中转建议」 |
 | 8 | 点「调整旅行偏好」 | 回到搜索页（这是有意的产品决策，不是「重新生成」） |
 | 9 | 结果页/详情页开启**价格监控** | `MonitorSetupScreen` 设阈值 → 保存；worker 轮询；触发后站内通知 + 邮件（同域可达） |
-| 10 | 进入**预订** | `BookingFlowScreen`：乘机人确认 → Verify（真实 Sandbox 验价）→ 两张独立单程 Order（MOCK）→ 模拟支付 → 涨价需重新确认 → 成功页/行程页 |
-| 11 | （可选，展示风险透明）第二单失败 | 调 `/api/orders/{id}/simulate-leg-b-failure` → App 显示 `PARTIAL_BOOKING` → 模拟退款补偿 |
+| 10 | 进入**预订** | `BookingFlowScreen`：乘机人确认 → Verify（真实 Sandbox 验价）→ 两张独立单程 Order（默认 MOCK；启用 `ATLAS_ORDER_PROVIDER=sandbox` 后为真实 Sandbox 测试订单）→ 支付（模拟 / Sandbox 余额测试支付）→ 涨价需重新确认 → 成功页/行程页 |
+| 11 | ~~（可选）第二单失败补偿~~ **评委演示不建议展示** | 双订单补偿是开发能力（开发页开关注入 `simulate-leg-b-failure`），Atlas 无退款 API、商业上也不构成卖点；主流程只展示正常预订→支付→出票闭环（2026-08-30 用户决策） |
 | 12 | 「我的」页切**英文** | 全 App 即时英文化（含 AI 卡、证件名、资格文案），无需重启 |
 
 ### Logcat 佐证（录制时不必展示，答疑时用）

@@ -334,17 +334,37 @@ fun bookingStatusText(status: String): String = when (status) {
     "PAYMENT_PENDING" -> L10n.t("booking.status.payment_pending")
     "COMPLETED" -> L10n.t("booking.status.completed")
     "PARTIAL_ORDER" -> L10n.t("booking.status.partial")
-    "SIMULATED_REFUND_PENDING" -> L10n.t("booking.status.refund_pending")
-    "SIMULATED_REFUNDED" -> L10n.t("booking.status.refunded")
-    "MANUAL_REVIEW" -> L10n.t("booking.status.manual_review")
+    "SIMULATED_REFUND_PENDING", "REFUND_PENDING_SIMULATED" -> L10n.t("booking.status.refund_pending")
+    "SIMULATED_REFUNDED", "REFUNDED_SIMULATED" -> L10n.t("booking.status.refunded")
+    "MANUAL_REVIEW", "MANUAL_ACTION_REQUIRED" -> L10n.t("booking.status.manual_review")
     "EXPIRED" -> L10n.t("booking.status.expired")
+    // Sandbox 交易闭环新增状态。
+    "PRICE_CONFIRMATION_REQUIRED" -> L10n.t("booking.status.price_confirm")
+    "TICKETING_IN_PROGRESS" -> L10n.t("booking.status.ticketing")
+    "ORDER_CANCELLED" -> L10n.t("booking.status.cancelled")
+    else -> status
+}
+
+/** 单张航段（腿）状态的产品化文案（含 Sandbox 出票状态）。 */
+fun legStatusText(status: String): String = when (status) {
+    "CREATED" -> L10n.t("booking.leg.created")
+    "ORDER_CREATED" -> L10n.t("booking.leg.created")
+    "PAY_SUBMITTED" -> L10n.t("booking.leg.pay_submitted")
+    "PAID" -> L10n.t("booking.leg.paid")
+    "TICKETING_PENDING" -> L10n.t("booking.leg.ticketing_pending")
+    "TICKETED" -> L10n.t("booking.leg.ticketed")
+    "FAILED" -> L10n.t("booking.leg.failed")
+    "ORDER_CANCELLED" -> L10n.t("booking.status.cancelled")
+    "UNKNOWN_REQUIRES_QUERY" -> L10n.t("booking.leg.unknown_query")
+    "REFUND_PENDING_SIMULATED" -> L10n.t("booking.status.refund_pending")
+    "REFUNDED_SIMULATED" -> L10n.t("booking.status.refunded")
     else -> status
 }
 
 fun bookingStatusColor(status: String): Color = when (status) {
-    "COMPLETED" -> BrandPrimary
-    "PARTIAL_ORDER", "MANUAL_REVIEW" -> BrandDanger
-    "SIMULATED_REFUNDED", "EXPIRED" -> BrandInkSoft
-    "PAYMENT_PENDING" -> BrandAccent
+    "COMPLETED", "TICKETED" -> BrandPrimary
+    "PARTIAL_ORDER", "MANUAL_REVIEW", "MANUAL_ACTION_REQUIRED", "ORDER_CANCELLED" -> BrandDanger
+    "SIMULATED_REFUNDED", "REFUNDED_SIMULATED", "EXPIRED" -> BrandInkSoft
+    "PAYMENT_PENDING", "PRICE_CONFIRMATION_REQUIRED" -> BrandAccent
     else -> BrandAmber
 }

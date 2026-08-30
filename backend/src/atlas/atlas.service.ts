@@ -57,6 +57,24 @@ export class AtlasService {
     return provider.name === 'ATLAS_SANDBOX' ? 'ATLAS_SANDBOX' : 'MOCK';
   }
 
+  /**
+   * Sandbox 环境代际（generation）：环境、凭据槽位或交易 Provider 变化时该值必变，
+   * 旧的 routingIdentifier / sessionId / 报价 / 付款确认令牌一律随之失效（AGENTS.md §8）。
+   * 只用 AK 的指纹，不把完整密钥混入计算输入。
+   */
+  environmentGeneration(): string {
+    const env = loadEnv();
+    const akFingerprint = env.ATLAS_CLIENT_ID ? createHash('sha256').update(env.ATLAS_CLIENT_ID).digest('hex').slice(0, 12) : 'none';
+    const canonical = JSON.stringify({
+      mode: env.ATLAS_MODE,
+      baseUrl: env.ATLAS_BASE_URL,
+      ak: akFingerprint,
+      orderProvider: env.ATLAS_ORDER_PROVIDER,
+      paymentProvider: env.ATLAS_PAYMENT_PROVIDER,
+    });
+    return createHash('sha256').update(canonical).digest('hex').slice(0, 24);
+  }
+
   searchProviderLabel(): 'ATLAS_SANDBOX' | 'MOCK' {
     return this.providerLabel(this.searchProvider);
   }
@@ -82,7 +100,19 @@ export class AtlasService {
     return this.mockInstance.search(input);
   }
 
-  /** 带缓存搜索。缓存只存脱敏摘要结构。 */
+  /** 报价是否仍在有效期内（无 expiresAt 的 Mock 报价视为不过期）。 */
+  static isOfferFresh(offer: { expiresAt?: string }, now: Date = new Date()): boolean {
+    if (!offer.expiresAt) return true;
+    const d = new Date(offer.expiresAt);
+    if (Number.isNaN(d.getTime())) return true;
+    return d.getTime() > now.getTime();
+  }
+
+  /**
+   * 带缓存搜索。缓存只存脱敏摘要结构；缓存保留 15 分钟，但命中时逐条检查报价有效期：
+   * 过期报价绝不返回（不得继续 Verify/Order/Pay）；全部过期则重新调用 Atlas Search。
+   * 缓存 Key 含环境代际：环境/凭据/交易 Provider 切换后旧缓存自然作废。
+   */
   async searchWithCache(input: FlightSearchInput): Promise<{ offers: FlightOffer[]; fromCache: boolean }> {
     const key = [
       'atlas:search',
@@ -92,12 +122,18 @@ export class AtlasService {
       input.adults ?? 1,
       input.currency ?? 'SGD',
       this.searchProvider.name,
+      this.environmentGeneration(),
     ].join(':');
 
     const cached = await this.redis.get(key);
     if (cached) {
       try {
-        return { offers: JSON.parse(cached), fromCache: true };
+        const parsed: FlightOffer[] = JSON.parse(cached);
+        const fresh = parsed.filter((o) => AtlasService.isOfferFresh(o));
+        if (fresh.length > 0) {
+          return { offers: fresh, fromCache: true };
+        }
+        this.logger.log(`event=atlas_cache_all_expired origin=${input.origin} destination=${input.destination} refreshing=true`);
       } catch {
         /* 缓存损坏，继续真实搜索 */
       }

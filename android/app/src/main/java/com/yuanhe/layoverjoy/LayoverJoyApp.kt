@@ -54,6 +54,8 @@ class LayoverJoyApp : Application() {
                 snap.previewToken?.let { Net.client.setPreviewToken(it) }
                 // 开发页演示开关恢复（仅本地缓存，重启后仍生效）。
                 DemoFlags.paySimFail = snap.paySimFail
+                DemoFlags.injectLegBFailure = snap.injectLegBFail
+                DemoFlags.demoFixtureFallback = snap.demoFixtureFallback
                 TokenHolder.accessToken = snap.accessToken
                 TokenHolder.refreshToken = snap.refreshToken
                 TokenHolder.onUnauthorized = { /* 401 时退为游客态由 UI 层处理 */ }

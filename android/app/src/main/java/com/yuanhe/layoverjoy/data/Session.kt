@@ -31,6 +31,8 @@ class SessionStore(private val context: Context) {
         val localPassportExpiry = stringPreferencesKey("local_passport_expiry")
         val localVisaCountries = stringPreferencesKey("local_visa_countries") // 逗号分隔
         val paySimFail = booleanPreferencesKey("pay_sim_fail")
+        val injectLegBFail = booleanPreferencesKey("inject_leg_b_fail")
+        val demoFixtureFallback = booleanPreferencesKey("demo_fixture_fallback")
     }
 
     val accessToken: Flow<String?> = context.dataStore.data.map { it[Keys.accessToken] }
@@ -50,6 +52,8 @@ class SessionStore(private val context: Context) {
             userId = p[Keys.userId],
             onboardingDone = p[Keys.onboardingDone] ?: false,
             paySimFail = p[Keys.paySimFail] ?: false,
+            injectLegBFail = p[Keys.injectLegBFail] ?: false,
+            demoFixtureFallback = p[Keys.demoFixtureFallback] ?: false,
         )
     }
 
@@ -83,6 +87,11 @@ class SessionStore(private val context: Context) {
 
     /** 开发页支付失败模拟开关（仅本地缓存）。 */
     suspend fun setPaySimFail(enabled: Boolean) = context.dataStore.edit { it[Keys.paySimFail] = enabled }
+
+    /** 开发页第一段下单失败注入开关（仅本地缓存）。 */
+    suspend fun setInjectLegBFail(enabled: Boolean) = context.dataStore.edit { it[Keys.injectLegBFail] = enabled }
+
+    suspend fun setDemoFixtureFallback(enabled: Boolean) = context.dataStore.edit { it[Keys.demoFixtureFallback] = enabled }
 
     suspend fun setOnboardingDone(done: Boolean, passportCountry: String?, passportType: String?, visaCountries: List<String>) {
         context.dataStore.edit {
@@ -147,4 +156,6 @@ data class SessionSnapshot(
     val userId: String?,
     val onboardingDone: Boolean,
     val paySimFail: Boolean = false,
+    val injectLegBFail: Boolean = false,
+    val demoFixtureFallback: Boolean = false,
 )

@@ -57,6 +57,8 @@ object Routes {
     const val PLAN_DETAIL = "plan/{planId}"
     const val MONITOR_SETUP = "monitor/{planId}"
     const val BOOKING = "booking/{planId}"
+    /** 订单详情：从行程页点击已预订订单直达，直接进入状态机页（不再从表单开始）。 */
+    const val BOOKING_STATUS = "booking/status/{bookingId}"
     const val NOTIFICATIONS = "notifications"
     const val DOCUMENTS = "documents"
     const val DEV_SETTINGS = "dev_settings"
@@ -72,6 +74,7 @@ object Routes {
     fun planDetail(planId: String) = "plan/$planId"
     fun monitorSetup(planId: String) = "monitor/$planId"
     fun booking(planId: String) = "booking/$planId"
+    fun bookingStatus(bookingId: String) = "booking/status/$bookingId"
 }
 
 private data class Tab(val route: String, val labelKey: String, val filled: ImageVector, val outlined: ImageVector)
@@ -195,6 +198,9 @@ fun MainScreen(appState: AppStateViewModel) {
             }
             composable(Routes.BOOKING, listOf(navArgument("planId") { type = NavType.StringType })) {
                 BookingFlowScreen(nav, it.arguments?.getString("planId").orEmpty())
+            }
+            composable(Routes.BOOKING_STATUS, listOf(navArgument("bookingId") { type = NavType.StringType })) {
+                BookingFlowScreen(nav, planId = "", initialBookingId = it.arguments?.getString("bookingId").orEmpty())
             }
             composable(Routes.NOTIFICATIONS) { NotificationsScreen(nav) }
             composable(Routes.DOCUMENTS) { DocumentsScreen(nav) }

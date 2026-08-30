@@ -23,6 +23,9 @@ async function bootstrap() {
       { path: 'api/debug/webhooks/atlas/simulate', method: RequestMethod.POST },
       { path: 'api/orders/composite', method: RequestMethod.POST },
       { path: 'api/orders/:id/mock-pay', method: RequestMethod.POST },
+      { path: 'api/orders/:id/confirm-price', method: RequestMethod.POST },
+      { path: 'api/orders/:id/pay', method: RequestMethod.POST },
+      { path: 'api/orders/:id/refresh-ticketing', method: RequestMethod.POST },
       { path: 'api/orders/:id/simulate-leg-b-failure', method: RequestMethod.POST },
       { path: 'api/orders/:id/mock-refund', method: RequestMethod.POST },
       { path: 'api/orders/:id', method: RequestMethod.GET },
@@ -38,7 +41,7 @@ async function bootstrap() {
 
   const swagger = new DocumentBuilder()
     .setTitle('LayoverJoy Backend')
-    .setDescription('转机的乐趣 —— 签证感知的 Agentic Stopover Planner（Atlas Sandbox 模拟报价，不会产生真实出票或扣款）')
+    .setDescription('转机的乐趣 —— 签证感知的 Agentic Stopover Planner')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

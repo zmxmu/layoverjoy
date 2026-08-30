@@ -37,8 +37,11 @@ import androidx.navigation.NavController
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.BookingDto
 import com.yuanhe.layoverjoy.data.CompositeOrderRequest
+import com.yuanhe.layoverjoy.data.ConfirmPriceRequest
+import com.yuanhe.layoverjoy.data.DemoFlags
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.PassengerInput
+import com.yuanhe.layoverjoy.data.PayRequest
 import com.yuanhe.layoverjoy.data.PlanDetailDto
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
@@ -52,8 +55,10 @@ import com.yuanhe.layoverjoy.ui.SecondaryButton
 import com.yuanhe.layoverjoy.ui.SectionTitle
 import com.yuanhe.layoverjoy.ui.bookingStatusColor
 import com.yuanhe.layoverjoy.ui.bookingStatusText
+import com.yuanhe.layoverjoy.ui.cityDisplayName
 import com.yuanhe.layoverjoy.ui.fmtDateTime
 import com.yuanhe.layoverjoy.ui.fmtPrice
+import com.yuanhe.layoverjoy.ui.legStatusText
 import com.yuanhe.layoverjoy.ui.theme.BrandAccent
 import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
@@ -65,19 +70,22 @@ import kotlinx.coroutines.launch
 /**
  * 预订全流程（模拟）：乘客与风险确认 → 确认订单 → 状态机操作。
  * 契约：Order/Pay 绝不自动重放；结果不明确只查询；模拟退款标注无真实资金交易。
+ *
+ * [initialBookingId] 非空时为“订单详情”模式（行程页点击已预订订单直达）：
+ * 先按订单 id 拉取状态，再按其 planId 补拉方案摘要，直接落在状态机页。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingFlowScreen(nav: NavController, planId: String) {
+fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: String? = null) {
     val scope = rememberCoroutineScope()
+    val statusMode = !initialBookingId.isNullOrBlank()
 
-    var phase by remember { mutableIntStateOf(0) } // 0 表单, 1 确认, 2 状态机
+    var phase by remember { mutableIntStateOf(if (statusMode) 2 else 0) } // 0 表单, 1 确认, 2 状态机
     var detail by remember { mutableStateOf<PlanDetailDto?>(null) }
     var booking by remember { mutableStateOf<BookingDto?>(null) }
     var givenName by remember { mutableStateOf("") }
     var familyName by remember { mutableStateOf("") }
     var riskAck by remember { mutableStateOf(false) }
-    var injectLegBFailure by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -89,10 +97,28 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
         }
     }
 
-    LaunchedEffect(planId) {
-        when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
-            is ApiResult.Ok -> detail = r.data
-            is ApiResult.Err -> error = r.message
+    LaunchedEffect(planId, initialBookingId) {
+        if (statusMode) {
+            // 订单详情直达：先拿订单状态，再用订单关联的 planId 补拉方案（失败不阻塞状态页）。
+            when (val r = apiCall { Net.api.booking(initialBookingId!!) }) {
+                is ApiResult.Ok -> {
+                    booking = r.data.booking
+                    phase = 2
+                    val pid = r.data.booking.planId
+                    if (pid.isNotBlank()) {
+                        when (val p = apiCall { Net.api.planDetail(pid, L10n.current.tag) }) {
+                            is ApiResult.Ok -> detail = p.data
+                            is ApiResult.Err -> { /* 方案摘要缺失不影响订单状态页 */ }
+                        }
+                    }
+                }
+                is ApiResult.Err -> error = r.message
+            }
+        } else {
+            when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
+                is ApiResult.Ok -> detail = r.data
+                is ApiResult.Err -> error = r.message
+            }
         }
     }
 
@@ -104,7 +130,13 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
         )
 
         val d = detail
-        if (d == null) {
+        // 订单详情模式下方案摘要可缺：状态机页不依赖它，不能被加载闸门卡住。
+        if (d == null && !statusMode) {
+            ErrorBanner(error, Modifier.padding(20.dp))
+            if (error == null) LoadingBlock(L10n.t("detail.loading"))
+            return@Column
+        }
+        if (statusMode && booking == null) {
             ErrorBanner(error, Modifier.padding(20.dp))
             if (error == null) LoadingBlock(L10n.t("detail.loading"))
             return@Column
@@ -130,14 +162,6 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                     SectionTitle(L10n.t("booking.risk_title"))
                     JoyCard {
                         RiskCheckItem(riskAck, { riskAck = it })
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(injectLegBFailure, { injectLegBFailure = it }, colors = CheckboxDefaults.colors(checkedColor = BrandDanger))
-                            Column(Modifier.weight(1f)) {
-                                Text(L10n.t("booking.inject_title"), style = MaterialTheme.typography.bodySmall, color = BrandDanger)
-                                Text(L10n.t("booking.inject_sub"), style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
                     }
                     Spacer(Modifier.height(16.dp))
                     PrimaryButton(
@@ -147,11 +171,13 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                     )
                 }
                 1 -> {
+                    // 确认页依赖方案摘要；详情直达模式不会进入本相位，摘要缺失时直接退出。
+                    val dd = d ?: return@Column
                     SectionTitle(L10n.t("booking.confirm_title"))
                     JoyCard {
-                        d.legs.forEach { leg ->
+                        dd.legs.forEach { leg ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                Text(L10n.t("common.leg_no", leg.legNo) + " ${leg.origin} → ${leg.destination}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                Text(L10n.t("common.leg_no", leg.legNo) + " ${cityDisplayName(leg.origin)} → ${cityDisplayName(leg.destination)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                                 Text(fmtPrice(leg.totalPrice, leg.currency), style = MaterialTheme.typography.bodyMedium)
                             }
                             Text("${leg.carrier ?: ""} ${leg.flightNumber ?: ""} · ${fmtDateTime(leg.departureAt)}", style = MaterialTheme.typography.labelSmall)
@@ -160,7 +186,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         Spacer(Modifier.height(6.dp))
                         Row(Modifier.fillMaxWidth()) {
                             Text(L10n.t("booking.total"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                            Text(fmtPrice(d.airfareTotal, d.currency), style = MaterialTheme.typography.titleSmall, color = BrandPrimary, fontWeight = FontWeight.Bold)
+                            Text(fmtPrice(dd.airfareTotal, dd.currency), style = MaterialTheme.typography.titleSmall, color = BrandPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -180,7 +206,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                     passengers = if (givenName.isNotBlank() || familyName.isNotBlank()) {
                                         listOf(PassengerInput(givenName.ifBlank { null }, familyName.ifBlank { null }))
                                     } else null,
-                                    legBFailure = if (injectLegBFailure) true else null,
+                                    legBFailure = if (DemoFlags.injectLegBFailure) true else null,
                                 )
                                 when (val r = apiCall { Net.api.compositeOrder(req) }) {
                                     is ApiResult.Ok -> {
@@ -231,7 +257,7 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                             b.orders.forEach { o ->
                                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                                     Text(L10n.t("booking.leg_order", o.legNo), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                    Text(o.status, style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+                                    Text(legStatusText(o.legState.ifEmpty { o.status }), style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
                                     Text(o.orderNoLast4?.let { L10n.t("booking.leg_last4", it) } ?: "", style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
                                 }
                             }
@@ -242,14 +268,28 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                         Spacer(Modifier.height(16.dp))
 
                         when (b.status) {
-                            "PAYMENT_PENDING" -> {
+                            "PRICE_CONFIRMATION_REQUIRED" -> {
+                                // 涨价检查点：展示原价/新价/差额/报价有效期，用户明确确认后才继续（绝不自动下单）。
+                                val pc = b.priceConfirmation
+                                JoyCard {
+                                    Text(L10n.t("booking.price_changed_title"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.height(6.dp))
+                                    if (pc != null) {
+                                        Text(L10n.t("booking.price_old", fmtPrice(pc.previousTotal ?: b.acceptedTotal, pc.currency.ifEmpty { b.currency })), style = MaterialTheme.typography.bodySmall)
+                                        Text(L10n.t("booking.price_new", fmtPrice(pc.newTotal, pc.currency.ifEmpty { b.currency })), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = BrandAccent)
+                                        Text(L10n.t("booking.price_delta", "%.2f".format(pc.delta)), style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
+                                        pc.offerExpiresAt?.let { Text(L10n.t("booking.offer_valid_until", fmtDateTime(it)), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft) }
+                                    }
+                                }
+                                Spacer(Modifier.height(10.dp))
                                 PrimaryButton(
-                                    text = L10n.t("booking.mock_pay"),
+                                    text = if (pc != null) L10n.t("booking.price_confirm_btn", fmtPrice(pc.newTotal, pc.currency.ifEmpty { b.currency })) else L10n.t("booking.price_confirm_fallback"),
                                     loading = loading,
                                     onClick = {
                                         loading = true
                                         scope.launch {
-                                            when (val r = apiCall { Net.api.mockPay(b.bookingId) }) {
+                                            val target = pc?.newTotal ?: b.acceptedTotal
+                                            when (val r = apiCall { Net.api.confirmPrice(b.bookingId, ConfirmPriceRequest(target, pc?.currency)) }) {
                                                 is ApiResult.Ok -> booking = r.data.booking
                                                 is ApiResult.Err -> {
                                                     error = r.message
@@ -260,47 +300,138 @@ fun BookingFlowScreen(nav: NavController, planId: String) {
                                         }
                                     },
                                 )
+                                Spacer(Modifier.height(8.dp))
+                                Text(L10n.t("booking.price_confirm_note"), style = MaterialTheme.typography.labelSmall)
+                            }
+                            "PAYMENT_PENDING" -> {
+                                if (b.isSandboxPayment) {
+                                    // Sandbox 付款摘要：航班/金额/币种/支付截止/涨价标识 + 含准确金额的确认按钮。
+                                    val payTotal = b.orders.mapNotNull { it.amount }.sum().takeIf { it > 0 } ?: b.acceptedTotal
+                                    val payCurrency = b.orders.firstNotNullOfOrNull { it.currency } ?: b.currency
+                                    val deadline = b.orders.firstNotNullOfOrNull { it.paymentDeadlineAt }
+                                    JoyCard {
+                                        Text(L10n.t("booking.pay_summary_title"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.height(6.dp))
+                                        Row {
+                                            Badge(L10n.t("home.provider_atlas"), color = BrandAccent, bg = BrandAccent.copy(alpha = 0.10f))
+                                            Spacer(Modifier.width(6.dp))
+                                            if (b.priceIncreased) Badge(L10n.t("booking.price_increased_badge"), color = BrandDanger, bg = BrandDanger.copy(alpha = 0.10f))
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        b.orders.forEach { o ->
+                                            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                                Text(L10n.t("booking.leg_order", o.legNo), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                                Text(o.amount?.let { fmtPrice(it, o.currency ?: payCurrency) } ?: "--", style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(Modifier.fillMaxWidth()) {
+                                            Text(L10n.t("booking.pay_total"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                            Text(fmtPrice(payTotal, payCurrency), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                        }
+                                        deadline?.let { Text(L10n.t("booking.pay_deadline", fmtDateTime(it)), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft) }
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(L10n.t("booking.sandbox_pay_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                                    }
+                                    Spacer(Modifier.height(10.dp))
+                                    PrimaryButton(
+                                        // 付款按钮必须包含准确金额与币种，禁止含糊文案。
+                                        text = L10n.t("booking.sandbox_pay_amount", payCurrency, "%.2f".format(payTotal)),
+                                        loading = loading,
+                                        onClick = {
+                                            loading = true
+                                            scope.launch {
+                                                val tokens = b.orders.mapNotNull { it.paymentConfirmationId }
+                                                when (val r = apiCall { Net.api.pay(b.bookingId, PayRequest(tokens)) }) {
+                                                    is ApiResult.Ok -> booking = r.data.booking
+                                                    is ApiResult.Err -> {
+                                                        error = r.message
+                                                        refreshBooking(b.bookingId)
+                                                    }
+                                                }
+                                                loading = false
+                                            }
+                                        },
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(L10n.t("booking.no_auto_retry"), style = MaterialTheme.typography.labelSmall)
+                                } else {
+                                    PrimaryButton(
+                                        text = L10n.t("booking.mock_pay"),
+                                        loading = loading,
+                                        onClick = {
+                                            loading = true
+                                            scope.launch {
+                                                when (val r = apiCall { Net.api.mockPay(b.bookingId) }) {
+                                                    is ApiResult.Ok -> booking = r.data.booking
+                                                    is ApiResult.Err -> {
+                                                        error = r.message
+                                                        refreshBooking(b.bookingId)
+                                                    }
+                                                }
+                                                loading = false
+                                            }
+                                        },
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    Text(L10n.t("booking.no_auto_retry"), style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            "TICKETING_IN_PROGRESS" -> {
+                                // TICKETING_PENDING 不是失败：展示“出票处理中”，允许稍后刷新。
+                                InfoBanner(L10n.t("booking.ticketing_banner"))
                                 Spacer(Modifier.height(10.dp))
-                                Text(L10n.t("booking.no_auto_retry"), style = MaterialTheme.typography.labelSmall)
+                                SecondaryButton(
+                                    text = if (loading) L10n.t("common.processing") else L10n.t("booking.ticketing_refresh"),
+                                    enabled = !loading,
+                                    onClick = {
+                                        loading = true
+                                        scope.launch {
+                                            when (val r = apiCall { Net.api.refreshTicketing(b.bookingId) }) {
+                                                is ApiResult.Ok -> booking = r.data.booking
+                                                is ApiResult.Err -> error = r.message
+                                            }
+                                            loading = false
+                                        }
+                                    },
+                                )
                             }
                             "PARTIAL_ORDER" -> {
-                                InfoBanner(L10n.t("booking.partial_banner"))
-                                Spacer(Modifier.height(10.dp))
-                                SecondaryButton(
-                                    text = if (loading) L10n.t("common.processing") else L10n.t("booking.mock_refund"),
-                                    enabled = !loading,
-                                    onClick = {
-                                        loading = true
-                                        scope.launch {
-                                            when (val r = apiCall { Net.api.mockRefund(b.bookingId) }) {
-                                                is ApiResult.Ok -> booking = r.data.booking
-                                                is ApiResult.Err -> error = r.message
-                                            }
-                                            loading = false
-                                        }
-                                    },
-                                )
+                                // 隐藏终态：正常演示不会到达（仅开发页开关可注入）；文案不暴露内部实现。
+                                InfoBanner(L10n.t("booking.partial_support"))
                             }
                             "COMPLETED" -> {
-                                InfoBanner(L10n.t("booking.completed_banner"))
-                                Spacer(Modifier.height(10.dp))
-                                SecondaryButton(
-                                    text = if (loading) L10n.t("common.processing") else L10n.t("booking.mock_refund"),
-                                    enabled = !loading,
-                                    onClick = {
-                                        loading = true
-                                        scope.launch {
-                                            when (val r = apiCall { Net.api.mockRefund(b.bookingId) }) {
-                                                is ApiResult.Ok -> booking = r.data.booking
-                                                is ApiResult.Err -> error = r.message
-                                            }
-                                            loading = false
+                                InfoBanner(if (b.isSandboxPayment) L10n.t("booking.sandbox_completed_banner") else L10n.t("booking.completed_banner"))
+                                // Sandbox 测试出票结果：订单号 / PNR / 测试票号（明确标注无真实扣款）。
+                                val ticketed = b.orders.filter { it.orderNo != null || it.pnrList.isNotEmpty() || it.ticketNumbers.isNotEmpty() }
+                                if (ticketed.isNotEmpty()) {
+                                    Spacer(Modifier.height(10.dp))
+                                    JoyCard {
+                                        Text(L10n.t("booking.ticket_title"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.height(6.dp))
+                                        ticketed.forEach { o ->
+                                            Text(L10n.t("booking.leg_order", o.legNo), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                            o.orderNo?.let { Text(L10n.t("booking.ticket_order_no", it), style = MaterialTheme.typography.bodySmall) }
+                                            if (o.pnrList.isNotEmpty()) Text(L10n.t("booking.ticket_pnr", o.pnrList.joinToString(", ")), style = MaterialTheme.typography.bodySmall)
+                                            if (o.ticketNumbers.isNotEmpty()) Text(L10n.t("booking.ticket_no", o.ticketNumbers.joinToString(", ")), style = MaterialTheme.typography.bodySmall)
+                                            Spacer(Modifier.height(4.dp))
                                         }
-                                    },
-                                )
+                                        Text(L10n.t("booking.sandbox_ticket_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                                    }
+                                }
+                                // 商业化产品形态：正常完成的订单不提供应用内退款入口（售后走客服渠道）。
+                                // 补偿/模拟退款能力仅保留在后端与开发页开关注入的隐藏终态，不在主流程展示。
                             }
-                            "SIMULATED_REFUNDED", "SIMULATED_REFUND_PENDING" -> {
+                            "SIMULATED_REFUNDED", "SIMULATED_REFUND_PENDING", "REFUNDED_SIMULATED", "REFUND_PENDING_SIMULATED" -> {
                                 InfoBanner(L10n.t("booking.refunded_banner"))
+                                Spacer(Modifier.height(6.dp))
+                                // UI 必须明示：这是模拟退款，Atlas 没有真实退款发生。
+                                Text(L10n.t("booking.refund_simulated_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                            }
+                            "MANUAL_REVIEW", "MANUAL_ACTION_REQUIRED" -> {
+                                InfoBanner(L10n.t("booking.unknown_query_note"))
+                                Spacer(Modifier.height(10.dp))
+                                SecondaryButton(L10n.t("common.refresh"), onClick = { scope.launch { refreshBooking(b.bookingId) } })
                             }
                             else -> {
                                 SecondaryButton(L10n.t("common.refresh"), onClick = { scope.launch { refreshBooking(b.bookingId) } })

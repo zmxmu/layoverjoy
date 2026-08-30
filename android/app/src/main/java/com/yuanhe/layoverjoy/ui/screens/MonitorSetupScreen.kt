@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.MonitorInput
 import com.yuanhe.layoverjoy.data.Net
@@ -44,6 +45,8 @@ import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
 import com.yuanhe.layoverjoy.ui.LoadingBlock
 import com.yuanhe.layoverjoy.ui.PrimaryButton
+import com.yuanhe.layoverjoy.ui.Routes
+import com.yuanhe.layoverjoy.ui.SecondaryButton
 import com.yuanhe.layoverjoy.ui.fmtPrice
 import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
@@ -145,7 +148,18 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
                 if (success) {
                     InfoBanner(L10n.t("monitor.created"))
                     Spacer(Modifier.height(12.dp))
-                    PrimaryButton(L10n.t("common.back"), onClick = { nav.popBackStack() })
+                    // 闭环入口：创建成功后直达监控列表（「行程」页），返回栈落回 tab 层。
+                    PrimaryButton(
+                        text = L10n.t("monitor.view_monitors"),
+                        onClick = {
+                            nav.navigate(Routes.TRIPS) {
+                                popUpTo(nav.graph.findStartDestination().id)
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton(L10n.t("common.back"), onClick = { nav.popBackStack() })
                 } else {
                     PrimaryButton(
                         text = L10n.t("monitor.create"),

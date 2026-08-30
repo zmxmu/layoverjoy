@@ -625,7 +625,27 @@ data class OrderDto(
     val legNo: Int = 0,
     val provider: String = "ATLAS",
     val status: String = "",
+    val legState: String = "",
     val orderNoLast4: String? = null,
+    // Sandbox 交易闭环（仅服务端回显，App 从不持有 Atlas 密钥）。
+    val orderNo: String? = null,
+    val pnrList: List<String> = emptyList(),
+    val ticketNumbers: List<String> = emptyList(),
+    val amount: Double? = null,
+    val currency: String? = null,
+    val paymentConfirmationId: String? = null,
+    val paymentDeadlineAt: String? = null,
+    val isSimulatedRefund: Boolean = false,
+    val lastProviderCode: String? = null,
+)
+
+@Serializable
+data class PriceConfirmationDto(
+    val previousTotal: Double? = null,
+    val newTotal: Double = 0.0,
+    val delta: Double = 0.0,
+    val currency: String = "",
+    val offerExpiresAt: String? = null,
 )
 
 @Serializable
@@ -640,8 +660,19 @@ data class BookingDto(
     val riskAckVersion: Int = 1,
     val expiresAt: String? = null,
     val createdAt: String = "",
+    val orderProvider: String = "MOCK",
+    val paymentProvider: String = "MOCK",
+    val isSandboxPayment: Boolean = false,
+    val priceIncreased: Boolean = false,
+    val priceConfirmation: PriceConfirmationDto? = null,
     val orders: List<OrderDto> = emptyList(),
 )
+
+@Serializable
+data class PayRequest(val paymentConfirmationIds: List<String> = emptyList())
+
+@Serializable
+data class ConfirmPriceRequest(val acceptedTotal: Double, val currency: String? = null)
 
 @Serializable
 data class BookingsResponse(val bookings: List<BookingDto> = emptyList())

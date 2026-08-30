@@ -218,3 +218,39 @@ describe('T-24 Nosana 不可用降级', () => {
     expect(r.disclaimerZh).toContain('不构成');
   });
 });
+
+describe('问题 8 回归：预订期资格复核不得因累计停留声明缺失而阻断免签下单', () => {
+  const toKul = (mode: 'SEARCH' | 'BOOKING', over: Partial<AssessInput> = {}) =>
+    runAgg(baseInput({
+      mode,
+      itinerary: {
+        purpose: 'TOURISM',
+        segments: [seg('SIN', 'KUL', '2026-09-20T02:00:00Z', '2026-09-20T03:00:00Z'), seg('KUL', 'PVG', '2026-09-24T06:00:00Z', '2026-09-24T12:00:00Z')],
+        stopover: { country: 'MY', airport: 'KUL', stayHours: 96 },
+        stayDays: 4,
+        arrivalDate: '2026-09-20',
+      },
+      documents: { onwardTicket: { status: 'CONFIRMED' } },
+      ...over,
+    }));
+
+  it('护照有效且免签：仅缺累计停留声明时预订期按规则放行（搜索/预订结论一致）', () => {
+    const r = toKul('BOOKING');
+    expect(r.matched[0]?.ruleId).toBe('CN_MY_MUTUAL_VISA_FREE');
+    expect(r.bookingDecision).toBe('CONDITIONALLY_ELIGIBLE');
+    expect(r.missingFacts).toContain('traveler.history.MY.daysInRollingWindowIncludingTrip');
+  });
+
+  it('搜索期同样不因累计停留声明缺失而降级', () => {
+    const r = toKul('SEARCH');
+    expect(r.searchDecision).toBe('ELIGIBLE');
+    expect(r.bookingDecision).toBe('CONDITIONALLY_ELIGIBLE');
+  });
+
+  it('fail-closed 保留：护照有效期事实缺失时预订期仍拦（不属声明类宽容）', () => {
+    const r = toKul('BOOKING', {
+      traveler: { passport: { issuingCountry: 'CN', type: 'ORDINARY', validUntil: undefined } as any, documents: [], history: {} },
+    });
+    expect(r.bookingDecision).toBe('NEEDS_INFO');
+  });
+});

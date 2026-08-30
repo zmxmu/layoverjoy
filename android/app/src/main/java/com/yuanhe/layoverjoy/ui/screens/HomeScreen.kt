@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,11 +39,11 @@ import androidx.navigation.NavController
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.BookingDto
 import com.yuanhe.layoverjoy.data.HomeOpportunityResponse
-import com.yuanhe.layoverjoy.data.LocalDemoData
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.OpportunityDetail
 import com.yuanhe.layoverjoy.data.SearchPrefill
 import com.yuanhe.layoverjoy.data.apiCall
+import com.yuanhe.layoverjoy.data.catalog.LocationCatalog
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.JoyCard
@@ -48,6 +51,8 @@ import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SectionTitle
 import com.yuanhe.layoverjoy.ui.bookingStatusColor
 import com.yuanhe.layoverjoy.ui.bookingStatusText
+import com.yuanhe.layoverjoy.ui.cityDisplayName
+import com.yuanhe.layoverjoy.ui.countryDisplayName
 import com.yuanhe.layoverjoy.ui.fmtPrice
 import com.yuanhe.layoverjoy.ui.guardedNavigate
 import com.yuanhe.layoverjoy.ui.i18n.L10n
@@ -59,8 +64,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 /**
- * 首页三层（11-执行方案 §3.2）：继续你的行程 → 我的最佳中转机会 → 精选中转灵感。
- * 机会卡只读后端已落库的搜索结果；灵感区保持本地示例并可点击预填搜索。
+ * 首页三层（11-执行方案 §3.2）：继续你的行程 → 我的最佳中转机会 → 热门中转目的地。
+ * 机会卡只读后端已落库的搜索结果；灵感区来自随包城市目录，点击可预填搜索。
  */
 @Composable
 fun HomeScreen(nav: NavController, appState: AppStateViewModel) {
@@ -103,7 +108,9 @@ fun HomeScreen(nav: NavController, appState: AppStateViewModel) {
         item {
             SectionTitle(L10n.t("home.continue_title"))
             if (appState.isLoggedIn) {
-                JoyCard(modifier = Modifier.clickable { guardedNavigate(nav, appState, Routes.TRIPS) }) {
+                // 有最新订单时直达订单详情页，否则回到行程页；闭环不断在列表层。
+                val target = latestBooking?.let { Routes.bookingStatus(it.bookingId) } ?: Routes.TRIPS
+                JoyCard(modifier = Modifier.clickable { guardedNavigate(nav, appState, target) }) {
                     val b = latestBooking
                     if (b != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,27 +146,20 @@ fun HomeScreen(nav: NavController, appState: AppStateViewModel) {
             Spacer(Modifier.height(12.dp))
             SectionTitle(L10n.t("home.cities"), trailing = L10n.t("home.cities_sub"))
         }
-        items(LocalDemoData.cities) { city ->
-            // 灵感即可行动：点击预填目的地并进入探索页（未登录则先登录再回跳）。
+        items(LocationCatalog.popularCities(6)) { city ->
+            // 灵感即可行动：点击预填目的地并进入探索页（未登录则先登录再回跳）；
+            // 城市与国家名称均来自随包城市目录，不携带任何本地虚构数据。
             JoyCard(modifier = Modifier.padding(vertical = 6.dp).clickable {
                 SearchPrefill.destinationCityId = city.cityId
                 guardedNavigate(nav, appState, Routes.SEARCH)
             }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("${city.cityNameZh} · ${city.cityNameEn}", style = MaterialTheme.typography.titleMedium)
+                        Text("${city.nameZh} · ${city.nameEn}", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        Text(city.entryLabel, style = MaterialTheme.typography.bodySmall, color = BrandPrimary, fontWeight = FontWeight.Medium)
+                        Text(countryDisplayName(city.countryCode), style = MaterialTheme.typography.bodySmall, color = BrandInkSoft)
                     }
-                    JoyScoreRing(city.joyScore)
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(city.highlight, style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(10.dp))
-                Row {
-                    Badge(L10n.t("common.days_badge", city.stayDays), color = BrandAccent, bg = BrandAccent.copy(alpha = 0.1f))
-                    Spacer(Modifier.width(8.dp))
-                    Badge(city.countryCode, color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = BrandPrimary)
                 }
             }
         }
@@ -235,28 +235,30 @@ private fun OpportunityReadyCard(
     stale: Boolean,
 ) {
     JoyCard(modifier = Modifier.clickable { nav.navigate(Routes.planDetail(o.planId)) }) {
-        // 路线：紧凑机场代码 + 中转停留胶囊，不用大箭头。
+        // 路线：完整城市名 + 中转停留胶囊，不用大箭头，也不展示三字码缩写。
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(o.origin, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(cityDisplayName(o.origin), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.width(8.dp))
             Box(Modifier.weight(1f).height(1.dp).background(BrandLine))
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(o.hub, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = BrandPrimary)
+                Text(cityDisplayName(o.hub), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = BrandPrimary)
                 Spacer(Modifier.height(2.dp))
                 Badge(L10n.t("common.days_badge", o.stayDays), color = BrandAccent, bg = BrandAccent.copy(alpha = 0.1f))
             }
             Spacer(Modifier.width(8.dp))
             Box(Modifier.weight(1f).height(1.dp).background(BrandLine))
             Spacer(Modifier.width(8.dp))
-            Text(o.destination, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(cityDisplayName(o.destination), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(10.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Badge(L10n.t("home.opportunity_eligible"), color = BrandPrimary, bg = BrandPrimary.copy(alpha = 0.1f))
-            Spacer(Modifier.width(8.dp))
-            Badge(providerLabel(o), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
+            providerLabel(o)?.let {
+                Spacer(Modifier.width(8.dp))
+                Badge(it, color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
+            }
             if (stale) {
                 Spacer(Modifier.width(8.dp))
                 Badge(L10n.t("home.opportunity_stale"), color = BrandAccent, bg = BrandAccent.copy(alpha = 0.12f))
@@ -313,11 +315,10 @@ private fun MetricLine(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = modifier.padding(vertical = 3.dp), textAlign = TextAlign.Start)
 }
 
-/** Provider 标签规则（11-执行方案 §5.4）：生产/沙箱/演示样本必须如实区分。 */
-private fun providerLabel(o: OpportunityDetail): String = when {
-    o.sourceProvider == "ATLAS_PRODUCTION" && !o.isSimulated -> L10n.t("home.provider_atlas")
-    o.sourceProvider == "ATLAS_SANDBOX" -> L10n.t("home.provider_atlas_sandbox")
-    else -> L10n.t("home.provider_demo")
+/** Provider 标签：只对真实报价来源标注；本地回退场景不标注，产品内不暴露实现细节。 */
+private fun providerLabel(o: OpportunityDetail): String? = when (o.sourceProvider) {
+    "ATLAS_PRODUCTION", "ATLAS_SANDBOX" -> L10n.t("home.provider_atlas")
+    else -> null
 }
 
 /** JoyScore 圆环（简化版）。 */

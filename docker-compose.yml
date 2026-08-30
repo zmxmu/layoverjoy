@@ -46,6 +46,8 @@ services:
       # Atlas/Nosana 由可信本地后端调用；候选评估默认进程内执行（local-runner，诚实标注）。
       # 需要展示真隔离沙箱时：DAYTONA_MODE=live docker compose up
       DAYTONA_MODE: ${DAYTONA_MODE:-local-runner}
+      # 联调旁路：跳过预订前入境资格重评（仅单腿联调测试方案使用；默认关，生产模式禁用）。
+      ATLAS_BOOKING_SKIP_ELIGIBILITY_GATE: ${ATLAS_BOOKING_SKIP_ELIGIBILITY_GATE:-false}
       # Nosana 推理部署（Ollama OpenAI-compatible endpoint；推理不校验 Bearer）。
       # 部署异常/不可达时自动降级模板解释并诚实标注。
       NOSANA_OPENAI_BASE_URL: ${NOSANA_OPENAI_BASE_URL:-https://3F7ZoStUp94NqH11NnjzoR55EooG9gtnLBKerABNFS4v.node.k8s.prd.nos.ci/v1}

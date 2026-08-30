@@ -372,12 +372,17 @@ model FlightOrder {
   legNo                  Int
   provider               String        // ATLAS_SANDBOX | MOCK
   orderNoEnc             String?       // AES-256-GCM
-  verifySessionIdEnc     String?
-  status                 String        // CREATED | PAID | TICKETED | FAILED | REFUND_PENDING | REFUNDED_SIMULATED
+  verifySessionIdEnc     String?       // AES-256-GCM
+  status                 String        // CREATED | PAY_SUBMITTED | PAID | TICKETING_PENDING | TICKETED | FAILED | ORDER_CANCELLED | UNKNOWN_REQUIRES_QUERY | REFUND_PENDING_SIMULATED | REFUNDED_SIMULATED | MANUAL_ACTION_REQUIRED
   amount                 Float?
   currency               String?
   lastProviderCode       String?
   idempotencyKey         String        @unique
+  // 2026-08-30 Sandbox 交易闭环（AGENTS.md §8）：出票与支付截止、环境代际。
+  pnrListEnc             String?       // AES-256-GCM JSON 数组；日志绝不输出完整值
+  ticketNosEnc           String?       // AES-256-GCM JSON 数组；日志绝不输出完整值
+  paymentDeadlineAt      DateTime?
+  atlasGeneration        String?       // 下单时的环境代际；环境切换后旧上下文失效
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
   bookingIntent          BookingIntent @relation(fields: [bookingIntentId], references: [id], onDelete: Cascade)

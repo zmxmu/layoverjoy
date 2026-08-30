@@ -15,9 +15,32 @@ export class OrdersMockController {
     return this.bookings.createComposite(user.userId, body);
   }
 
+  /** 涨价检查点：用户明确确认新总价后才继续下单。 */
+  @Post(':id/confirm-price')
+  confirmPrice(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: { acceptedTotal: number; currency?: string }) {
+    return this.bookings.confirmPrice(user.userId, id, body);
+  }
+
+  /** 支付：Sandbox 支付必须逐单提交一次性付款确认令牌。 */
+  @Post(':id/pay')
+  pay(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { paymentConfirmationIds?: string[] },
+    @Headers('x-demo-pay-result') demoPayResult?: string,
+  ) {
+    return this.bookings.pay(user.userId, id, body?.paymentConfirmationIds, demoPayResult);
+  }
+
+  /** 手动刷新出票状态（单次查询，不轮询）。 */
+  @Post(':id/refresh-ticketing')
+  refreshTicketing(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.bookings.refreshTicketing(user.userId, id);
+  }
+
   @Post(':id/mock-pay')
   mockPay(@CurrentUser() user: AuthUser, @Param('id') id: string, @Headers('x-demo-pay-result') demoPayResult?: string) {
-    return this.bookings.mockPay(user.userId, id, demoPayResult);
+    return this.bookings.pay(user.userId, id, undefined, demoPayResult);
   }
 
   @Post(':id/simulate-leg-b-failure')

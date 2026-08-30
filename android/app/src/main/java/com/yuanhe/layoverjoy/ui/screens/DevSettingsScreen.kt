@@ -77,10 +77,15 @@ fun DevSettingsScreen(nav: NavController) {
     var localOverride by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
     var paySimFail by remember { mutableStateOf(DemoFlags.paySimFail) }
+    var injectLegBFail by remember { mutableStateOf(DemoFlags.injectLegBFailure) }
+    var demoFixtureFallback by remember { mutableStateOf(DemoFlags.demoFixtureFallback) }
 
     // 从本地缓存恢复开关初始值。
     LaunchedEffect(Unit) {
-        paySimFail = session.snapshot().paySimFail
+        val snap = session.snapshot()
+        paySimFail = snap.paySimFail
+        injectLegBFail = snap.injectLegBFail
+        demoFixtureFallback = snap.demoFixtureFallback
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
@@ -149,7 +154,7 @@ fun DevSettingsScreen(nav: NavController) {
         }
 
         Spacer(Modifier.height(16.dp))
-        // 演示开关：支付失败模拟，切换即存入本地缓存，无需点保存。
+        // 演示开关：切换即存入本地缓存，无需点保存；只对演示/开发账号可见。
         JoyCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -162,6 +167,38 @@ fun DevSettingsScreen(nav: NavController) {
                         paySimFail = v
                         DemoFlags.paySimFail = v
                         scope.launch { session.setPaySimFail(v) }
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(L10n.t("dev.inject_title"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Text(L10n.t("dev.inject_sub"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                }
+                Switch(
+                    injectLegBFail,
+                    { v ->
+                        injectLegBFail = v
+                        DemoFlags.injectLegBFailure = v
+                        scope.launch { session.setInjectLegBFail(v) }
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(L10n.t("dev.demo_fixture_title"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Text(L10n.t("dev.demo_fixture_sub"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                }
+                Switch(
+                    demoFixtureFallback,
+                    { v ->
+                        demoFixtureFallback = v
+                        DemoFlags.demoFixtureFallback = v
+                        scope.launch { session.setDemoFixtureFallback(v) }
                     },
                     colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary),
                 )

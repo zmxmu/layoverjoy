@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { EntryRulesService } from '../entry-rules/entry-rules.service';
 import { UsersService } from '../users/users.service';
-import { candidateHubs, CITY_PACKS, CityEntry, resolveLocation, resolveSelection } from '../airports/catalog';
+import { CITY_PACKS, CityEntry, rankHubsForRoute, resolveLocation, resolveSelection } from '../airports/catalog';
 import { EligibilityAssessService } from '../entry-rules/v2/assess.service';
 import { buildJoyScore } from '../plans/joy-score';
 import { AppError } from '../common/errors';
@@ -13,17 +13,18 @@ import { FIELD_CRYPTO } from '../core.module';
 import { FieldCrypto } from '../common/crypto';
 
 /**
- * 搜索编排器。预算契约（10 契约 §6）：
- * 候选 Hub ≤3、每 Hub 停留天数 ≤2、Atlas Search ≤10、并发 3、
- * 单请求超时 8s（Provider 内）、软超时 20s、硬超时 30s、缓存 15min。
+ * 搜索编排器。预算契约：
+ * 候选 Hub 面向全目录按航线绕飞度动态排序，评估上限 8；每 Hub 停留天数 ≤2；
+ * Atlas Search ≤30、并发 3、单请求超时 8s（Provider 内）、软超时 40s、硬超时 60s、缓存 15min。
+ * （已从黑客松期的固定三城/10 次调用预算升级为生产级全球候选评估。）
  */
 export const SEARCH_BUDGET = {
-  maxHubs: 3,
+  maxHubs: 8,
   maxStayVariantsPerHub: 2,
-  maxSearchCalls: 10,
+  maxSearchCalls: 30,
   concurrency: 3,
-  softTimeoutMs: 20_000,
-  hardTimeoutMs: 30_000,
+  softTimeoutMs: 40_000,
+  hardTimeoutMs: 60_000,
 };
 
 interface CandidateOutcome {
@@ -62,7 +63,10 @@ export class SearchOrchestrator {
       const stayVariants = this.stayDayVariants(run.minStopDays, run.maxStopDays);
       const exclude = [resolveLocation(run.originInput)?.countryCode, resolveLocation(run.destinationInput)?.countryCode]
         .filter(Boolean) as string[];
-      const hubs = candidateHubs(exclude, 8).slice(0, SEARCH_BUDGET.maxHubs);
+      // 全球候选：按本次航线绕飞度动态排序（不再固化亚洲热门三城）；坐标缺失时退回热门榜单。
+      const originCityId = prefs.originLocation?.cityId ?? resolveLocation(run.originInput)?.cityId ?? null;
+      const destCityId = prefs.destinationLocation?.cityId ?? resolveLocation(run.destinationInput)?.cityId ?? null;
+      const hubs = rankHubsForRoute(originCityId, destCityId, exclude, SEARCH_BUDGET.maxHubs);
 
       const outcomes: CandidateOutcome[] = [];
       let searchCalls = 0;
@@ -186,7 +190,10 @@ export class SearchOrchestrator {
   }
 
   private bestBookable(offers: FlightOffer[]): FlightOffer | null {
-    const bookable = offers.filter((o) => o.priceStatus === 'current' && o.bookable);
+    // 过期报价不得继续 Verify/Order/Pay（AGENTS.md §8）：选择前先过滤有效期。
+    const bookable = offers.filter(
+      (o) => o.priceStatus === 'current' && o.bookable && (!o.expiresAt || new Date(o.expiresAt).getTime() > Date.now()),
+    );
     if (!bookable.length) return null;
     return [...bookable].sort((a, b) => a.totalPrice - b.totalPrice)[0];
   }
@@ -265,7 +272,8 @@ export class SearchOrchestrator {
         isSimulated: true,
         baggageJson: (offer.baggageJson ?? null) as any,
         rawHash: this.atlas.rawHash(offer),
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        // 上游 expireTime 优先；无有效期的（Mock）保留 30 分钟兼容窗口。
+        expiresAt: offer.expiresAt ? new Date(offer.expiresAt) : new Date(Date.now() + 30 * 60 * 1000),
       },
     });
     return snap.id;
@@ -346,25 +354,37 @@ export class SearchOrchestrator {
     }
     const useDemo = prefs.demoFixture === true;
 
+    // 2) 第一段：A → H（出发日；多机场出发地受控展开）。
+    //    第一段不依赖停留天数，每城只搜一次，各停留变体复用，把搜索预算留给更多候选城市。
+    let leg1Best: FlightOffer | null = null;
+    let leg1Label: 'ATLAS_SANDBOX' | 'MOCK' = this.atlas.searchProviderLabel();
+    try {
+      const leg1 = await this.searchFirstBookable(
+        this.endpointCodes(run, 'origin'),
+        [hubCode],
+        this.isoDate(run.departureDate),
+        useDemo,
+        consumeSearch,
+        3,
+      );
+      leg1Best = leg1.best;
+      leg1Label = leg1.label;
+    } catch (e) {
+      const code = (e as AppError).code;
+      outcome.status = code === 'NO_SANDBOX_INVENTORY' ? 'NO_INVENTORY' : 'FAILED';
+      outcome.reasonCodes = [code || 'SEARCH_FAILED'];
+      outcome.error = (e as Error).message;
+      return;
+    }
+    if (!leg1Best) {
+      outcome.status = 'NO_INVENTORY';
+      outcome.reasonCodes = ['NO_SANDBOX_INVENTORY_LEG_1'];
+      return;
+    }
+
     for (const stayDays of stayVariants) {
       if (Date.now() - (run.startedAt ? new Date(run.startedAt).getTime() : 0) > SEARCH_BUDGET.softTimeoutMs) return;
       try {
-        // 2) 第一段：A → H（出发日；多机场出发地受控展开）
-        const leg1 = await this.searchFirstBookable(
-          this.endpointCodes(run, 'origin'),
-          [hubCode],
-          this.isoDate(run.departureDate),
-          useDemo,
-          consumeSearch,
-          3,
-        );
-        const leg1Best = leg1.best;
-        if (!leg1Best) {
-          outcome.status = 'NO_INVENTORY';
-          outcome.reasonCodes = ['NO_SANDBOX_INVENTORY_LEG_1'];
-          continue;
-        }
-
         // 3) 第二段：H → B（出发日 + 停留天数；多机场目的地受控展开）
         const leg2Date = this.isoDate(this.addDays(run.departureDate, stayDays));
         const leg2 = await this.searchFirstBookable(
@@ -421,7 +441,7 @@ export class SearchOrchestrator {
           currency: leg1Best.currency,
           stayDays,
           cityId: city.cityId,
-          providerLabel: leg1.label,
+          providerLabel: leg1Label,
         });
 
         const joy = buildJoyScore({
@@ -435,13 +455,13 @@ export class SearchOrchestrator {
           departureHourLocal: new Date(leg1Best.departureAt).getUTCHours(),
           arrivalHourLocal: new Date(leg2Best.arrivalAt).getUTCHours(),
           interestsMatched: interestMatch,
-          isSimulated: leg1.label !== 'ATLAS_SANDBOX' || true,
+          isSimulated: leg1Label !== 'ATLAS_SANDBOX' || true,
         });
 
-        const leg1SnapId = await this.saveOffer(run.id, 1, 'LEG_1', city.cityId, leg1Best, leg1.label);
+        const leg1SnapId = await this.saveOffer(run.id, 1, 'LEG_1', city.cityId, leg1Best, leg1Label);
         const leg2SnapId = await this.saveOffer(run.id, 2, 'LEG_2', city.cityId, leg2Best, leg2.label);
         // 两段来源可能不同（如一段真实一段回退）：按腿聚合，不一致时诚实标记 MIXED。
-        const aggregatedProvider = leg1.label === leg2.label ? leg1.label : 'MIXED';
+        const aggregatedProvider = leg1Label === leg2.label ? leg1Label : 'MIXED';
 
         await this.prisma.stopoverPlan.create({
           data: {

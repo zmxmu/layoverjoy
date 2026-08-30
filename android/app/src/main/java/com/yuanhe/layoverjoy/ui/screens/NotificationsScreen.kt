@@ -38,6 +38,7 @@ import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.EmptyBlock
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
+import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.fmtDateTime
 import com.yuanhe.layoverjoy.ui.theme.BrandBackground
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
@@ -82,11 +83,15 @@ fun NotificationsScreen(nav: NavController) {
                 items(list, key = { it.id }) { n ->
                     val unread = n.readAt == null
                     JoyCard(Modifier.padding(vertical = 5.dp).clickable {
+                        // 点击：标记已读 + 按通知目标跳转（订单事件→订单详情，好价提醒→方案详情），形成闭环。
                         if (unread) {
-                            scope.launch {
-                                apiCall { Net.api.markRead(n.id) }
-                                load()
-                            }
+                            scope.launch { apiCall { Net.api.markRead(n.id) } }
+                        }
+                        val bookingId = n.deepLink?.substringAfter("/bookings/", "")?.takeIf { it.isNotBlank() && !it.contains("/") }
+                        when {
+                            bookingId != null -> nav.navigate(Routes.bookingStatus(bookingId))
+                            !n.planId.isNullOrBlank() -> nav.navigate(Routes.planDetail(n.planId))
+                            unread -> scope.launch { load() }
                         }
                     }) {
                         Row(Modifier.fillMaxWidth()) {

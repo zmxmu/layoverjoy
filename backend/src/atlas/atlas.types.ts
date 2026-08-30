@@ -26,6 +26,8 @@ export interface FlightOffer {
   totalPrice: number;
   priceStatus: 'current' | 'reference';
   bookable: boolean;
+  /** 上游报价有效期（Atlas Search 响应 `expireTime`）；过期后不得 Verify/Order/Pay。 */
+  expiresAt?: string; // ISO
   baggageJson?: unknown;
   raw?: unknown; // 脱敏后的原始结构（仅服务端）
 }
@@ -53,7 +55,13 @@ export interface FlightOrderResult {
   status: string;
   currency?: string;
   amount?: number;
-  paymentConfirmationId?: string;
+  /** 支付截止时间（上游返回时才有）。 */
+  paymentDeadlineAt?: string;
+  /** 出票信息（仅 queryOrderDetails 解析后才有）。 */
+  pnrList?: string[];
+  ticketNumbers?: string[];
+  orderStatus?: string; // 上游 orderStatus 枚举（0/1/2/-3）
+  ticketStatus?: string; // 上游 ticketStatus 枚举（0/1）
 }
 
 export interface PayOrderInput {

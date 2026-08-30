@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, JwtAuthGuard, AuthUser } from '../common/auth';
 import { NotificationsService } from './notifications.service';
@@ -34,12 +34,18 @@ export class MonitorsController {
   }
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.monitors.list(user.userId);
+  list(@CurrentUser() user: AuthUser, @Query('lang') lang?: string) {
+    const normalized: 'zh' | 'en' = (lang || '').toLowerCase().startsWith('en') ? 'en' : 'zh';
+    return this.monitors.list(user.userId, normalized);
   }
 
   @Patch(':id/status')
   setStatus(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: { status: 'ACTIVE' | 'PAUSED' | 'STOPPED' }) {
     return this.monitors.setStatus(user.userId, id, body.status);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.monitors.remove(user.userId, id);
   }
 }

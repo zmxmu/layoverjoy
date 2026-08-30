@@ -85,29 +85,36 @@ export function aggregate(
   }
 
   if (best.outcome.value === 'UNKNOWN') {
-    // 搜索期材料宽容（T-08）：仅缺 documents.*/traveler.history.* 声明时，
-    // 搜索决策取规则本身，预订决策至少 NEEDS_REVIEW；缺证件事实仍 NEEDS_INFO。
-    const relaxable =
-      opts.mode === 'SEARCH' &&
-      best.rule.category !== 'TRANSIT_TOUR_PROGRAM' &&
-      best.outcome.missing.length > 0 &&
-      best.outcome.missing.every((m) => m.startsWith('documents.') || m.startsWith('traveler.history.'));
-    if (!relaxable) {
-      for (const e of positives) if (e.outcome.value === 'UNKNOWN') missingAll.push(...e.outcome.missing);
+    // 缺失事实分类：
+    // - documents.*：证件/材料（续程票、住宿证明等），预订期必须齐备，缺失仍 NEEDS_INFO；
+    // - traveler.history.*：累计停留声明，产品不采集，属旅客自主申报义务（边境最终裁定），
+    //   互免/免签等确定性规则不应因此阻断下单——否则“搜索期显示符合资格、下单却被拦”自相矛盾。
+    const missing = best.outcome.missing;
+    const notTourProgram = best.rule.category !== 'TRANSIT_TOUR_PROGRAM';
+    const declarativeOnly =
+      missing.length > 0 && missing.every((m) => m.startsWith('documents.') || m.startsWith('traveler.history.'));
+    const historyOnly = missing.length > 0 && missing.every((m) => m.startsWith('traveler.history.'));
+    // 搜索期材料宽容（T-08）：仅缺声明类事实时按规则搜索决策放行。
+    const searchRelaxed = opts.mode === 'SEARCH' && notTourProgram && declarativeOnly;
+    // 预订期：仅缺累计停留声明时按规则预订决策放行；缺证件材料仍 NEEDS_INFO（fail-closed）。
+    const bookingRelaxed = notTourProgram && historyOnly;
+    if (searchRelaxed || bookingRelaxed) {
+      // 放宽时两个决策都取规则自身结论（T-08 契约：搜索期评估也如实给出规则的预订决策）。
       return {
-        searchDecision: 'NEEDS_INFO',
-        bookingDecision: 'NEEDS_INFO',
+        searchDecision: best.rule.decision.search,
+        bookingDecision: best.rule.decision.booking,
         matched: [best.rule],
-        missingFacts: [...new Set(missingAll)],
-        reasonCodes: ['MISSING_FACTS', best.rule.ruleId],
+        missingFacts: [...new Set(missing)],
+        reasonCodes: [best.rule.ruleId, 'DECLARATION_PENDING_VERIFY'],
       };
     }
+    for (const e of positives) if (e.outcome.value === 'UNKNOWN') missingAll.push(...e.outcome.missing);
     return {
-      searchDecision: best.rule.decision.search,
-      bookingDecision: best.rule.decision.booking,
+      searchDecision: 'NEEDS_INFO',
+      bookingDecision: 'NEEDS_INFO',
       matched: [best.rule],
-      missingFacts: [...new Set(best.outcome.missing)],
-      reasonCodes: [best.rule.ruleId, 'MATERIAL_PENDING_VERIFY'],
+      missingFacts: [...new Set(missingAll)],
+      reasonCodes: ['MISSING_FACTS', best.rule.ruleId],
     };
   }
 

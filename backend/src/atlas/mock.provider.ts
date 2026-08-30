@@ -106,12 +106,13 @@ export class MockAtlasProvider implements FlightProvider {
       throw err;
     }
     const orderNo = `MOCK-ORD-${randomUUID().slice(0, 8).toUpperCase()}`;
+    // 注：paymentConfirmationId 由 LayoverJoy 后端签发（bookings 层），不是 Provider 字段。
     return {
       orderNo,
       status: 'CREATED',
       currency: 'SGD',
       amount: 282,
-      paymentConfirmationId: `mock-pay-${randomUUID().slice(0, 8)}`,
+      paymentDeadlineAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     };
   }
 
@@ -128,6 +129,19 @@ export class MockAtlasProvider implements FlightProvider {
   }
 
   async getOrder(orderNo: string): Promise<FlightOrderResult> {
-    return { orderNo, status: 'CREATED', currency: 'SGD', amount: 282 };
+    // Mock 出票语义：包含 PEND 的订单停留在已支付未出票，其余视为已出票（供有界轮询测试）。
+    if (orderNo.includes('PEND')) {
+      return { orderNo, status: 'PAID', currency: 'SGD', amount: 282, orderStatus: '2', ticketStatus: '0', pnrList: [], ticketNumbers: [] };
+    }
+    return {
+      orderNo,
+      status: 'TICKETED',
+      currency: 'SGD',
+      amount: 282,
+      orderStatus: '2',
+      ticketStatus: '1',
+      pnrList: ['MOCKPNR1'],
+      ticketNumbers: ['999-0000000001'],
+    };
   }
 }

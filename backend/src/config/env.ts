@@ -19,17 +19,27 @@ const EnvSchema = z.object({
   ATLAS_CID: z.string().optional().default(''),
   ATLAS_SEARCH_PROVIDER: z.enum(['mock', 'sandbox']).default('sandbox'),
   ATLAS_VERIFY_PROVIDER: z.enum(['mock', 'sandbox']).default('sandbox'),
-  ATLAS_ORDER_PROVIDER: z.enum(['mock']).default('mock'),
-  ATLAS_PAYMENT_PROVIDER: z.enum(['mock']).default('mock'),
+  // 2026-08-30 用户授权：Order/Payment 支持 mock | sandbox（默认 mock）。
+  // 组合安全门禁在 loadEnv() 中强制：仅 ATLAS_MODE='sandbox' 时允许 sandbox。
+  ATLAS_ORDER_PROVIDER: z.enum(['mock', 'sandbox']).default('mock'),
+  ATLAS_PAYMENT_PROVIDER: z.enum(['mock', 'sandbox']).default('mock'),
+  // Refund 永远只允许 mock：Sandbox 无退款 API，补偿只走明确标识的模拟退款。
   ATLAS_REFUND_PROVIDER: z.enum(['mock']).default('mock'),
   ATLAS_SEARCH_TIMEOUT_MS: z.coerce.number().default(8000),
   ATLAS_DEFAULT_CURRENCY: z.string().default('SGD'),
+  // 仅限联调/演示：跳过预订前入境资格重评（单腿测试方案无 hubCountry 时使用）；默认关闭，生产模式永远禁止开启。
+  ATLAS_BOOKING_SKIP_ELIGIBILITY_GATE: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
   ATLAS_WEBHOOK_SHARED_TOKEN: z.string().optional().default(''),
   WEBHOOK_MODE: z.enum(['simulate', 'tunnel']).default('simulate'),
   PUBLIC_WEBHOOK_BASE_URL: z.string().optional().default(''),
   DEMO_FIXTURE_ENABLED: z
     .string()
-    .default('true')
+    // 2026-08-30 用户决策：演示回退默认关闭，评委可见路径 100% 真实 Sandbox 报价；
+    // 仅在开发页开关 + 显式环境变量同时开启时才可回退本地 fixture（结果明确标 MOCK）。
+    .default('false')
     .transform((v) => v === 'true' || v === '1'),
 
   NOSANA_API_KEY: z.string().optional().default(''),
@@ -112,6 +122,18 @@ export function loadEnv(): AppEnv {
     // 只输出字段名和错误原因，不输出变量值
     throw new Error(`[env] invalid environment configuration -> ${fields}`);
   }
-  cached = parsed.data;
+  // 组合安全门禁（AGENTS.md §8）：
+  // 1) 仅 ATLAS_MODE=sandbox 时 Order/Payment 才允许配置为 sandbox；
+  // 2) production/mock 模式下配置 sandbox 交易 = 启动失败（Production 交易永远禁止）。
+  const env = parsed.data;
+  if (env.ATLAS_MODE !== 'sandbox' && (env.ATLAS_ORDER_PROVIDER === 'sandbox' || env.ATLAS_PAYMENT_PROVIDER === 'sandbox')) {
+    throw new Error(
+      `[env] invalid environment configuration -> ATLAS_ORDER_PROVIDER/ATLAS_PAYMENT_PROVIDER=sandbox requires ATLAS_MODE=sandbox (current ATLAS_MODE=${env.ATLAS_MODE}); production transactions are forbidden`,
+    );
+  }
+  if (env.ATLAS_MODE === 'production' && env.ATLAS_BOOKING_SKIP_ELIGIBILITY_GATE) {
+    throw new Error('[env] invalid environment configuration -> ATLAS_BOOKING_SKIP_ELIGIBILITY_GATE is forbidden in production');
+  }
+  cached = env;
   return cached;
 }

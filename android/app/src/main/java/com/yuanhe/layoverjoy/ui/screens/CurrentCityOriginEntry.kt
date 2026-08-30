@@ -227,7 +227,7 @@ fun CurrentCityOriginEntry(onConfirm: (LocationSelection, String) -> Unit) {
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
-                                "$code · ${L10n.t("loc.distance_approx", candidate.distanceKm.roundToInt())}",
+                                L10n.t("loc.distance_approx", candidate.distanceKm.roundToInt()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BrandInkSoft,
                             )
@@ -258,7 +258,7 @@ fun CurrentCityOriginEntry(onConfirm: (LocationSelection, String) -> Unit) {
                             )
                         }) {
                             Text(
-                                "${L10n.t("loc.all_airports")}（${matchedCity.airports.joinToString(" / ") { it.iata }}）",
+                                L10n.t("loc.all_airports"),
                                 color = BrandPrimary,
                                 textAlign = TextAlign.Start,
                             )

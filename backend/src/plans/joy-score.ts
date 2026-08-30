@@ -96,6 +96,6 @@ export function buildJoyScore(input: PlanScoringInput) {
     { key: 'SCHEDULE_COMFORT', normalized: comfortNorm, explanation: comfortNorm >= 0.85 ? '起降时间舒适，无红眼。' : '存在红眼或换机场带来的疲劳。' },
     { key: 'INDEPENDENT_TICKET_RISK', normalized: riskNorm, explanation: '两张独立订单，停留时间影响衔接余量。' },
     { key: 'PREFERENCE_MATCH', normalized: Math.min(1, Math.max(0, input.interestsMatched)), explanation: '与用户兴趣标签匹配。' },
-    { key: 'DATA_CONFIDENCE', normalized: confidenceNorm, explanation: input.isSimulated ? 'Atlas Sandbox 模拟数据，带测试标签。' : '数据字段完整。' },
+    { key: 'DATA_CONFIDENCE', normalized: confidenceNorm, explanation: input.isSimulated ? '报价数据以验价结果为准。' : '数据字段完整。' },
   ]);
 }

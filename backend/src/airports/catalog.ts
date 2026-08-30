@@ -24,6 +24,8 @@ export interface CatalogCity {
   timezone: string;
   metroCode: string | null;
   defaultAirportIata: string;
+  latitude: number | null;
+  longitude: number | null;
   airports: AirportEntry[];
 }
 
@@ -98,6 +100,8 @@ const countryByCode = new Map<string, CatalogCountry>();
           timezone: c.timezone,
           metroCode: c.metroCode ?? null,
           defaultAirportIata: c.defaultAirportIata,
+          latitude: typeof c.latitude === 'number' ? c.latitude : null,
+          longitude: typeof c.longitude === 'number' ? c.longitude : null,
           airports: c.airports,
         };
         for (const a of city.airports) {
@@ -199,6 +203,89 @@ export function candidateHubs(excludeCountryCodes: string[], limit = 8): CityEnt
     if (picked.length >= limit) break;
   }
   return picked;
+}
+
+// ---------- 按航线动态排序的全球中转候选（生产级选城） ----------
+
+type GeoPoint = { lat: number; lon: number };
+
+/** 球面大圆距离（km），用于中转绕飞度排序。 */
+function distanceKm(a: GeoPoint, b: GeoPoint): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const s =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+/**
+ * 按本次航线动态生成全球中转候选（不再限定亚洲热门三城）：
+ * - 候选池为全目录（六大洲）城市，仅排除出发地与目的地所在国；
+ * - 两端坐标齐备时按绕飞增量排序：detour = dist(O,H) + dist(H,D) - dist(O,D)，越小越顺路；
+ * - 离任一端点不足全程 10% 的“近端点城市”（如伦敦出发经法兰克福）不是有意义的中转停留，
+ *   降权排在真正居中的候选之后（不排除，作为候选不足时的补充）；
+ * - 短途航线（直达 <600km）无绕行空间，退回热门优先，避免把无关远城排到前面；
+ * - 缺坐标的城市按热门次序排在有坐标候选之后。
+ */
+export function rankHubsForRoute(
+  originCityId: string | null,
+  destCityId: string | null,
+  excludeCountryCodes: string[],
+  limit = 16,
+): CityEntry[] {
+  const origin = originCityId ? cityOf(originCityId) : null;
+  const dest = destCityId ? cityOf(destCityId) : null;
+  const o: GeoPoint | null =
+    origin && typeof origin.latitude === 'number' && typeof origin.longitude === 'number'
+      ? { lat: origin.latitude, lon: origin.longitude }
+      : null;
+  const d: GeoPoint | null =
+    dest && typeof dest.latitude === 'number' && typeof dest.longitude === 'number'
+      ? { lat: dest.latitude, lon: dest.longitude }
+      : null;
+  const popularRank = new Map(POPULAR_CITY_IDS.map((id, i) => [id, i]));
+
+  const excludeCityIds = new Set([originCityId, destCityId].filter(Boolean) as string[]);
+  const candidates = CITIES.filter(
+    (c) => !excludeCountryCodes.includes(c.countryCode) && !excludeCityIds.has(c.cityId),
+  );
+
+  const direct = o && d ? distanceKm(o, d) : null;
+  const shortHaul = direct !== null && direct < 600;
+  const nearEndpoint = direct !== null ? direct * 0.1 : 0;
+
+  const scored = candidates.map((c) => {
+    const rank = popularRank.get(c.cityId) ?? 999;
+    const p: GeoPoint | null =
+      typeof c.latitude === 'number' && typeof c.longitude === 'number'
+        ? { lat: c.latitude, lon: c.longitude }
+        : null;
+    let detour: number | null = null;
+    let degenerate = false;
+    if (!shortHaul && o && d && p && direct !== null) {
+      const dOH = distanceKm(o, p);
+      const dHD = distanceKm(p, d);
+      detour = dOH + dHD - direct;
+      degenerate = dOH < nearEndpoint || dHD < nearEndpoint;
+    }
+    return { city: c, rank, detour, degenerate };
+  });
+
+  scored.sort((a, b) => {
+    // 近端点降权：真正居中的候选优先；同类内部再按绕飞度。
+    if (a.degenerate !== b.degenerate) return a.degenerate ? 1 : -1;
+    if (a.detour !== null && b.detour !== null && Math.abs(a.detour - b.detour) > 150) {
+      return a.detour - b.detour;
+    }
+    if (a.detour === null && b.detour !== null) return 1; // 缺坐标排在可计算绕飞度的城市之后
+    if (a.detour !== null && b.detour === null) return -1;
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return a.city.cityId.localeCompare(b.city.cityId);
+  });
+
+  return scored.slice(0, limit).map((s) => HUB_CATALOG.find((c) => c.cityId === s.city.cityId)!);
 }
 
 // ---------- 规范化与模糊检索（12 号方案 §6） ----------

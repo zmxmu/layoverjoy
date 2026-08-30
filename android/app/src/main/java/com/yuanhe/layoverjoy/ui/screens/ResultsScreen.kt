@@ -45,6 +45,8 @@ import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SectionTitle
+import com.yuanhe.layoverjoy.ui.cityDisplayName
+import com.yuanhe.layoverjoy.ui.cityNameById
 import com.yuanhe.layoverjoy.ui.fmtDateTime
 import com.yuanhe.layoverjoy.ui.fmtPrice
 import com.yuanhe.layoverjoy.ui.theme.BrandAccent
@@ -143,8 +145,9 @@ fun ResultsScreen(nav: NavController, runId: String) {
                             JoyCard {
                                 s.funnel.forEach { f ->
                                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        // 统一展示完整城市名（中/英），不再回退到 cityId 缩写串。
                                         Text(
-                                            if (L10n.current == AppLanguage.EN) f.cityId.ifBlank { f.cityNameZh } else f.cityNameZh.ifBlank { f.cityId },
+                                            cityNameById(f.cityId) ?: f.cityNameZh.ifBlank { f.cityId },
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier.weight(1f),
                                         )
@@ -165,7 +168,7 @@ fun ResultsScreen(nav: NavController, runId: String) {
                 plans?.let { p ->
                     item {
                         Spacer(Modifier.height(8.dp))
-                        SectionTitle(L10n.t("results.direct_baseline"), trailing = p.providerMode ?: "")
+                        SectionTitle(L10n.t("results.direct_baseline"))
                     }
                     item {
                         val offer = p.directBaseline?.offer
@@ -175,7 +178,7 @@ fun ResultsScreen(nav: NavController, runId: String) {
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
-                                        Text("${offer.origin} → ${offer.destination}", style = MaterialTheme.typography.titleSmall)
+                                        Text("${cityDisplayName(offer.origin)} → ${cityDisplayName(offer.destination)}", style = MaterialTheme.typography.titleSmall)
                                         Text("${offer.carrier ?: ""} ${offer.flightNumber ?: ""} · ${fmtDateTime(offer.departureAt)}", style = MaterialTheme.typography.labelSmall)
                                     }
                                     Text(fmtPrice(offer.totalPrice, offer.currency), style = MaterialTheme.typography.titleMedium, color = BrandPrimary, fontWeight = FontWeight.Bold)
@@ -196,11 +199,10 @@ fun ResultsScreen(nav: NavController, runId: String) {
 @Composable
 fun PlanCard(plan: PlanDto, context: PlansResponse?, onClick: () -> Unit) {
     val funnelItem = context?.funnel?.firstOrNull { it.cityId == plan.stopoverCityId }
-    val cityName = if (L10n.current == AppLanguage.EN) {
-        plan.stopoverCityId.orEmpty().ifBlank { funnelItem?.cityNameZh.orEmpty() }
-    } else {
-        funnelItem?.cityNameZh?.ifBlank { null } ?: plan.stopoverCityId.orEmpty()
-    }
+    // 城市名统一按当前语言从目录解析完整名称，不回退到 cityId/代码。
+    val cityName = cityNameById(plan.stopoverCityId)
+        ?: funnelItem?.cityNameZh?.ifBlank { null }
+        ?: plan.stopoverCityId.orEmpty()
     val leg1 = plan.legs.getOrNull(0)
     val leg2 = plan.legs.getOrNull(1)
     JoyCard(modifier = Modifier.padding(vertical = 6.dp).clickable(onClick = onClick)) {
@@ -230,7 +232,6 @@ fun PlanCard(plan: PlanDto, context: PlansResponse?, onClick: () -> Unit) {
                 color = if (delta > 0) BrandAccent else BrandPrimary,
             )
             Spacer(Modifier.weight(1f))
-            if (plan.isSimulated) Badge(L10n.t("common.simulated_quote"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
         }
         context?.eligibility?.firstOrNull { it.cityId == plan.stopoverCityId }?.let { eli ->
             Spacer(Modifier.height(10.dp))
@@ -286,7 +287,7 @@ private fun EligibilityCard(eli: EligibilityDto) {
 @Composable
 private fun LegLine(origin: String, destination: String, departureAt: String, carrier: String?, flightNumber: String?) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text("$origin → $destination", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text("${cityDisplayName(origin)} → ${cityDisplayName(destination)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text("${carrier ?: ""} ${flightNumber ?: ""} · ${fmtDateTime(departureAt)}", style = MaterialTheme.typography.labelSmall)
     }
 }

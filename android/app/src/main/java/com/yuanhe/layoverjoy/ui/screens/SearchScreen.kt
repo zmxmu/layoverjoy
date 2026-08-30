@@ -51,6 +51,7 @@ import com.yuanhe.layoverjoy.LayoverJoyApp
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.SearchPrefill
+import com.yuanhe.layoverjoy.data.DemoFlags
 import com.yuanhe.layoverjoy.data.SearchPreferences
 import com.yuanhe.layoverjoy.data.SearchRequest
 import com.yuanhe.layoverjoy.data.Trace
@@ -168,7 +169,6 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
     var originSource by rememberSaveable { mutableStateOf(OriginSelectionSource.MANUAL.name) }
     var interests by remember { mutableStateOf(setOf<String>()) }
     var acceptRedEye by remember { mutableStateOf(true) }
-    var demoFixture by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -381,8 +381,6 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
             }
             Spacer(Modifier.height(14.dp))
             SwitchRow(L10n.t("search.redeye"), L10n.t("search.redeye_sub"), acceptRedEye) { acceptRedEye = it }
-            Spacer(Modifier.height(10.dp))
-            SwitchRow(L10n.t("search.demo_fallback"), L10n.t("search.demo_fallback_sub"), demoFixture) { demoFixture = it }
         }
         Spacer(Modifier.height(12.dp))
         ErrorBanner(error)
@@ -414,7 +412,8 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
                         preferences = SearchPreferences(
                             interests = interests.toList().ifEmpty { null },
                             acceptRedEye = acceptRedEye,
-                            demoFixture = demoFixture,
+                            // 演示回退默认关闭：仅开发页开关开启时才允许无库存回退本地 fixture（结果标 MOCK）。
+                            demoFixture = if (DemoFlags.demoFixtureFallback) true else null,
                         ),
                     )
                     when (val r = apiCall { Net.api.createSearch(req) }) {

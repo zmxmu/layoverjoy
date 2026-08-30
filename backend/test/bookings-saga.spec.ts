@@ -76,7 +76,9 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
         return Promise.resolve({ orderNo: `ORD-${bookingReference}`, currency: 'SGD', amount: 50 });
       }),
     },
-    providerLabel: () => 'ATLAS_SANDBOX',
+    providerLabel: () => 'MOCK',
+    // Saga 单测走 Mock 交易链路（Sandbox 闭环在 atlas-sandbox-booking.spec.ts 验证）。
+    environmentGeneration: () => 'gen-test-000000000000',
   };
 
   const notifications: any = { notify: vi.fn().mockResolvedValue({}) };
@@ -105,7 +107,12 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
     })),
   };
 
-  const service = new BookingsService(prisma, atlas, notifications, rules, users, assessV2, crypto);
+  const redis: any = {
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+  };
+
+  const service = new BookingsService(prisma, atlas, redis, notifications, rules, users, assessV2, crypto);
   return { service, transitions, rules, assessV2 };
 }
 

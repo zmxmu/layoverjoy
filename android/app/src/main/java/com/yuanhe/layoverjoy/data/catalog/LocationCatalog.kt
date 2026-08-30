@@ -132,7 +132,10 @@ object LocationCatalog {
                     for (c in ctry.cities) {
                         require(seenCities.add(c.cityId)) { "duplicate cityId ${c.cityId}" }
                         require(c.airports.isNotEmpty()) { "empty airports ${c.cityId}" }
-                        for (a in c.airports) require(seenIata.add(a.iata)) { "duplicate IATA ${a.iata}" }
+                        for (a in c.airports) {
+                            require(seenIata.add(a.iata)) { "duplicate IATA ${a.iata}" }
+                            iataToCity[a.iata] = c
+                        }
                         cityById[c.cityId] = c
                         continentByCity[c.cityId] = cont
                         countryByCity[c.cityId] = ctry

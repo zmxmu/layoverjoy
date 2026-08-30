@@ -57,10 +57,17 @@ object TokenHolder {
     }
 }
 
-/** 演示开关持有者（由 SessionStore 持久化，开发页切换），供拦截器读取。 */
+/** 演示开关持有者（由 SessionStore 持久化，开发页切换），供拦截器/请求构造读取。 */
 object DemoFlags {
     /** 支付失败模拟：开启后支付请求携带 X-Demo-Pay-Result: FAIL，后端 Mock 支付使第一段必然失败。 */
     @Volatile var paySimFail: Boolean = false
+
+    /** 第一段下单失败注入：开启后预订请求携带 legBFailure，第二段成功后第一段返回库存变化，演示双订单补偿。 */
+    @Volatile var injectLegBFailure: Boolean = false
+
+    /** 演示方案回退（默认关闭）：开启后搜索请求携带 demoFixture，无库存时可回退本地 fixture（结果标 MOCK）。
+     *  评委可见路径应保持关闭，保证报价 100% 来自真实 Sandbox。 */
+    @Volatile var demoFixtureFallback: Boolean = false
 }
 
 /** 网络结果：统一携带后端错误契约。 */
@@ -142,14 +149,19 @@ interface ApiService {
     @GET("v1/notifications") suspend fun notifications(@Query("unread") unread: String?): retrofit2.Response<NotificationsResponse>
     @PATCH("v1/notifications/{id}/read") suspend fun markRead(@Path("id") id: String): retrofit2.Response<okhttp3.ResponseBody>
     @POST("v1/monitors") suspend fun createMonitor(@Body body: MonitorInput): retrofit2.Response<MonitorCreatedResponse>
-    @GET("v1/monitors") suspend fun monitors(): retrofit2.Response<MonitorsResponse>
+    @GET("v1/monitors") suspend fun monitors(@Query("lang") lang: String?): retrofit2.Response<MonitorsResponse>
     @PATCH("v1/monitors/{id}/status") suspend fun setMonitorStatus(@Path("id") id: String, @Body body: MonitorStatusInput): retrofit2.Response<MonitorCreatedResponse>
+    @DELETE("v1/monitors/{id}") suspend fun deleteMonitor(@Path("id") id: String): retrofit2.Response<okhttp3.ResponseBody>
 
     // 预订（模拟接口不在 /v1 前缀下）
     @GET("v1/bookings") suspend fun bookings(): retrofit2.Response<BookingsResponse>
     @GET("v1/bookings/{id}") suspend fun booking(@Path("id") id: String): retrofit2.Response<BookingResponse>
     @POST("api/orders/composite") suspend fun compositeOrder(@Body body: CompositeOrderRequest): retrofit2.Response<BookingResponse>
     @POST("api/orders/{id}/mock-pay") suspend fun mockPay(@Path("id") id: String): retrofit2.Response<BookingResponse>
+    // Sandbox 交易闭环：涨价确认 / 带一次性确认令牌的支付 / 手动刷新出票状态。
+    @POST("api/orders/{id}/confirm-price") suspend fun confirmPrice(@Path("id") id: String, @Body body: ConfirmPriceRequest): retrofit2.Response<BookingResponse>
+    @POST("api/orders/{id}/pay") suspend fun pay(@Path("id") id: String, @Body body: PayRequest): retrofit2.Response<BookingResponse>
+    @POST("api/orders/{id}/refresh-ticketing") suspend fun refreshTicketing(@Path("id") id: String): retrofit2.Response<BookingResponse>
     @POST("api/orders/{id}/simulate-leg-b-failure") suspend fun simulateLegB(@Path("id") id: String): retrofit2.Response<BookingResponse>
     @POST("api/orders/{id}/mock-refund") suspend fun mockRefund(@Path("id") id: String): retrofit2.Response<BookingResponse>
 }
