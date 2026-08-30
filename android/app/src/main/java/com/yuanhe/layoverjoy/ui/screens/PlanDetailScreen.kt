@@ -1,5 +1,6 @@
 package com.yuanhe.layoverjoy.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -55,6 +58,9 @@ import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
 import com.yuanhe.layoverjoy.ui.i18n.AppLanguage
 import com.yuanhe.layoverjoy.ui.i18n.L10n
+import com.yuanhe.layoverjoy.data.ExplanationPayload
+import android.util.Log
+import com.yuanhe.layoverjoy.BuildConfig
 import kotlinx.coroutines.launch
 
 /** 置信度 → i18n key。 */
@@ -81,6 +87,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
     var detail by remember { mutableStateOf<PlanDetailDto?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var explaining by remember { mutableStateOf(false) }
+    var autoRequested by remember { mutableStateOf(false) }
 
     suspend fun load() {
         when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
@@ -100,7 +107,18 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
         }
     }
 
-    LaunchedEffect(planId, L10n.current) { load() }
+    LaunchedEffect(planId, L10n.current) {
+        load()
+        // AI-11：无推荐时自动生成，不需点击；后端失败也返回丰富模板，页面不停错误态。
+        val cur = detail
+        if (cur != null && cur.explanation == null && !autoRequested) {
+            autoRequested = true
+            explaining = true
+            apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
+            load()
+            explaining = false
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -130,7 +148,22 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                                 Text("JoyScore", style = MaterialTheme.typography.labelSmall)
                                 Text("${d.joyScore} / 100", style = MaterialTheme.typography.titleLarge, color = BrandPrimary, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
-                                Text(L10n.t("detail.usable", "%.0f".format(d.usableHours), d.stayDays), style = MaterialTheme.typography.labelSmall)
+                                // 净体验窗口唯一展示位置（14 号方案 §4）
+                                val ec = d.experienceContext
+                                if (ec != null) {
+                                    Text(
+                                        if (L10n.current == AppLanguage.EN) ec.windowLabelEn else ec.windowLabelZh,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        if (L10n.current == AppLanguage.EN) ec.budgetNoteEn else ec.budgetNoteZh,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BrandInkSoft,
+                                    )
+                                } else {
+                                    Text(L10n.t("detail.usable", "%.0f".format(d.usableHours), d.stayDays), style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(fmtPrice(d.airfareTotal, d.currency), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -174,46 +207,62 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                     }
                 }
 
-                item { SectionTitle(L10n.t("detail.why_title")) }
+                item {
+                    val whyCity = d.stopoverCity?.let { if (L10n.current == AppLanguage.EN) it.cityNameEn.ifBlank { it.cityNameZh } else it.cityNameZh.ifBlank { it.cityNameEn } } ?: ""
+                    SectionTitle(if (whyCity.isBlank()) L10n.t("detail.why_title") else L10n.t("detail.why_title_city", whyCity))
+                }
                 item {
                     JoyCard {
                         val payload = d.explanation?.payload
-                        if (payload != null) {
-                            Text(payload.summary, style = MaterialTheme.typography.bodyMedium)
-                            if (payload.highlights.isNotEmpty()) {
-                                Spacer(Modifier.height(8.dp))
-                                payload.highlights.forEach { Text("· $it", style = MaterialTheme.typography.bodySmall) }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            // 推理来源诚实展示：Nosana 附模型/耗时/部署尾码，降级时明示模板。
-                            val caption = if (d.explanation?.provider == "NOSANA") {
-                                buildString {
-                                    append(L10n.t("detail.why_nosana", payload?.modelId ?: d.explanation?.modelId ?: ""))
-                                    payload?.latencyMs?.let { append(" · ").append(L10n.t("detail.why_latency", "%.1f".format(it / 1000.0))) }
-                                    payload?.deploymentIdTail?.let { append(" · ").append(L10n.t("detail.why_deploy", it)) }
-                                }
-                            } else L10n.t("detail.why_template")
-                            Text(
-                                caption,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BrandInkSoft,
+                        // AI-10：模型元数据仅 Debug 日志，脱敏后输出。
+                        if (BuildConfig.DEBUG) {
+                            val meta = payload?.debugMeta
+                            Log.d(
+                                "LayoverJoyAI",
+                                "plan=${planId.takeLast(8)} " +
+                                    "request=${meta?.requestId?.takeLast(8) ?: ""} " +
+                                    "provider=${meta?.provider ?: d.explanation?.provider ?: ""} " +
+                                    "model=${meta?.modelId ?: ""} " +
+                                    "latencyMs=${meta?.latencyMs ?: -1} " +
+                                    "deployment=${meta?.deploymentIdTail ?: ""} " +
+                                    "fallback=${meta?.fallbackReason ?: ""} " +
+                                    "prompt=${meta?.promptVersion ?: ""}",
                             )
-                        } else {
-                            Text(L10n.t("detail.why_empty"), style = MaterialTheme.typography.bodySmall)
+                        }
+                        when {
+                            payload != null && payload.schemaVersion == "2.0" -> RichNarrativeCard(payload)
+                            payload != null -> {
+                                Text(payload.summary, style = MaterialTheme.typography.bodyMedium)
+                                if (payload.highlights.isNotEmpty()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    payload.highlights.forEach { Text("· $it", style = MaterialTheme.typography.bodySmall) }
+                                }
+                            }
+                            explaining -> NarrativeSkeleton()
+                            else -> Text(L10n.t("detail.why_empty"), style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(Modifier.height(10.dp))
-                        SecondaryButton(
-                            text = if (explaining) L10n.t("detail.why_generating") else if (payload != null) L10n.t("detail.why_regenerate") else L10n.t("detail.why_generate"),
-                            enabled = !explaining,
-                            onClick = {
-                                explaining = true
-                                scope.launch {
-                                    apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
-                                    load()
-                                    explaining = false
-                                }
-                            },
-                        )
+                        if (payload != null) {
+                            Text(L10n.t("detail.smart_note"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                            Spacer(Modifier.height(8.dp))
+                            SecondaryButton(
+                                text = L10n.t("detail.adjust_prefs"),
+                                onClick = { nav.popBackStack(Routes.SEARCH, false) },
+                            )
+                        } else {
+                            SecondaryButton(
+                                text = if (explaining) L10n.t("detail.why_generating") else L10n.t("detail.why_generate"),
+                                enabled = !explaining,
+                                onClick = {
+                                    explaining = true
+                                    scope.launch {
+                                        apiCall { Net.api.createExplanation(planId, L10n.current.tag) }
+                                        load()
+                                        explaining = false
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -304,4 +353,104 @@ private fun costKeyText(key: String): String = when (key) {
     "VISA_FEE" -> L10n.t("cost.visa")
     "ACTIVITIES_FOOD" -> L10n.t("cost.activities")
     else -> key
+}
+
+/** v2 丰富解读卡（14 号方案 §5）：城市优势/小行程/便利度/取舍；不渲染任何模型元数据。 */
+@Composable
+private fun RichNarrativeCard(p: ExplanationPayload) {
+    val en = L10n.current == AppLanguage.EN
+    p.headline?.let { Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+    Spacer(Modifier.height(6.dp))
+    Text(p.summary, style = MaterialTheme.typography.bodyMedium)
+
+    if (p.cityAdvantages.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Text(L10n.t("detail.advantages_title"), style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
+        p.cityAdvantages.forEach { a ->
+            Spacer(Modifier.height(4.dp))
+            Text("• ${a.title}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            Text(a.body, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+
+    if (p.miniPlan.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Text(L10n.t("detail.plan_title"), style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
+        p.miniPlan.forEach { m ->
+            Spacer(Modifier.height(6.dp))
+            Row {
+                Text(
+                    when (m.slot) {
+                        "ARRIVAL_DAY" -> L10n.t("detail.slot_arrival")
+                        "DEPARTURE_DAY" -> L10n.t("detail.slot_departure")
+                        else -> L10n.t("detail.slot_full")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BrandPrimary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(64.dp),
+                )
+                Column {
+                    Text(m.title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                    Text(m.description, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+
+    p.easeNarrative?.let { e ->
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(L10n.t("detail.ease_title"), style = MaterialTheme.typography.labelMedium, color = BrandInkSoft, modifier = Modifier.weight(1f))
+            p.context?.ease?.let { ease ->
+                Text("${ease.score}/100 · ${easeLevelText(ease.level, en)}", style = MaterialTheme.typography.labelMedium, color = BrandPrimary, fontWeight = FontWeight.Bold)
+            }
+        }
+        Text(e.summary, style = MaterialTheme.typography.bodySmall)
+        e.positives.forEach { Text("· $it", style = MaterialTheme.typography.labelSmall, color = BrandPrimary) }
+        e.cautions.forEach { Text("· $it", style = MaterialTheme.typography.labelSmall, color = BrandAccent) }
+    }
+
+    p.tradeoff?.let { t ->
+        Spacer(Modifier.height(10.dp))
+        Text(L10n.t("detail.tradeoff_gain"), style = MaterialTheme.typography.labelMedium, color = BrandPrimary)
+        Text(t.gain, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(4.dp))
+        Text(L10n.t("detail.tradeoff_sacrifice"), style = MaterialTheme.typography.labelMedium, color = BrandAccent)
+        Text(t.sacrifice, style = MaterialTheme.typography.bodySmall)
+    }
+
+    p.practicalTip?.let {
+        Spacer(Modifier.height(10.dp))
+        Text("· $it", style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+    }
+}
+
+private fun easeLevelText(level: String, en: Boolean): String = when (level) {
+    "EASY" -> if (en) "Easy" else "轻松"
+    "SMOOTH" -> if (en) "Smooth" else "顺畅"
+    "PLAN_CAREFULLY" -> if (en) "Plan carefully" else "需规划"
+    else -> if (en) "Demanding" else "较折腾"
+}
+
+/** 与最终卡结构一致的 Skeleton（AI-11）。 */
+@Composable
+private fun NarrativeSkeleton() {
+    val box = Modifier
+        .fillMaxWidth()
+        .height(14.dp)
+        .clip(RoundedCornerShape(7.dp))
+        .background(BrandInkSoft.copy(alpha = 0.15f))
+    val tallBox = Modifier
+        .fillMaxWidth()
+        .height(48.dp)
+        .clip(RoundedCornerShape(7.dp))
+        .background(BrandInkSoft.copy(alpha = 0.15f))
+    Column {
+        box
+        Spacer(Modifier.height(8.dp))
+        box
+        Spacer(Modifier.height(8.dp))
+        tallBox
+    }
 }

@@ -1,0 +1,458 @@
+{
+  "schemaVersion": "1.0.0",
+  "catalogType": "LAYOVER_CITY_EXPERIENCE",
+  "generatedFor": "LayoverJoy AI stopover value narrative (14-plan)",
+  "legalNoticeZh": "城市资料为人工整理的参考信息；交通时间为典型区间，实际以运营方实时时刻为准。",
+  "cities": [
+    {
+      "cityId": "my-kuala-lumpur",
+      "version": 1,
+      "lastReviewedAt": "2026-08-30",
+      "timezone": "Asia/Kuala_Lumpur",
+      "uniqueAdvantages": [
+        {
+          "id": "KUL_FOOD_DIVERSITY",
+          "titleZh": "多元饮食集中",
+          "titleEn": "Dense mix of food cultures",
+          "bodyZh": "南洋早餐、马来小吃、华人茶室和印度餐可以在同一两个街区内串成一条路线，短停留也能吃得完整。",
+          "bodyEn": "Local breakfast, Malay stalls, Chinese kopitiams and Indian food can be chained within one or two districts, so even a short stay feels complete.",
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        },
+        {
+          "id": "KUL_SKYLINE_CONTRAST",
+          "titleZh": "现代天际线与老街并存",
+          "titleEn": "Skyline beside old streets",
+          "bodyZh": "双子塔、城市地标与茨厂街、独立广场一带距离不远，白天看街区、傍晚看天际线节奏自然。",
+          "bodyEn": "The Twin Towers and civic landmarks sit close to Petaling Street and Merdeka Square, so daytime streets and an evening skyline fit one rhythm.",
+          "interestTags": ["WALKING", "LOCAL_CULTURE", "NIGHTLIFE"]
+        },
+        {
+          "id": "KUL_EVENING_CONTENT",
+          "titleZh": "夜间也有内容",
+          "titleEn": "Evenings are usable",
+          "bodyZh": "多数商场与餐饮营业至 22:00 前后，抵达当晚不必浪费，可安排夜景或街区晚餐。",
+          "bodyEn": "Most malls and eateries run until around 22:00, so an arrival evening can hold a skyline view or a neighborhood dinner.",
+          "interestTags": ["NIGHTLIFE", "FOOD", "SHOPPING"]
+        }
+      ],
+      "airportAccess": [
+        {
+          "airportIata": "KUL",
+          "primaryMode": "AIRPORT_RAIL",
+          "typicalOneWayMinutes": { "min": 28, "max": 40 },
+          "complexity": "EASY",
+          "lateNightAvailability": "LIMITED",
+          "sourceUrl": "https://www.kliaekspres.net/",
+          "sourceAuthority": "Express Rail Link (KLIA Ekspres) operator",
+          "verifiedAt": "2026-08-30"
+        }
+      ],
+      "experienceBlocks": [
+        {
+          "id": "KUL_OLD_CITY_FOOD",
+          "titleZh": "老城与本地饮食",
+          "titleEn": "Old city and local food",
+          "areaZh": "茨厂街/中央市场/独立广场",
+          "areaEn": "Petaling Street / Central Market / Merdeka Square",
+          "durationMinutes": { "min": 180, "max": 300 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON"],
+          "interestTags": ["FOOD", "LOCAL_CULTURE", "WALKING"]
+        },
+        {
+          "id": "KUL_SKYLINE_EVENING",
+          "titleZh": "双子塔夜景与公园",
+          "titleEn": "Twin Towers evening",
+          "areaZh": "KLCC 公园",
+          "areaEn": "KLCC Park",
+          "durationMinutes": { "min": 90, "max": 150 },
+          "bestTimeWindows": ["EVENING"],
+          "interestTags": ["NIGHTLIFE", "WALKING", "FAMILY"]
+        },
+        {
+          "id": "KUL_MARKET_BREAKFAST",
+          "titleZh": "南洋早餐快闪",
+          "titleEn": "Local breakfast run",
+          "areaZh": "酒店附近茶室/市场",
+          "areaEn": "Nearby kopitiam / market",
+          "durationMinutes": { "min": 60, "max": 120 },
+          "bestTimeWindows": ["EARLY_MORNING", "MORNING"],
+          "interestTags": ["FOOD"]
+        }
+      ],
+      "practicalTips": [
+        {
+          "id": "KUL_CLUSTER_AREAS",
+          "textZh": "短停留优先把同一区域的餐饮和景点组合，避免反复跨城。",
+          "textEn": "Cluster food and sights in one district to avoid crossing the city repeatedly."
+        },
+        {
+          "id": "KUL_RAIL_HOURS",
+          "textZh": "机场快线深夜班次有限，凌晨到达或离境时按出租车时间预留。",
+          "textEn": "Airport rail runs limited late-night services; budget taxi time for very early or late flights."
+        }
+      ]
+    },
+    {
+      "cityId": "th-bangkok",
+      "version": 1,
+      "lastReviewedAt": "2026-08-30",
+      "timezone": "Asia/Bangkok",
+      "uniqueAdvantages": [
+        {
+          "id": "BKK_STREET_FOOD_DEPTH",
+          "titleZh": "街头饮食密度高",
+          "titleEn": "Deep street-food scene",
+          "bodyZh": "从清晨市场到深夜排档，饮食体验不依赖大景点，几小时也能获得高质量内容。",
+          "bodyEn": "From morning markets to late-night stalls, great food does not depend on big sights, so even a few hours deliver quality.",
+          "interestTags": ["FOOD", "NIGHTLIFE", "LOCAL_CULTURE"]
+        },
+        {
+          "id": "BKK_RIVER_TEMPLES",
+          "titleZh": "河岸寺庙与老城步行带",
+          "titleEn": "River temples and old town walk",
+          "bodyZh": "大皇宫、卧佛寺与湄南河码头集中在一条步行带上，适合安排一个完整白天。",
+          "bodyEn": "The Grand Palace, Wat Pho and river piers form one walkable band, ideal for a single full day.",
+          "interestTags": ["LOCAL_CULTURE", "WALKING", "MUSEUM"]
+        },
+        {
+          "id": "BKK_MALL_NIGHT",
+          "titleZh": "商圈与夜市衔接",
+          "titleEn": "Malls flow into night markets",
+          "bodyZh": "暹罗商圈白天避暑、夜间转夜市，抵达日傍晚有自然去处。",
+          "bodyEn": "Siam malls offer daytime refuge and flow into night markets, giving arrival evenings a natural plan.",
+          "interestTags": ["SHOPPING", "NIGHTLIFE", "FOOD"]
+        }
+      ],
+      "airportAccess": [
+        {
+          "airportIata": "BKK",
+          "primaryMode": "AIRPORT_RAIL",
+          "typicalOneWayMinutes": { "min": 30, "max": 45 },
+          "complexity": "EASY",
+          "lateNightAvailability": "LIMITED",
+          "sourceUrl": "https://www.srtet.co.th/en/",
+          "sourceAuthority": "SRT Electrified Train (AERA Link) operator",
+          "verifiedAt": "2026-08-30"
+        },
+        {
+          "airportIata": "DMK",
+          "primaryMode": "TAXI_OR_BUS",
+          "typicalOneWayMinutes": { "min": 40, "max": 70 },
+          "complexity": "MODERATE",
+          "lateNightAvailability": "AVAILABLE",
+          "sourceUrl": "https://www.donmuangairport.net/",
+          "sourceAuthority": "Airports of Thailand (Don Mueang)",
+          "verifiedAt": "2026-08-30"
+        }
+      ],
+      "experienceBlocks": [
+        {
+          "id": "BKK_RIVER_DAY",
+          "titleZh": "河岸寺庙一日",
+          "titleEn": "River temples day",
+          "areaZh": "大皇宫/卧佛寺/湄南河",
+          "areaEn": "Grand Palace / Wat Pho / Chao Phraya",
+          "durationMinutes": { "min": 300, "max": 420 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON"],
+          "interestTags": ["LOCAL_CULTURE", "WALKING", "MUSEUM"]
+        },
+        {
+          "id": "BKK_FOOD_EVENING",
+          "titleZh": "排档与夜市之夜",
+          "titleEn": "Stalls and night market evening",
+          "areaZh": "暹罗/是隆一带",
+          "areaEn": "Siam / Silom area",
+          "durationMinutes": { "min": 120, "max": 240 },
+          "bestTimeWindows": ["EVENING"],
+          "interestTags": ["FOOD", "NIGHTLIFE"]
+        },
+        {
+          "id": "BKK_MARKET_MORNING",
+          "titleZh": "清晨市场快闪",
+          "titleEn": "Morning market flash",
+          "areaZh": "酒店附近市场",
+          "areaEn": "Market near hotel",
+          "durationMinutes": { "min": 60, "max": 120 },
+          "bestTimeWindows": ["EARLY_MORNING", "MORNING"],
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        }
+      ],
+      "practicalTips": [
+        {
+          "id": "BKK_TRAFFIC_BUFFER",
+          "textZh": "高峰时段路面交通不可靠，往返机场优先轨道或预留冗余。",
+          "textEn": "Rush-hour road traffic is unreliable; prefer rail or add buffer for airport transfers."
+        },
+        {
+          "id": "BKK_DRESS_CODE",
+          "textZh": "寺庙有着装要求，安排河岸日时避免短裤背心。",
+          "textEn": "Temples enforce dress codes; avoid shorts and sleeveless tops on river days."
+        }
+      ]
+    },
+    {
+      "cityId": "hk-hong-kong",
+      "version": 1,
+      "lastReviewedAt": "2026-08-30",
+      "timezone": "Asia/Hong_Kong",
+      "uniqueAdvantages": [
+        {
+          "id": "HKG_HARBOUR_NIGHT",
+          "titleZh": "海港夜景世界级",
+          "titleEn": "World-class harbour night",
+          "bodyZh": "维港两岸夜景与星光大道步行带紧凑，傍晚抵达也能立即获得核心体验。",
+          "bodyEn": "The harbour skyline and Avenue of Stars walk are compact, so even an evening arrival yields the core experience immediately.",
+          "interestTags": ["NIGHTLIFE", "WALKING"]
+        },
+        {
+          "id": "HKG_FOOD_TEASHOP",
+          "titleZh": "茶餐厅与街市密度",
+          "titleEn": "Dense tea restaurants and markets",
+          "bodyZh": "茶餐厅、点心与街市集中在步行范围，短停留的饮食效率高。",
+          "bodyEn": "Cha chaan tengs, dim sum and street markets cluster within walking range, making short stays food-efficient.",
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        },
+        {
+          "id": "HKG_COMPACT_TRANSIT",
+          "titleZh": "轨道覆盖极密",
+          "titleEn": "Extremely dense rail coverage",
+          "bodyZh": "机场快线与港铁把机场、中环、尖沙咀串成分钟级移动，行程切换成本低。",
+          "bodyEn": "Airport Express and MTR chain airport, Central and Tsim Sha Tsui in minutes, keeping itinerary switches cheap.",
+          "interestTags": ["WALKING", "SHOPPING", "FAMILY"]
+        }
+      ],
+      "airportAccess": [
+        {
+          "airportIata": "HKG",
+          "primaryMode": "AIRPORT_RAIL",
+          "typicalOneWayMinutes": { "min": 24, "max": 35 },
+          "complexity": "EASY",
+          "lateNightAvailability": "LIMITED",
+          "sourceUrl": "https://www.mtr.com.hk/en/customer/main/index.html",
+          "sourceAuthority": "MTR Corporation (Airport Express)",
+          "verifiedAt": "2026-08-30"
+        }
+      ],
+      "experienceBlocks": [
+        {
+          "id": "HKG_HARBOUR_WALK",
+          "titleZh": "维港两岸步行",
+          "titleEn": "Harbour waterfront walk",
+          "areaZh": "尖沙咀海滨/星光大道",
+          "areaEn": "TST waterfront / Avenue of Stars",
+          "durationMinutes": { "min": 90, "max": 180 },
+          "bestTimeWindows": ["EVENING", "AFTERNOON"],
+          "interestTags": ["NIGHTLIFE", "WALKING"]
+        },
+        {
+          "id": "HKG_DIM_SUM_MORNING",
+          "titleZh": "点心早茶",
+          "titleEn": "Dim sum morning",
+          "areaZh": "佐敦/旺角茶楼",
+          "areaEn": "Jordan / Mong Kok tea houses",
+          "durationMinutes": { "min": 60, "max": 120 },
+          "bestTimeWindows": ["EARLY_MORNING", "MORNING"],
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        },
+        {
+          "id": "HKG_PEAK_VIEW",
+          "titleZh": "山顶俯瞰",
+          "titleEn": "The Peak overlook",
+          "areaZh": "太平山顶",
+          "areaEn": "Victoria Peak",
+          "durationMinutes": { "min": 120, "max": 180 },
+          "bestTimeWindows": ["AFTERNOON", "EVENING"],
+          "interestTags": ["WALKING", "FAMILY", "NIGHTLIFE"]
+        }
+      ],
+      "practicalTips": [
+        {
+          "id": "HKG_TRANSIT_GENUINE",
+          "textZh": "过境停留需真实续程第三国/地区，安排行程时保留续程凭证。",
+          "textEn": "Transit stays require a genuine onward third destination; keep onward proof with you."
+        },
+        {
+          "id": "HKG_OCTOPUS",
+          "textZh": "八达通可覆盖轨道与多数餐饮，减少排队购票时间。",
+          "textEn": "An Octopus card covers rail and most eateries, cutting ticket queues."
+        }
+      ]
+    },
+    {
+      "cityId": "sg-singapore",
+      "version": 1,
+      "lastReviewedAt": "2026-08-30",
+      "timezone": "Asia/Singapore",
+      "uniqueAdvantages": [
+        {
+          "id": "SIN_HAWKER_CULTURE",
+          "titleZh": "小贩中心饮食文化",
+          "titleEn": "Hawker-centre food culture",
+          "bodyZh": "高密度小贩中心让任何时段都能快速吃到代表性食物，短停留饮食效率极高。",
+          "bodyEn": "Dense hawker centres serve iconic food at any hour, making short stays extremely food-efficient.",
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        },
+        {
+          "id": "SIN_GARDEN_CITY_NIGHT",
+          "titleZh": "滨海湾夜景与花园",
+          "titleEn": "Marina Bay nights and gardens",
+          "bodyZh": "滨海湾花园、金沙夜景与河岸步行带相邻，夜间内容集中且不赶路。",
+          "bodyEn": "Gardens by the Bay, Marina Bay lights and the river walk sit adjacent, concentrating evening content without rushing.",
+          "interestTags": ["NIGHTLIFE", "WALKING", "FAMILY"]
+        },
+        {
+          "id": "SIN_TRANSIT_EASE",
+          "titleZh": "机场与市区无缝",
+          "titleEn": "Seamless airport-city link",
+          "bodyZh": "地铁直达樟宜机场，换乘清晰，短窗口也能安全往返市区。",
+          "bodyEn": "The MRT reaches Changi directly with clear transfers, so even short windows allow a safe city round trip.",
+          "interestTags": ["FAMILY", "SHOPPING", "WALKING"]
+        }
+      ],
+      "airportAccess": [
+        {
+          "airportIata": "SIN",
+          "primaryMode": "METRO",
+          "typicalOneWayMinutes": { "min": 35, "max": 55 },
+          "complexity": "EASY",
+          "lateNightAvailability": "LIMITED",
+          "sourceUrl": "https://www.smrt.com.sg/",
+          "sourceAuthority": "SMRT (Changi Airport MRT link)",
+          "verifiedAt": "2026-08-30"
+        }
+      ],
+      "experienceBlocks": [
+        {
+          "id": "SIN_MARINA_EVENING",
+          "titleZh": "滨海湾夜游",
+          "titleEn": "Marina Bay evening",
+          "areaZh": "滨海湾/鱼尾狮公园",
+          "areaEn": "Marina Bay / Merlion Park",
+          "durationMinutes": { "min": 120, "max": 240 },
+          "bestTimeWindows": ["EVENING"],
+          "interestTags": ["NIGHTLIFE", "WALKING", "FAMILY"]
+        },
+        {
+          "id": "SIN_HAWKER_RUN",
+          "titleZh": "小贩中心觅食",
+          "titleEn": "Hawker centre run",
+          "areaZh": "麦士威/老巴刹",
+          "areaEn": "Maxwell / Lau Pa Sat",
+          "durationMinutes": { "min": 60, "max": 120 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON", "EVENING"],
+          "interestTags": ["FOOD"]
+        },
+        {
+          "id": "SIN_CIVIC_WALK",
+          "titleZh": "市政区步行",
+          "titleEn": "Civic district walk",
+          "areaZh": "市政区/河岸",
+          "areaEn": "Civic District / Riverside",
+          "durationMinutes": { "min": 90, "max": 180 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON"],
+          "interestTags": ["WALKING", "MUSEUM", "LOCAL_CULTURE"]
+        }
+      ],
+      "practicalTips": [
+        {
+          "id": "SIN_ARRIVAL_CARD",
+          "textZh": "抵达前 3 天内提交 SG Arrival Card，避免入境排队补填。",
+          "textEn": "Submit the SG Arrival Card within 3 days before arrival to avoid queueing."
+        },
+        {
+          "id": "SIN_MRT_HOURS",
+          "textZh": "地铁末班约午夜前后，红眼离境按出租车预留。",
+          "textEn": "MRT ends around midnight; budget taxi time for red-eye departures."
+        }
+      ]
+    },
+    {
+      "cityId": "kr-seoul",
+      "version": 1,
+      "lastReviewedAt": "2026-08-30",
+      "timezone": "Asia/Seoul",
+      "uniqueAdvantages": [
+        {
+          "id": "ICN_AREX_FAST",
+          "titleZh": "机场快线直达首尔站",
+          "titleEn": "AREX express to Seoul Station",
+          "bodyZh": "仁川机场快线 40 余分钟直达首尔站，短停留也能把时间花在市区而非路上。",
+          "bodyEn": "The AREX express reaches Seoul Station in about 40 minutes, so short stops spend time in the city, not on the road.",
+          "interestTags": ["WALKING", "SHOPPING", "FAMILY"]
+        },
+        {
+          "id": "SEOUL_FOOD_NIGHT",
+          "titleZh": "夜间饮食与街区活力",
+          "titleEn": "Night food and district energy",
+          "bodyZh": "烤肉、汤饭与夜市营业到深夜，抵达当晚即可安排一顿正式晚餐。",
+          "bodyEn": "BBQ, soup houses and night markets run late, so an arrival night still holds a proper dinner.",
+          "interestTags": ["FOOD", "NIGHTLIFE"]
+        },
+        {
+          "id": "SEOUL_PALACE_MORNING",
+          "titleZh": "宫殿与老城上午",
+          "titleEn": "Palaces and old town mornings",
+          "bodyZh": "景福宫、北村与仁寺洞步行相连，一个上午即可完成核心文化路线。",
+          "bodyEn": "Gyeongbokgung, Bukchon and Insadong connect on foot, fitting the core culture route into one morning.",
+          "interestTags": ["LOCAL_CULTURE", "WALKING", "MUSEUM"]
+        }
+      ],
+      "airportAccess": [
+        {
+          "airportIata": "ICN",
+          "primaryMode": "AIRPORT_RAIL",
+          "typicalOneWayMinutes": { "min": 43, "max": 66 },
+          "complexity": "EASY",
+          "lateNightAvailability": "LIMITED",
+          "sourceUrl": "https://www.arex.or.kr/main.do",
+          "sourceAuthority": "Airport Railroad Express (AREX)",
+          "verifiedAt": "2026-08-30"
+        }
+      ],
+      "experienceBlocks": [
+        {
+          "id": "SEOUL_PALACE_LOOP",
+          "titleZh": "宫殿老城环线",
+          "titleEn": "Palace old-town loop",
+          "areaZh": "景福宫/北村/仁寺洞",
+          "areaEn": "Gyeongbokgung / Bukchon / Insadong",
+          "durationMinutes": { "min": 180, "max": 300 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON"],
+          "interestTags": ["LOCAL_CULTURE", "WALKING", "MUSEUM"]
+        },
+        {
+          "id": "SEOUL_NIGHT_BBQ",
+          "titleZh": "烤肉之夜",
+          "titleEn": "BBQ night",
+          "areaZh": "钟路/麻浦一带",
+          "areaEn": "Jongno / Mapo area",
+          "durationMinutes": { "min": 90, "max": 180 },
+          "bestTimeWindows": ["EVENING"],
+          "interestTags": ["FOOD", "NIGHTLIFE"]
+        },
+        {
+          "id": "SEOUL_MARKET_FLASH",
+          "titleZh": "传统市场快闪",
+          "titleEn": "Traditional market flash",
+          "areaZh": "广藏市场",
+          "areaEn": "Gwangjang Market",
+          "durationMinutes": { "min": 60, "max": 120 },
+          "bestTimeWindows": ["MORNING", "AFTERNOON", "EVENING"],
+          "interestTags": ["FOOD", "LOCAL_CULTURE"]
+        }
+      ],
+      "practicalTips": [
+        {
+          "id": "ICN_TRANSIT_RULE",
+          "textZh": "第三国过境免签依赖签证国路线与续程票，行程需保持方向一致。",
+          "textEn": "Third-country transit exemption depends on the qualifying-visa route and onward ticket; keep the itinerary direction consistent."
+        },
+        {
+          "id": "ICN_AREX_LAST",
+          "textZh": "快线末班约 23:00 前后，深夜到达按机场巴士或出租车预留。",
+          "textEn": "AREX express ends around 23:00; budget airport bus or taxi for late arrivals."
+        }
+      ]
+    }
+  ]
+}

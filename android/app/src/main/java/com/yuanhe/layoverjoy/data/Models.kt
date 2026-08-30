@@ -386,6 +386,68 @@ data class ExplanationPayload(
     val fallbackReason: String? = null,
     /** 生成时使用的语言（zh/en），用于语言切换后失效重生成。 */
     val lang: String? = null,
+    // ---- v2 丰富解读（14 号方案）；技术元数据仅 Debug 日志使用 ----
+    val schemaVersion: String? = null,
+    val verdict: String? = null,
+    val headline: String? = null,
+    val cityAdvantages: List<CityAdvantageDto> = emptyList(),
+    val miniPlan: List<MiniPlanBlockDto> = emptyList(),
+    val easeNarrative: EaseNarrativeDto? = null,
+    val tradeoff: TradeoffDto? = null,
+    val practicalTip: String? = null,
+    val context: RichContextDto? = null,
+    val debugMeta: ExplanationDebugMetaDto? = null,
+)
+
+@Serializable
+data class CityAdvantageDto(val title: String = "", val body: String = "", val evidenceKeys: List<String> = emptyList())
+
+@Serializable
+data class MiniPlanBlockDto(val slot: String = "", val title: String = "", val description: String = "", val evidenceKeys: List<String> = emptyList())
+
+@Serializable
+data class EaseNarrativeDto(val summary: String = "", val positives: List<String> = emptyList(), val cautions: List<String> = emptyList())
+
+@Serializable
+data class TradeoffDto(val gain: String = "", val sacrifice: String = "")
+
+@Serializable
+data class ExplanationDebugMetaDto(
+    val requestId: String? = null,
+    val provider: String? = null,
+    val modelId: String? = null,
+    val latencyMs: Long? = null,
+    val deploymentIdTail: String? = null,
+    val fallbackReason: String? = null,
+    val promptVersion: String? = null,
+)
+
+@Serializable
+data class RichContextDto(val ease: RichEaseDto? = null, val schedule: RichScheduleDto? = null)
+
+@Serializable
+data class RichEaseDto(val score: Int = 0, val level: String = "", val positiveReasonCodes: List<String> = emptyList(), val cautionReasonCodes: List<String> = emptyList())
+
+@Serializable
+data class RichScheduleDto(
+    val experienceWindowLabelZh: String = "",
+    val experienceWindowLabelEn: String = "",
+    val confidence: String = "",
+    val sameAirport: Boolean = false,
+    val arrivalPeriod: String = "",
+    val departurePeriod: String = "",
+)
+
+@Serializable
+data class ExperienceContextDto(
+    val windowLabelZh: String = "",
+    val windowLabelEn: String = "",
+    val budgetNoteZh: String = "",
+    val budgetNoteEn: String = "",
+    val confidence: String = "",
+    val sameAirport: Boolean = false,
+    val easeScore: Int = 0,
+    val easeLevel: String = "",
 )
 
 /** POST /v1/plans/:id/explanation 与详情内嵌 explanation 共用。 */
@@ -428,6 +490,7 @@ data class PlanDetailDto(
     val riskFlags: List<String> = emptyList(),
     val isSimulated: Boolean = true,
     val eligibility: EligibilityDetailDto? = null,
+    val experienceContext: ExperienceContextDto? = null,
     val cityPack: CityPack? = null,
     val explanation: ExplanationDto? = null,
 )

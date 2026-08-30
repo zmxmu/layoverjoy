@@ -1,5 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { isMaskedSecret, loadEnv } from '../config/env';
+import { StopoverExperienceContext, PROMPT_VERSION } from './experience-context.builder';
+import { RichStopoverNarrative, validateRichNarrative } from './rich-narrative.validator';
+import { buildRichTemplateNarrative } from './rich-template-narrator';
+
+export interface RichExplanationResult {
+  narrative: RichStopoverNarrative;
+  provider: 'NOSANA' | 'TEMPLATE';
+  debugMeta: {
+    requestId: string;
+    provider: string;
+    modelId: string | null;
+    latencyMs: number;
+    deploymentIdTail: string | null;
+    fallbackReason: string | null;
+    promptVersion: string;
+  };
+}
 
 export type ExplanationFallbackReason =
   | 'PROVIDER_DISABLED'
@@ -249,5 +267,132 @@ export class NosanaService {
       }
     }
     return this.templateExplanation(req, 'TIMEOUT');
+  }
+
+  // ---------- v2 丰富解读（14 号方案） ----------
+
+  private static inflight = new Map<string, Promise<RichExplanationResult>>();
+
+  /** single-flight：同一 cacheKey 并发请求只推理一次。 */
+  async explainRich(cacheKey: string, ctx: StopoverExperienceContext, lang: 'zh' | 'en'): Promise<RichExplanationResult> {
+    const existing = NosanaService.inflight.get(cacheKey);
+    if (existing) return existing;
+    const p = this.computeRich(ctx, lang).finally(() => NosanaService.inflight.delete(cacheKey));
+    NosanaService.inflight.set(cacheKey, p);
+    return p;
+  }
+
+  private async computeRich(ctx: StopoverExperienceContext, lang: 'zh' | 'en'): Promise<RichExplanationResult> {
+    const env = loadEnv();
+    const startedAt = Date.now();
+    const requestId = `exp_${randomUUID().replace(/-/g, '')}`;
+    const meta = (provider: string, fallbackReason: string | null) => ({
+      requestId,
+      provider,
+      modelId: env.NOSANA_MODEL,
+      latencyMs: Date.now() - startedAt,
+      deploymentIdTail: env.NOSANA_DEPLOYMENT_ID ? env.NOSANA_DEPLOYMENT_ID.slice(-8) : null,
+      fallbackReason,
+      promptVersion: PROMPT_VERSION,
+    });
+    if (env.INFERENCE_PROVIDER === 'nosana' && env.NOSANA_OPENAI_BASE_URL) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const content = await this.chatRich(ctx, lang, attempt === 2, env);
+          const v = validateRichNarrative(JSON.parse(content), ctx, lang);
+          if (v.ok) {
+            this.logger.log(
+              `event=stopover_explanation_completed requestTail=${requestId.slice(-8)} provider=NOSANA latencyMs=${Date.now() - startedAt} fallback=none promptVersion=${PROMPT_VERSION}`,
+            );
+            return { narrative: v.narrative, provider: 'NOSANA', debugMeta: meta('NOSANA', null) };
+          }
+          this.logger.warn(`event=stopover_explanation_rejected requestTail=${requestId.slice(-8)} attempt=${attempt} errors=${v.errors.slice(0, 3).join(';')}`);
+        } catch (e) {
+          this.logger.warn(`event=stopover_explanation_failed requestTail=${requestId.slice(-8)} attempt=${attempt} category=${(e as Error).name}`);
+        }
+      }
+      return { narrative: buildRichTemplateNarrative(ctx, lang), provider: 'TEMPLATE', debugMeta: meta('TEMPLATE', 'VALIDATION_OR_NETWORK') };
+    }
+    return { narrative: buildRichTemplateNarrative(ctx, lang), provider: 'TEMPLATE', debugMeta: meta('TEMPLATE', 'PROVIDER_DISABLED') };
+  }
+
+  /** v2 system prompt（中英语义一致，14 号方案 §10.1）。 */
+  private richSystemPrompt(lang: 'zh' | 'en', strict: boolean): string {
+    const zh = lang === 'zh';
+    const lines = zh
+      ? [
+          '你是 LayoverJoy 的中转体验编辑，不是航班、价格或签证决策器。',
+          '基于输入中已提供的确定性事实回答：为什么这座城市适合这次中转；当前起落时间形成怎样的体验节奏；哪些城市优势匹配用户兴趣；转机是否便利以及主要代价；如何在给定时间块内安排不过度赶路的小行程。',
+          '强制规则：只能使用输入的 cityEvidence 和 feasibleExperienceBlocks，不得新增景点、交通时间、营业时间或城市事实；不得计算或修改航班、价格、JoyScore、StopoverEaseScore、签证结论和订单状态；不得重复总停留天数、可用体验小时或 JoyScore 定义；不得出现模型名、供应商、GPU、Deployment 或推理耗时；不得使用空泛套话；每条城市优势和小行程必须返回有效 evidenceKeys；事实不足时减少输出项，不得补写常识；输出合法 JSON 且符合 RichStopoverNarrative schema；简体中文自然、具体、克制。',
+        ]
+      : [
+          'You are the LayoverJoy stopover experience editor, not a flight, price or visa decision maker.',
+          'Using only the deterministic facts provided, answer: why this city fits this stopover; what rhythm the arrival/departure times create; which city advantages match the traveler interests; how easy the transfer is and its main costs; and a small itinerary inside the given time blocks.',
+          'Hard rules: use only cityEvidence and feasibleExperienceBlocks from the input; never add sights, transport times, opening hours or city facts; never compute or alter flights, prices, JoyScore, StopoverEaseScore, visa conclusions or order status; never repeat total stay days, usable hours or JoyScore definitions; never mention model names, providers, GPU, deployments or latency; avoid generic cliches; every advantage and mini-plan block must carry valid evidenceKeys; when facts are thin, output fewer items instead of inventing; output valid JSON matching RichStopoverNarrative; English must be natural, specific and restrained.',
+        ];
+    if (strict) lines.push(zh ? '严格提醒：上一次输出因违反规则被拒绝，必须修正 evidenceKeys 并移除违禁内容。' : 'STRICT REMINDER: your previous output was rejected; fix evidenceKeys and remove prohibited content.');
+    return lines.join('\n');
+  }
+
+  /** 脱敏上下文：不含分钟数/金额/PII/Secret；兴趣真实进入 prompt。 */
+  private sanitizeContextForPrompt(ctx: StopoverExperienceContext) {
+    return {
+      city: ctx.city,
+      schedule: {
+        arrivalPeriod: ctx.schedule.arrivalPeriod,
+        departurePeriod: ctx.schedule.departurePeriod,
+        sameAirport: ctx.schedule.sameAirport,
+        arrivalAirport: ctx.schedule.arrivalAirport,
+        departureAirport: ctx.schedule.departureAirport,
+        experienceWindowCode: ctx.schedule.experienceWindowCode,
+        experienceWindowLabelZh: ctx.schedule.experienceWindowLabelZh,
+        experienceWindowLabelEn: ctx.schedule.experienceWindowLabelEn,
+        confidence: ctx.schedule.confidence,
+      },
+      ease: ctx.ease,
+      cityEvidence: ctx.cityEvidence,
+      feasibleExperienceBlocks: ctx.feasibleExperienceBlocks,
+      matchedInterests: ctx.matchedInterests,
+      riskFlags: ctx.riskFlags,
+      fareTradeoffBand: ctx.fareTradeoffBand,
+      eligibilityDisplayStatus: ctx.eligibilityDisplayStatus,
+    };
+  }
+
+  private async chatRich(ctx: StopoverExperienceContext, lang: 'zh' | 'en', strict: boolean, env: ReturnType<typeof loadEnv>): Promise<string> {
+    const apiKey = isMaskedSecret(env.NOSANA_API_KEY) ? '' : env.NOSANA_API_KEY;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    const messages = [
+      { role: 'system', content: this.richSystemPrompt(lang, strict) },
+      { role: 'user', content: JSON.stringify(this.sanitizeContextForPrompt(ctx)) },
+    ];
+    const rootBase = env.NOSANA_OPENAI_BASE_URL.replace(/\/v1\/?$/, '').replace(/\/$/, '');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), env.NOSANA_TIMEOUT_MS);
+    try {
+      // 原生 /api/chat 优先，404/405 回退 OpenAI 兼容
+      let res = await fetch(`${rootBase}/api/chat`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers,
+        body: JSON.stringify({ model: env.NOSANA_MODEL, stream: false, ...(env.NOSANA_MODEL.startsWith('qwen3') ? { think: false } : {}), format: 'json', messages }),
+      });
+      if (res.status === 404 || res.status === 405) {
+        res = await fetch(`${rootBase}/v1/chat/completions`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers,
+          body: JSON.stringify({ model: env.NOSANA_MODEL, stream: false, response_format: { type: 'json_object' }, messages }),
+        });
+      }
+      if (!res.ok) throw new Error(`HTTP_${res.status}`);
+      const data: any = await res.json();
+      const content = data?.message?.content ?? data?.choices?.[0]?.message?.content ?? '';
+      if (!content) throw new Error('EMPTY_CONTENT');
+      return content;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

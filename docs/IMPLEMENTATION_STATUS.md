@@ -132,3 +132,20 @@
   PH 过境 INELIGIBLE、SG 互免非 VFTF、HK 真实过境 CONDITIONAL vs 往返 NEEDS_REVIEW、KH 10-10 ELIGIBLE / 10-16 NEEDS_REVIEW。
 - 测试：vitest 41/41（含 T-01~T-12/T-17/T-18/T-23/T-24 子集、Saga 门禁）；check-i18n 300 keys。
 - 真机：SIN→LAX 结果页香港「条件匹配」、曼谷/吉隆坡「证件匹配」+ 法律提示行。
+
+## AI-VALUE：AI 中转价值解读（14 号方案，2026-08-30）
+
+- 单一事实源 `shared/catalog/city-experience-catalog.zh-en.json`（schema 1.0.0），
+  sync-catalog.sh 同步到 backend/src/explanations/data；MVP 五城 KUL/BKK/HKG/SIN/ICN，
+  机场交通均带官方运营方来源与 verifiedAt（KLIA Ekspres / SRTET / MTR / SMRT / AREX），无占位 URL。
+- 新增确定性组件：ExperienceContextBuilder（IANA 时区净体验窗口 §6.2/§6.3）、
+  StopoverEaseScore（§7.1 完全确定性）、RichNarrativeValidator（§11）、RichTemplateNarrator（§12 同结构降级）。
+- Nosana v2 Prompt（stopover-value-v2）：脱敏上下文（不含分钟数/金额/PII），兴趣真实进入；
+  输出 RichStopoverNarrative；校验失败重试一次后丰富模板降级；single-flight 按 §15 缓存键。
+- API 向后兼容：POST /v1/plans/:id/explanation 返回 v2 payload（含 v1 summary/highlights/tips 兼容字段），
+  modelId=internal-debug-only；debugMeta 仅 Debug 日志（BuildConfig.DEBUG + Log.d("LayoverJoyAI")，脱敏尾缀）。
+- Android：净体验窗口顶部唯一展示；推荐卡含城市优势/小行程时间轴/便利度/取舍/消费者说明；
+  自动生成（无点击门槛）+ Skeleton；「重新生成」改为「调整旅行偏好」。
+- 测试：vitest 58/58（ease 确定性、validator 拒绝、模板同结构、兴趣影响）；check-i18n 306 keys。
+- 真机：v2 卡完整渲染（headline/优势/抵达日-完整日-离境日/51 分需规划/取舍），UI 无模型元数据，
+  Logcat 含脱敏 LayoverJoyAI 行。
