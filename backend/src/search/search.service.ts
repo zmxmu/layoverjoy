@@ -2,12 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { SearchOrchestrator } from './search.orchestrator';
 import { AtlasService } from '../atlas/atlas.service';
-import { resolveLocation } from '../airports/catalog';
+import { resolveLocation, resolveSelection, CATALOG_VERSION, SelectionInput } from '../airports/catalog';
 import { AppError } from '../common/errors';
 
 export interface SearchRequestInput {
-  origin: string;
-  destination: string;
+  origin?: string;
+  destination?: string;
+  /** V2 契约：只信任 cityId/mode/airportIata，后端按目录权威解析。 */
+  originLocation?: SelectionInput;
+  destinationLocation?: SelectionInput;
   departureDate: string; // YYYY-MM-DD
   minStopDays?: number;
   maxStopDays?: number;
@@ -33,15 +36,32 @@ export class SearchService {
 
   async create(userId: string, input: SearchRequestInput) {
     const missing: string[] = [];
-    if (!input.origin) missing.push('origin');
-    if (!input.destination) missing.push('destination');
+    if (!input.originLocation && !input.origin) missing.push('origin');
+    if (!input.destinationLocation && !input.destination) missing.push('destination');
     if (!input.departureDate) missing.push('departureDate');
     if (missing.length) throw AppError.validation(missing);
 
-    const originLoc = resolveLocation(input.origin);
-    const destLoc = resolveLocation(input.destination);
-    if (!originLoc) throw new AppError('UNSUPPORTED_AIRPORT', '当前 MVP 暂不支持这个城市或机场。', 422, false, { input: input.origin });
-    if (!destLoc) throw new AppError('UNSUPPORTED_AIRPORT', '当前 MVP 暂不支持这个城市或机场。', 422, false, { input: input.destination });
+    // V2 优先；旧字符串契约迁移期兼容（解析为城市级/机场级选择）。
+    const legacySel = (s: string | undefined) => {
+      if (!s) return undefined;
+      const loc = resolveLocation(s);
+      if (!loc) return undefined;
+      return loc.searchCodeType === 'AIRPORT'
+        ? { cityId: loc.cityId, mode: 'AIRPORT' as const, airportIata: loc.searchCode }
+        : { cityId: loc.cityId, mode: 'ALL_AIRPORTS' as const, airportIata: null };
+    };
+    const originSel = input.originLocation ?? legacySel(input.origin);
+    const destSel = input.destinationLocation ?? legacySel(input.destination);
+    if (!originSel) throw new AppError('INVALID_LOCATION_SELECTION', '出发地不在城市目录中。', 422, false, { side: 'origin', reason: 'INVALID_CITY' });
+    if (!destSel) throw new AppError('INVALID_LOCATION_SELECTION', '目的地不在城市目录中。', 422, false, { side: 'destination', reason: 'INVALID_CITY' });
+
+    const o = resolveSelection(originSel);
+    if (!o.ok) throw new AppError('INVALID_LOCATION_SELECTION', '出发地选择不合法。', 422, false, { side: 'origin', reason: o.error });
+    const d = resolveSelection(destSel);
+    if (!d.ok) throw new AppError('INVALID_LOCATION_SELECTION', '目的地选择不合法。', 422, false, { side: 'destination', reason: d.error });
+    if (o.value.city.cityId === d.value.city.cityId) {
+      throw new AppError('SAME_ORIGIN_DESTINATION', '出发地与目的地不能是同一城市。', 422, false);
+    }
 
     const departure = new Date(`${input.departureDate}T00:00:00Z`);
     if (Number.isNaN(departure.getTime())) throw AppError.validation(['departureDate'], '出发日期格式不正确。');
@@ -55,15 +75,20 @@ export class SearchService {
     const run = await this.prisma.searchRun.create({
       data: {
         userId,
-        originInput: input.origin,
-        destinationInput: input.destination,
-        originCode: originLoc.searchCode,
-        destinationCode: destLoc.searchCode,
+        originInput: input.origin ?? originSel.cityId,
+        destinationInput: input.destination ?? destSel.cityId,
+        originCode: o.value.primaryCode,
+        destinationCode: d.value.primaryCode,
         departureDate: departure,
         minStopDays: minStop,
         maxStopDays: maxStop,
         maxAirfareDelta: input.maxAirfareDelta ?? null,
-        preferencesJson: (input.preferences ?? {}) as any,
+        preferencesJson: {
+          ...(input.preferences ?? {}),
+          originLocation: originSel,
+          destinationLocation: destSel,
+          catalogVersion: CATALOG_VERSION.schemaVersion,
+        } as any,
         providerMode: this.atlas.searchProviderLabel(),
       },
     });

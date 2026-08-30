@@ -31,9 +31,12 @@ import androidx.navigation.navArgument
 import com.yuanhe.layoverjoy.ui.i18n.L10n
 import com.yuanhe.layoverjoy.ui.screens.AuthScreen
 import com.yuanhe.layoverjoy.ui.screens.BookingFlowScreen
+import com.yuanhe.layoverjoy.ui.screens.ContinentCountriesScreen
+import com.yuanhe.layoverjoy.ui.screens.CountryCitiesScreen
 import com.yuanhe.layoverjoy.ui.screens.DevSettingsScreen
 import com.yuanhe.layoverjoy.ui.screens.DocumentsScreen
 import com.yuanhe.layoverjoy.ui.screens.HomeScreen
+import com.yuanhe.layoverjoy.ui.screens.LocationPickerScreen
 import com.yuanhe.layoverjoy.ui.screens.MonitorSetupScreen
 import com.yuanhe.layoverjoy.ui.screens.NotificationsScreen
 import com.yuanhe.layoverjoy.ui.screens.PlanDetailScreen
@@ -57,6 +60,13 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val DOCUMENTS = "documents"
     const val DEV_SETTINGS = "dev_settings"
+    const val LOCATION_PICKER = "locationPicker/{role}"
+    const val CONTINENT = "continent/{code}/{role}"
+    const val COUNTRY = "country/{code}/{role}"
+
+    fun locationPicker(role: String) = "locationPicker/$role"
+    fun continent(code: String, role: String) = "continent/$code/$role"
+    fun countryCitiesOf(code: String, role: String) = "country/$code/$role"
 
     fun results(runId: String) = "results/$runId"
     fun planDetail(planId: String) = "plan/$planId"
@@ -189,6 +199,15 @@ fun MainScreen(appState: AppStateViewModel) {
             composable(Routes.NOTIFICATIONS) { NotificationsScreen(nav) }
             composable(Routes.DOCUMENTS) { DocumentsScreen(nav) }
             composable(Routes.DEV_SETTINGS) { DevSettingsScreen(nav) }
+            composable(Routes.LOCATION_PICKER, listOf(navArgument("role") { type = NavType.StringType })) {
+                LocationPickerScreen(nav, it.arguments?.getString("role") ?: "DESTINATION")
+            }
+            composable(Routes.CONTINENT, listOf(navArgument("code") { type = NavType.StringType }, navArgument("role") { type = NavType.StringType })) {
+                ContinentCountriesScreen(nav, it.arguments?.getString("code") ?: "", it.arguments?.getString("role") ?: "DESTINATION")
+            }
+            composable(Routes.COUNTRY, listOf(navArgument("code") { type = NavType.StringType }, navArgument("role") { type = NavType.StringType })) {
+                CountryCitiesScreen(nav, it.arguments?.getString("code") ?: "", it.arguments?.getString("role") ?: "DESTINATION")
+            }
         }
     }
 }

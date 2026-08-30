@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { EntryRulesService } from '../entry-rules/entry-rules.service';
 import { UsersService } from '../users/users.service';
-import { candidateHubs, CITY_PACKS, CityEntry, resolveLocation } from '../airports/catalog';
+import { candidateHubs, CITY_PACKS, CityEntry, resolveLocation, resolveSelection } from '../airports/catalog';
 import { buildJoyScore } from '../plans/joy-score';
 import { AppError } from '../common/errors';
 import { FlightOffer } from '../atlas/atlas.types';
@@ -66,18 +66,21 @@ export class SearchOrchestrator {
       let searchCalls = 0;
       let softTimedOut = false;
 
-      // 1) 直飞基准（预算内第 1 次搜索）
-      searchCalls += 1;
-      const directOffers = await this.safeSearch({
-        origin: run.originCode,
-        destination: run.destinationCode,
-        departDate: this.isoDate(run.departureDate),
-        currency: 'SGD',
-      }, useDemoFixtureFallback);
-      const directBest = this.bestBookable(directOffers.offers);
+      // 1) 直飞基准（预算内受控组合搜索，多机场端点空库存时展开）
+      const originCodes = this.endpointCodes(run, 'origin');
+      const destCodes = this.endpointCodes(run, 'destination');
+      const direct = await this.searchFirstBookable(
+        originCodes,
+        destCodes,
+        this.isoDate(run.departureDate),
+        useDemoFixtureFallback,
+        () => (searchCalls += 1),
+        3,
+      );
+      const directBest = direct.best;
       let directSnapshotId: string | null = null;
       if (directBest) {
-        directSnapshotId = await this.saveOffer(run.id, 1, 'DIRECT_BASELINE', null, directBest, directOffers.label);
+        directSnapshotId = await this.saveOffer(run.id, 1, 'DIRECT_BASELINE', null, directBest, direct.label);
       }
 
       // 2) 候选城市：先资格硬过滤，再并行搜索（并发 3）
@@ -186,6 +189,47 @@ export class SearchOrchestrator {
     return [...bookable].sort((a, b) => a.totalPrice - b.totalPrice)[0];
   }
 
+  /** 端点搜索码：AIRPORT→指定机场；ALL_AIRPORTS→[城市码/默认机场, …受控展开≤3]。 */
+  private endpointCodes(run: any, side: 'origin' | 'destination'): string[] {
+    const prefs: any = run.preferencesJson ?? {};
+    const sel = side === 'origin' ? prefs.originLocation : prefs.destinationLocation;
+    if (sel?.cityId) {
+      const r = resolveSelection(sel);
+      if (r.ok) {
+        return r.value.mode === 'AIRPORT' ? [r.value.primaryCode] : [r.value.primaryCode, ...r.value.expansionCodes.filter((c) => c !== r.value.primaryCode)];
+      }
+    }
+    return [side === 'origin' ? run.originCode : run.destinationCode];
+  }
+
+  /**
+   * 端点×端点受控组合搜索（12 号方案 §10.4）：先主码，空库存时按目录展开机场（单端≤3），
+   * 组合数受 maxPairs 与搜索预算双重限制；多机场展开属后端编排。
+   */
+  private async searchFirstBookable(
+    aCodes: string[],
+    bCodes: string[],
+    departDate: string,
+    useDemo: boolean,
+    consume: () => number,
+    maxPairs: number,
+  ): Promise<{ best: FlightOffer | null; label: 'ATLAS_SANDBOX' | 'MOCK' }> {
+    let label: 'ATLAS_SANDBOX' | 'MOCK' = this.atlas.searchProviderLabel();
+    let pairs = 0;
+    for (const a of aCodes) {
+      for (const b of bCodes) {
+        if (pairs >= maxPairs) return { best: null, label };
+        if (consume() > SEARCH_BUDGET.maxSearchCalls) return { best: null, label };
+        pairs += 1;
+        const r = await this.safeSearch({ origin: a, destination: b, departDate, currency: 'SGD' }, useDemo);
+        label = r.label;
+        const best = this.bestBookable(r.offers);
+        if (best) return { best, label };
+      }
+    }
+    return { best: null, label };
+  }
+
   private async saveOffer(
     searchRunId: string,
     legNo: number,
@@ -272,27 +316,33 @@ export class SearchOrchestrator {
     for (const stayDays of stayVariants) {
       if (Date.now() - (run.startedAt ? new Date(run.startedAt).getTime() : 0) > SEARCH_BUDGET.softTimeoutMs) return;
       try {
-        // 2) 第一段：A → H（出发日）
-        consumeSearch();
-        const leg1 = await this.safeSearch(
-          { origin: run.originCode, destination: hubCode, departDate: this.isoDate(run.departureDate), currency: 'SGD' },
+        // 2) 第一段：A → H（出发日；多机场出发地受控展开）
+        const leg1 = await this.searchFirstBookable(
+          this.endpointCodes(run, 'origin'),
+          [hubCode],
+          this.isoDate(run.departureDate),
           useDemo,
+          consumeSearch,
+          3,
         );
-        const leg1Best = this.bestBookable(leg1.offers);
+        const leg1Best = leg1.best;
         if (!leg1Best) {
           outcome.status = 'NO_INVENTORY';
           outcome.reasonCodes = ['NO_SANDBOX_INVENTORY_LEG_1'];
           continue;
         }
 
-        // 3) 第二段：H → B（出发日 + 停留天数）
-        consumeSearch();
+        // 3) 第二段：H → B（出发日 + 停留天数；多机场目的地受控展开）
         const leg2Date = this.isoDate(this.addDays(run.departureDate, stayDays));
-        const leg2 = await this.safeSearch(
-          { origin: hubCode, destination: run.destinationCode, departDate: leg2Date, currency: 'SGD' },
+        const leg2 = await this.searchFirstBookable(
+          [hubCode],
+          this.endpointCodes(run, 'destination'),
+          leg2Date,
           useDemo,
+          consumeSearch,
+          3,
         );
-        const leg2Best = this.bestBookable(leg2.offers);
+        const leg2Best = leg2.best;
         if (!leg2Best) {
           outcome.status = 'NO_INVENTORY';
           outcome.reasonCodes = ['NO_SANDBOX_INVENTORY_LEG_2'];

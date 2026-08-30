@@ -85,13 +85,13 @@ fun ResultsScreen(nav: NavController, runId: String) {
                         if (r.data.status == "COMPLETED") {
                             when (val p = apiCall { Net.api.searchPlans(runId) }) {
                                 is ApiResult.Ok -> plans = p.data
-                                is ApiResult.Err -> error = p.message
+                                is ApiResult.Err -> error = locationErrorText(p)
                             }
                         }
                     }
                 }
                 is ApiResult.Err -> {
-                    error = r.message
+                    error = locationErrorText(r)
                     done = true
                 }
             }
@@ -126,7 +126,9 @@ fun ResultsScreen(nav: NavController, runId: String) {
                     status?.let { s ->
                         if (s.resultStatus == "FAILED" && s.counts.keptPlans == 0) {
                             Spacer(Modifier.height(8.dp))
-                            ErrorBanner(L10n.t("results.no_plans"))
+                            // LOC-06：无库存不显示“城市不支持”；按漏斗原因区分文案。
+                            val noInventory = s.funnel.any { f -> f.reasonCodes.any { it.startsWith("NO_SANDBOX_INVENTORY") || it == "NO_FLIGHT_INVENTORY" } }
+                            ErrorBanner(if (noInventory) L10n.t("loc.err_no_inventory") else L10n.t("results.no_plans"))
                         }
                     }
                 }

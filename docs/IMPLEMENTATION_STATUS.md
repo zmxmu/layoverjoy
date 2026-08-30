@@ -96,3 +96,20 @@
 - 城市体验包标签更诚实：`人工精选 · 非实时库存` / `Curated · not live inventory`（回应“是否 mock”：人工维护的真实城市建议，非实时酒店库存）。
 - 验证：BKK/KUL × zh/en 四条重生成全部 provider=NOSANA、零金额表述、2.7–6s；真机当场生成 5.3s 干净输出。
 - 截图：`docs/screenshots/plan-detail-nosana-en.png`。
+
+## LOC：城市与机场选择器（12 号方案，2026-08-30）
+
+- 单一事实源：`shared/catalog/city-airport-catalog.zh-en.json`（schema 2.0.0），
+  `scripts/sync-catalog.sh` + Gradle `syncCatalog` 同步到 Android assets 与后端 src；旧 hub-catalog.json 已删除。
+- 后端：catalog.ts 重写（启动校验/扁平索引/§6 评分/§7.2 resolveSelection）；airports 接口匿名 + Cache-Control
+  （version/browse/cities/selection）；Search V2（originLocation/destinationLocation，INVALID_LOCATION_SELECTION /
+  SAME_ORIGIN_DESTINATION，preferences 记录 catalogVersion）；orchestrator 多机场受控展开（§10.4，单端≤3，预算封顶）。
+- Android：LocationCatalog（离线索引/检索/最近选择≤6）；LocationPickerScreen（热门/最近/洲浏览/机场 Sheet/
+  SHA·KUL·BKK 消歧）；ContinentCountries/CountryCities 二级页；SearchScreen 地点卡+交换+rememberSaveable；
+  ResultsScreen/SearchScreen 错误码映射（LOC-06）。
+- 真机验收：§4.3 输入矩阵后端全过（含拼音/首字母/音调/消歧）；热门与最近可点；亚洲→马来西亚三级浏览；
+  首页灵感卡预填「香港 · 全市机场（HKG）」；断网后选择页完整可用；SIN→上海(SHA) 端到端产出 KUL/BKK 方案
+  （BKK→SHA 证明机场级选择生效）。
+- 测试：tsc EXIT 0；vitest 14/14；check-i18n 284 keys；Gradle BUILD SUCCESSFUL。
+- 坑：选择结果回填最初用内存 pendingRole，导航 dispose 后丢失导致选到错误角色；改为按角色键
+  `location_selection_{ROLE}` 写回 savedStateHandle，地点状态改 rememberSaveable（JSON Saver）。

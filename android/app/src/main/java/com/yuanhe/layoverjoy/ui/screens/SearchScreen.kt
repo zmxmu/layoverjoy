@@ -26,6 +26,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +36,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +52,9 @@ import com.yuanhe.layoverjoy.data.SearchPrefill
 import com.yuanhe.layoverjoy.data.SearchPreferences
 import com.yuanhe.layoverjoy.data.SearchRequest
 import com.yuanhe.layoverjoy.data.apiCall
+import com.yuanhe.layoverjoy.data.catalog.LocationCatalog
+import com.yuanhe.layoverjoy.data.catalog.LocationSelection
+import com.yuanhe.layoverjoy.data.catalog.LocationSelectionMode
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
@@ -57,11 +64,55 @@ import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.i18n.L10n
 import com.yuanhe.layoverjoy.ui.theme.BrandInkSoft
 import com.yuanhe.layoverjoy.ui.theme.BrandPrimary
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.SwapVert
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+
+/* 后端错误码 → 用户文案（LOC-06：无匹配/无库存/超时/登录失效分别展示）。 */
+fun locationErrorText(e: ApiResult.Err): String = when (e.code) {
+    "SAME_ORIGIN_DESTINATION" -> L10n.t("loc.same_od")
+    "INVALID_LOCATION_SELECTION" -> L10n.t("loc.err_invalid_selection")
+    "NO_SANDBOX_INVENTORY", "NO_FLIGHT_INVENTORY" -> L10n.t("loc.err_no_inventory")
+    "ATLAS_TIMEOUT", "FLIGHT_PROVIDER_TIMEOUT" -> L10n.t("loc.err_provider_timeout")
+    "UNAUTHORIZED" -> L10n.t("loc.err_login")
+    else -> e.message
+}
+
+/** 搜索页地点卡：整卡可点击；已选择时展示城市名 + 国家/地区 · 范围（代码）。 */
+@Composable
+fun LocationField(title: String, sel: LocationSelection?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val city = LocationCatalog.city(sel?.cityId)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(com.yuanhe.layoverjoy.ui.theme.BrandLine.copy(alpha = 0.18f))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
+                Spacer(Modifier.height(4.dp))
+                if (city != null && sel != null) {
+                    Text(cityName(city), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(locationSubtitle(city, sel), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                } else {
+                    Text(L10n.t("loc.field_placeholder"), style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(2.dp))
+                    Text(L10n.t("loc.field_hint"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                }
+            }
+            Icon(Icons.Default.Place, null, tint = BrandPrimary)
+        }
+    }
+}
 
 /** 兴趣标签：code 传给后端（保持语义稳定），文案按当前语言展示。 */
 private val ALL_INTERESTS = listOf(
@@ -74,15 +125,23 @@ private val ALL_INTERESTS = listOf(
     "family" to "interest.family",
 )
 
+/* 地点选择在导航重建后仍需保留（rememberSaveable + JSON Saver）。 */
+private val SelectionSaver = Saver<LocationSelection?, String>(
+    save = { it?.let { v -> kotlinx.serialization.json.Json.encodeToString(LocationSelection.serializer(), v) } ?: "" },
+    restore = { if (it.isEmpty()) null else kotlinx.serialization.json.Json.decodeFromString(LocationSelection.serializer(), it) },
+)
+
 /** 搜索页：输入起终点、日期与偏好，创建异步搜索编排。 */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(nav: NavController) {
     val scope = rememberCoroutineScope()
 
-    var origin by remember { mutableStateOf("SIN") }
-    // 首页灵感卡点击后的一次性预填（取走即清空）。
-    var destination by remember { mutableStateOf(SearchPrefill.takeDestination() ?: "PVG") }
+    var originSel by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf<LocationSelection?>(null) }
+    // 首页灵感卡点击后的一次性预填（cityId，取走即清空）。
+    var destSel by rememberSaveable(stateSaver = SelectionSaver) {
+        mutableStateOf(SearchPrefill.takeDestinationCityId()?.let { LocationSelection(it, LocationSelectionMode.ALL_AIRPORTS) })
+    }
     var departMillis by remember { mutableLongStateOf(defaultDepartMillis()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var minStop by remember { mutableIntStateOf(1) }
@@ -96,6 +155,26 @@ fun SearchScreen(nav: NavController) {
 
     val departDateText = remember(departMillis) { utcDate(departMillis) }
 
+    // 选择页返回回填（按角色键区分，避免内存状态在导航重建中丢失）。
+    val handle = nav.currentBackStackEntry?.savedStateHandle
+    val resultJson = remember { Json { ignoreUnknownKeys = true } }
+    androidx.compose.runtime.LaunchedEffect(handle) {
+        handle?.getStateFlow<String?>("location_selection_ORIGIN", null)?.collect { raw ->
+            if (raw != null) {
+                try { originSel = resultJson.decodeFromString<LocationSelection>(raw) } catch (_: Exception) {}
+                handle.remove<String>("location_selection_ORIGIN")
+            }
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(handle) {
+        handle?.getStateFlow<String?>("location_selection_DESTINATION", null)?.collect { raw ->
+            if (raw != null) {
+                try { destSel = resultJson.decodeFromString<LocationSelection>(raw) } catch (_: Exception) {}
+                handle.remove<String>("location_selection_DESTINATION")
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(20.dp))
         Text(L10n.t("search.title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -104,9 +183,20 @@ fun SearchScreen(nav: NavController) {
         Spacer(Modifier.height(16.dp))
 
         JoyCard {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LabeledField(L10n.t("search.origin"), origin, { origin = it.uppercase().take(4) }, placeholder = "SIN", modifier = Modifier.weight(1f))
-                LabeledField(L10n.t("search.destination"), destination, { destination = it.uppercase().take(4) }, placeholder = "PVG", modifier = Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LocationField(
+                    L10n.t("search.origin"),
+                    originSel,
+                    Modifier.weight(1f),
+                ) { nav.navigate(Routes.locationPicker("ORIGIN")) }
+                IconButton(onClick = { val t = originSel; originSel = destSel; destSel = t }) {
+                    Icon(Icons.Default.SwapVert, L10n.t("loc.swap"), tint = BrandPrimary)
+                }
+                LocationField(
+                    L10n.t("search.destination"),
+                    destSel,
+                    Modifier.weight(1f),
+                ) { nav.navigate(Routes.locationPicker("DESTINATION")) }
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -153,14 +243,20 @@ fun SearchScreen(nav: NavController) {
         PrimaryButton(
             text = L10n.t("search.go"),
             loading = loading,
-            enabled = origin.isNotBlank() && destination.isNotBlank(),
+            enabled = originSel != null && destSel != null,
             onClick = {
                 error = null
+                val o = originSel!!
+                val d = destSel!!
+                if (o.cityId == d.cityId) {
+                    error = L10n.t("loc.same_od")
+                    return@PrimaryButton
+                }
                 loading = true
                 scope.launch {
                     val req = SearchRequest(
-                        origin = origin.trim(),
-                        destination = destination.trim(),
+                        originLocation = o,
+                        destinationLocation = d,
                         departureDate = departDateText,
                         minStopDays = minStop,
                         maxStopDays = maxStop,
@@ -173,7 +269,7 @@ fun SearchScreen(nav: NavController) {
                     )
                     when (val r = apiCall { Net.api.createSearch(req) }) {
                         is ApiResult.Ok -> nav.navigate(Routes.results(r.data.searchRunId))
-                        is ApiResult.Err -> error = r.message
+                        is ApiResult.Err -> error = locationErrorText(r)
                     }
                     loading = false
                 }

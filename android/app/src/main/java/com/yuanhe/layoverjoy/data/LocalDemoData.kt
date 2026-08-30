@@ -91,14 +91,14 @@ object LocalDemoData {
     val demoRoute: String get() = if (L10n.current == AppLanguage.EN) "Singapore SIN → Shanghai PVG" else "新加坡 SIN → 上海 PVG"
 }
 
-/** 首页灵感卡 → 探索页的一次性预填（首页本身仍不发网络请求，保持本地契约）。 */
+/** 首页灵感卡 → 探索页的一次性预填（传 cityId，名称/机场范围由目录解析）。 */
 object SearchPrefill {
     @Volatile
-    var destination: String? = null
+    var destinationCityId: String? = null
 
-    fun takeDestination(): String? {
-        val v = destination
-        destination = null
+    fun takeDestinationCityId(): String? {
+        val v = destinationCityId
+        destinationCityId = null
         return v
     }
 }

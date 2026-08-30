@@ -176,8 +176,9 @@ data class SearchPreferences(
 
 @Serializable
 data class SearchRequest(
-    val origin: String,
-    val destination: String,
+    /** V2 契约：只提交 cityId/mode/airportIata，后端按目录权威解析。 */
+    val originLocation: com.yuanhe.layoverjoy.data.catalog.LocationSelection,
+    val destinationLocation: com.yuanhe.layoverjoy.data.catalog.LocationSelection,
     val departureDate: String,
     val minStopDays: Int? = null,
     val maxStopDays: Int? = null,

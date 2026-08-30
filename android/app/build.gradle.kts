@@ -4,6 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// 城市目录单一事实源构建期同步（shared/catalog → assets；见 scripts/sync-catalog.sh）。
+tasks.register<Copy>("syncCatalog") {
+    from(file("${rootDir}/../../shared/catalog/city-airport-catalog.zh-en.json"))
+    into(file("src/main/assets/catalog"))
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn("syncCatalog") }
+
 android {
     namespace = "com.yuanhe.layoverjoy"
     compileSdk = 37

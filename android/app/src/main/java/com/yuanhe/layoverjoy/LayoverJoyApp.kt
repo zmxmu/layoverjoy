@@ -27,6 +27,8 @@ class LayoverJoyApp : Application() {
         instance = this
         session = SessionStore(this)
         L10n.init(this)
+        // 城市目录离线加载与索引（地点选择不依赖网络/登录）。
+        com.yuanhe.layoverjoy.data.catalog.LocationCatalog.init(this)
         // 默认地址随运行环境自适应：模拟器自动用 10.0.2.2（固定别名，不随电脑 IP 变化），真机/本机用 127.0.0.1；
         // 用户（开发页）保存过的地址随后覆盖。
         Net.init(ServerEnv.localServerUrl())
