@@ -34,7 +34,7 @@ const EnvSchema = z.object({
 
   NOSANA_API_KEY: z.string().optional().default(''),
   NOSANA_OPENAI_BASE_URL: z.string().optional().default(''),
-  NOSANA_MODEL: z.string().default('qwen3.5:9b'),
+  NOSANA_MODEL: z.string().default('layoverjoy-qwen2.5-3b'),
   // 实测 qwen3.5:9b 单次推理可达 60s，默认超时须覆盖最坏情况，否则全部降级模板。
   NOSANA_TIMEOUT_MS: z.coerce.number().default(90000),
   NOSANA_DEPLOYMENT_ID: z.string().optional().default(''),

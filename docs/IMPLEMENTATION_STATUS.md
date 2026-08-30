@@ -72,3 +72,16 @@
   - 模拟器英文详情页全英文截图：`docs/screenshots/plan-detail-nosana-en.png`（含 Nosana 归属标注）。
 - 测试：tsc EXIT 0；vitest 14/14；check-i18n 265 keys 0 缺失；Gradle BUILD SUCCESSFUL 装机验证。
 - 已知限制：Nosana 为共享 GPU 节点，冷启动/繁忙时偶发空内容；总预算 NOSANA_TIMEOUT_MS=90s，超限诚实降级模板。解释落库缓存，重复展示瞬时。
+
+## NOSANA-FAST：轻量模型换装（2026-08-30，演示前）
+
+- 目标：解释生成 <2s。旧 qwen3.5:9b 即关思考也需 3.8–4.5s。
+- 新部署：DfQoerNYzsD3PSqngPKX1P7BffHU9k2i6oc3XW5811vR，Qwen2.5-3B-Instruct-AWQ（served name `layoverjoy-qwen2.5-3b`），RTX 3060，$0.048/h。
+- 后端适配：
+  - 接口风格自适应：Ollama 原生 /api/chat 优先（qwen3 系关思考）；vLLM 等非 Ollama 栈（404/405）自动切 OpenAI 兼容 /v1。
+  - 事实纪律：票价差文案（savings）由后端确定性计算并随 prompt 下发，模型逐字引用，杜绝 3B 改写货币/数值（实测曾把 SGD 写成“美元”/“$”）。
+  - 输出压缩：summary ≤30 词/45 字、highlights 1、tips 1，压低生成 token。
+- 实测：en 3.8s、zh 6.3s（含 ~1s 网络固定开销；3060 实测 ~25 tok/s）。
+- 结论：3060 档稳态 en≈3–4s；<2s 需更高 GPU 档位（带宽约 2–3 倍）或依赖落库缓存（展示瞬时，仅 Regenerate 付费等待）。演示视频建议录缓存展示或接受 ~4s Regenerate。
+- 坑：shell 中 export 的旧 NOSANA_* 会经 compose `${VAR:-default}` 覆盖 env_file——重建容器前必须 unset（本次曾因此注入旧端点致 503）。
+- 截图：`docs/screenshots/plan-detail-nosana-en.png`（3.8s 版本）。

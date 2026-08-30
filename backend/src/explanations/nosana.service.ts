@@ -124,64 +124,90 @@ export class NosanaService {
     const startedAt = Date.now();
     const deadline = startedAt + env.NOSANA_TIMEOUT_MS;
     const lang = req.lang ?? 'zh';
+    // 票价差文案由后端确定性计算，小模型只能逐字引用，杜绝改写货币/数值。
+    const savings =
+      req.airfareDelta < 0
+        ? lang === 'en'
+          ? `saves about ${Math.abs(req.airfareDelta)} ${req.currency} versus a direct flight`
+          : `相比直飞节省约 ${Math.abs(req.airfareDelta)} ${req.currency}`
+        : req.airfareDelta > 0
+          ? lang === 'en'
+            ? `costs about ${req.airfareDelta} ${req.currency} more than a direct flight`
+            : `相比直飞多花约 ${req.airfareDelta} ${req.currency}`
+          : lang === 'en'
+            ? 'priced on par with a direct flight'
+            : '与直飞价格相当';
     const systemPrompt =
       lang === 'en'
         ? [
-            'You are the LayoverJoy travel experience narrator. Only explain the structured plan provided; never invent flights, prices, visa conclusions or order status.',
+            'You are the LayoverJoy travel experience narrator. Only narrate the structured facts provided; never invent or recompute flights, prices, visa conclusions or order status.',
             'Output MUST be valid JSON: {"summary": string, "highlights": string[], "tips": string[]}',
-            'Language: English; summary within 60 words; highlights 2-3; tips 1-3.',
+            'Language: English only (never mix other languages); summary within 30 words; highlights exactly 1; tips exactly 1.',
+            'When mentioning the fare difference, use the provided "savings" phrase verbatim.',
           ].join('\n')
         : [
-            '你是 LayoverJoy 的旅行体验解说员。只解释已给出的结构化方案，不生成新的航班、价格、签证结论或订单状态。',
+            '你是 LayoverJoy 的旅行体验解说员。只解说已给出的结构化事实，不生成新的航班、价格、签证结论或订单状态。',
             '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
-            '语言：简体中文；summary 不超过 80 字；highlights 2-3 条；tips 1-3 条。',
+            '语言：简体中文；summary 不超过 45 字；highlights 1 条；tips 1 条。',
+            '提及票价差时必须逐字使用提供的 savings 短语。',
           ].join('\n');
+    // 小模型只负责“解说”，事实由后端确定性计算；输入从简以压低延迟。
     const userPrompt = JSON.stringify({
       city: lang === 'en' ? (req.cityNameEn?.trim() || req.cityNameZh) : req.cityNameZh,
       stayDays: req.stayDays,
       usableHours: req.usableHours,
-      airfareDelta: req.airfareDelta,
-      currency: req.currency,
+      savings,
       joyScore: req.joyScore,
-      joyScoreBreakdown: req.joyScoreBreakdown,
       riskFlags: req.riskFlags,
-      interests: req.interests,
     });
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
-    // 09 文档约定：推理失败最多重试一次（仅解析/网络类错误重试；超时与 HTTP 错误直接降级），再失败降级模板。
+    // 接口风格自适应：Ollama 原生 /api/chat 优先（可对 qwen3 系关思考，实测 10 倍提速）；
+    // 部署若为 vLLM 等非 Ollama 栈（原生接口 404/405）自动改用 OpenAI 兼容 /v1/chat/completions。
+    let style: 'native' | 'openai' = 'native';
     for (let attempt = 1; attempt <= 2; attempt++) {
       const budgetMs = deadline - Date.now();
       if (budgetMs < 5000) break;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), budgetMs);
       try {
-        // 走 Ollama 原生 /api/chat：OpenAI 兼容接口无法关闭 qwen3.5 的长推理（实测 45–50s），
-        // 原生接口 think:false + format:json 同等质量约 5s（实测 10 倍提速）。
-        const nativeBase = env.NOSANA_OPENAI_BASE_URL.replace(/\/v1\/?$/, '').replace(/\/$/, '');
-        const res = await fetch(`${nativeBase}/api/chat`, {
-          method: 'POST',
-          signal: controller.signal,
-          headers,
-          body: JSON.stringify({
-            model: env.NOSANA_MODEL,
-            stream: false,
-            think: false,
-            format: 'json',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-          }),
-        });
+        const rootBase = env.NOSANA_OPENAI_BASE_URL.replace(/\/v1\/?$/, '').replace(/\/$/, '');
+        const url = style === 'native' ? `${rootBase}/api/chat` : `${rootBase}/v1/chat/completions`;
+        const body =
+          style === 'native'
+            ? {
+                model: env.NOSANA_MODEL,
+                stream: false,
+                ...(env.NOSANA_MODEL.startsWith('qwen3') ? { think: false } : {}),
+                format: 'json',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt },
+                ],
+              }
+            : {
+                model: env.NOSANA_MODEL,
+                stream: false,
+                response_format: { type: 'json_object' },
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt },
+                ],
+              };
+        const res = await fetch(url, { method: 'POST', signal: controller.signal, headers, body: JSON.stringify(body) });
         if (!res.ok) {
+          if (style === 'native' && (res.status === 404 || res.status === 405)) {
+            style = 'openai';
+            continue;
+          }
           NosanaService.lastErrorCategory = `HTTP_${res.status}`;
           this.logger.warn(`Nosana HTTP ${res.status}; falling back to template explanation`);
           return this.templateExplanation(req, 'HTTP_ERROR');
         }
         const data: any = await res.json();
-        const content: string = data?.message?.content ?? '';
+        const content: string =
+          style === 'native' ? (data?.message?.content ?? '') : (data?.choices?.[0]?.message?.content ?? '');
         const parsed = JSON.parse(content);
         if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
         NosanaService.lastInferenceSucceededAt = new Date().toISOString();
