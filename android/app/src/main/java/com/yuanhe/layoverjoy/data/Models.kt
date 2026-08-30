@@ -648,6 +648,14 @@ data class PriceConfirmationDto(
     val offerExpiresAt: String? = null,
 )
 
+/** 预订期入境资格风险提示（非阻断结论）：展示用，最终决定权在边检/领馆/航司。 */
+@Serializable
+data class EligibilityNoticeDto(
+    val decision: String = "",
+    val ruleId: String? = null,
+    val explanationZh: String = "",
+)
+
 @Serializable
 data class BookingDto(
     val bookingId: String,
@@ -665,6 +673,7 @@ data class BookingDto(
     val isSandboxPayment: Boolean = false,
     val priceIncreased: Boolean = false,
     val priceConfirmation: PriceConfirmationDto? = null,
+    val eligibilityNotice: EligibilityNoticeDto? = null,
     val orders: List<OrderDto> = emptyList(),
 )
 

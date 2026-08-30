@@ -42,6 +42,7 @@ import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.DateField
 import com.yuanhe.layoverjoy.ui.EmptyBlock
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
@@ -80,7 +81,7 @@ fun DocumentsScreen(nav: NavController) {
         error = null
         when (val r = apiCall { Net.api.documents() }) {
             is ApiResult.Ok -> docs = r.data.documents
-            is ApiResult.Err -> error = r.message
+            is ApiResult.Err -> error = apiErrorText(r)
         }
     }
 
@@ -202,7 +203,7 @@ private fun AddPassportForm(onDone: () -> Unit) {
                 scope.launch {
                     when (val r = apiCall { Net.api.addDocument(DocumentInput(kind = "PASSPORT", countryCode = country, passportType = type, expiresOn = expiry, isPrimary = true)) }) {
                         is ApiResult.Ok -> { onDone() }
-                        is ApiResult.Err -> err = r.message
+                        is ApiResult.Err -> err = apiErrorText(r)
                     }
                     busy = false
                 }
@@ -269,7 +270,7 @@ private fun AddVisaForm(onDone: () -> Unit) {
                 scope.launch {
                     when (val r = apiCall { Net.api.addDocument(DocumentInput(kind = "VISA", countryCode = country, visaType = type, expiresOn = expiry, validFrom = validFrom.ifBlank { null }, entryCount = entryCount, verificationMode = verificationMode, usedBefore = usedBefore)) }) {
                         is ApiResult.Ok -> onDone()
-                        is ApiResult.Err -> err = r.message
+                        is ApiResult.Err -> err = apiErrorText(r)
                     }
                     busy = false
                 }

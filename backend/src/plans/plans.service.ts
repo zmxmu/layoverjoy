@@ -5,6 +5,7 @@ import { NosanaService } from '../explanations/nosana.service';
 import { buildExperienceContext, EXPERIENCE_CATALOG_VERSION, PROMPT_VERSION } from '../explanations/experience-context.builder';
 import { CITY_PACKS, HUB_CATALOG } from '../airports/catalog';
 import { AppError } from '../common/errors';
+import { REQUIREMENT_EN } from '../entry-rules/v2/requirement-text';
 
 export interface RequiredDocumentOut {
   code: string;
@@ -49,7 +50,7 @@ export function normalizeRequiredDocuments(raw: any): RequiredDocumentOut[] {
           code,
           mandatory: true,
           descriptionZh: REQUIRED_DOC_I18N[code]?.zh ?? null,
-          descriptionEn: REQUIRED_DOC_I18N[code]?.en ?? null,
+          descriptionEn: REQUIRED_DOC_I18N[code]?.en ?? REQUIREMENT_EN[code] ?? null,
           factPaths: [],
         });
         return;
@@ -61,7 +62,7 @@ export function normalizeRequiredDocuments(raw: any): RequiredDocumentOut[] {
           code,
           mandatory: item.mandatory === false ? false : true,
           descriptionZh: typeof item.descriptionZh === 'string' ? item.descriptionZh : (REQUIRED_DOC_I18N[code]?.zh ?? null),
-          descriptionEn: typeof item.descriptionEn === 'string' ? item.descriptionEn : (REQUIRED_DOC_I18N[code]?.en ?? null),
+          descriptionEn: typeof item.descriptionEn === 'string' ? item.descriptionEn : (REQUIRED_DOC_I18N[code]?.en ?? REQUIREMENT_EN[code] ?? null),
           factPaths,
         });
         return;

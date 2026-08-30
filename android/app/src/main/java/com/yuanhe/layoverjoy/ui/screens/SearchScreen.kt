@@ -66,6 +66,7 @@ import com.yuanhe.layoverjoy.data.search.SearchFormState
 import com.yuanhe.layoverjoy.data.search.SearchPreferencesMapper
 import com.yuanhe.layoverjoy.data.search.SmartDepartureDateResolver
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
@@ -93,7 +94,7 @@ fun locationErrorText(e: ApiResult.Err): String = when (e.code) {
     "NO_SANDBOX_INVENTORY", "NO_FLIGHT_INVENTORY" -> L10n.t("loc.err_no_inventory")
     "ATLAS_TIMEOUT", "FLIGHT_PROVIDER_TIMEOUT" -> L10n.t("loc.err_provider_timeout")
     "UNAUTHORIZED" -> L10n.t("loc.err_login")
-    else -> e.message
+    else -> apiErrorText(e)
 }
 
 /** 搜索页地点卡：整卡可点击；已选择时展示城市名 + 国家/地区 · 范围（代码）。 */

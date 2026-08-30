@@ -37,6 +37,7 @@ import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.EmptyBlock
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.fmtDateTime
@@ -55,9 +56,9 @@ fun NotificationsScreen(nav: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
 
     suspend fun load() {
-        when (val r = apiCall { Net.api.notifications(null) }) {
+        when (val r = apiCall { Net.api.notifications(null, L10n.current.tag) }) {
             is ApiResult.Ok -> items = r.data.notifications
-            is ApiResult.Err -> error = r.message
+            is ApiResult.Err -> error = apiErrorText(r)
         }
     }
 

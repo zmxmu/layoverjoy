@@ -91,6 +91,7 @@ class SessionStore(private val context: Context) {
     /** 开发页第一段下单失败注入开关（仅本地缓存）。 */
     suspend fun setInjectLegBFail(enabled: Boolean) = context.dataStore.edit { it[Keys.injectLegBFail] = enabled }
 
+    /** 开发页演示方案回退开关（仅本地缓存；默认关，保证报价来自真实 Sandbox）。 */
     suspend fun setDemoFixtureFallback(enabled: Boolean) = context.dataStore.edit { it[Keys.demoFixtureFallback] = enabled }
 
     suspend fun setOnboardingDone(done: Boolean, passportCountry: String?, passportType: String?, visaCountries: List<String>) {

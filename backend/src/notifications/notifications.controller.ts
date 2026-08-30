@@ -12,8 +12,8 @@ export class NotificationsController {
 
   /** App 端本地通知：WorkManager 定时轮询本接口（15 分钟）。 */
   @Get()
-  list(@CurrentUser() user: AuthUser, @Query('unread') unread?: string) {
-    return this.notifications.list(user.userId, unread === 'true');
+  list(@CurrentUser() user: AuthUser, @Query('unread') unread?: string, @Query('lang') lang?: string) {
+    return this.notifications.list(user.userId, unread === 'true', 50, lang === 'en' ? 'en' : 'zh');
   }
 
   @Patch(':id/read')

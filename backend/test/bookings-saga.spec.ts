@@ -7,7 +7,7 @@ import { BookingsService } from '../src/bookings/bookings.service';
  * 覆盖两种单边失败：先下的第二段失败、第一段失败而第二段已成功。
  */
 
-function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'ELIGIBILITY_FAIL') {
+function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'ELIGIBILITY_FAIL' | 'ELIGIBILITY_SOFT') {
   const transitions: string[] = [];
   const prisma: any = {
     stopoverPlan: {
@@ -30,6 +30,7 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
     },
     bookingIntent: {
       create: vi.fn().mockResolvedValue({ id: 'intent1' }),
+      findUnique: vi.fn().mockResolvedValue({ id: 'intent1', verifyResultJson: null }),
       update: vi.fn().mockImplementation(({ data }: any) => {
         if (data.status) transitions.push(data.status);
         return Promise.resolve({ id: 'intent1', ...data });
@@ -99,7 +100,9 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
   const assessV2: any = {
     assess: vi.fn().mockImplementation(() => ({
       searchDecision: 'ELIGIBLE',
-      bookingDecision: orderBehavior === 'ELIGIBILITY_FAIL' ? 'NEEDS_INFO' : 'CONDITIONALLY_ELIGIBLE',
+      // 产品决策：仅 INELIGIBLE 阻断；NEEDS_* 为风险提示不阻断。
+      bookingDecision:
+        orderBehavior === 'ELIGIBILITY_FAIL' ? 'INELIGIBLE' : orderBehavior === 'ELIGIBILITY_SOFT' ? 'NEEDS_REVIEW' : 'CONDITIONALLY_ELIGIBLE',
       matchedRuleIds: ['CN_MY_MUTUAL_VISA_FREE'],
       missingFacts: [],
       explanationZh: 'test',
@@ -113,7 +116,7 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
   };
 
   const service = new BookingsService(prisma, atlas, redis, notifications, rules, users, assessV2, crypto);
-  return { service, transitions, rules, assessV2 };
+  return { service, transitions, rules, assessV2, prisma };
 }
 
 const input = { planId: 'plan1', riskAckVersion: 1, passengers: [{ givenName: 'WEI', familyName: 'ZHANG' }] };
@@ -153,11 +156,27 @@ describe('双订单 Saga 状态机', () => {
     expect(transitions).not.toContain('BOTH_ORDERED');
   });
 
-  it('预订期资格复核未通过：不下任何订单 -> EXPIRED', async () => {
-    const { service, transitions, assessV2 } = buildService('ELIGIBILITY_FAIL');
-    await expect(service.createComposite('user1', input)).rejects.toMatchObject({ code: 'BOOKING_ELIGIBILITY_FAILED' });
+  it('预订期资格不合规（INELIGIBLE）：不阻断下单，风险提示随订单返回', async () => {
+    const { service, transitions, assessV2, prisma } = buildService('ELIGIBILITY_FAIL');
+    await service.createComposite('user1', input);
     expect(assessV2.assess).toHaveBeenCalledWith(expect.objectContaining({ mode: 'BOOKING' }), expect.anything());
-    expect(transitions[transitions.length - 1]).toBe('EXPIRED');
-    expect(transitions).not.toContain('LEG_B_ORDERING');
+    expect(transitions[transitions.length - 1]).toBe('PAYMENT_PENDING');
+    expect(transitions).toContain('LEG_B_ORDERING');
+    const noticeWrites = prisma.bookingIntent.update.mock.calls
+      .map((c: any) => c[0]?.data)
+      .filter((d: any) => d?.verifyResultJson?.bookingEligibility);
+    expect(noticeWrites.length).toBeGreaterThan(0);
+    expect(noticeWrites[0].verifyResultJson.bookingEligibility.decision).toBe('INELIGIBLE');
+  });
+
+  it('预订期资格待核对/需补资料（NEEDS_*）：不阻断下单，风险提示随订单返回', async () => {
+    const { service, transitions, prisma } = buildService('ELIGIBILITY_SOFT');
+    await service.createComposite('user1', input);
+    expect(transitions[transitions.length - 1]).toBe('PAYMENT_PENDING');
+    const noticeWrites = prisma.bookingIntent.update.mock.calls
+      .map((c: any) => c[0]?.data)
+      .filter((d: any) => d?.verifyResultJson?.bookingEligibility);
+    expect(noticeWrites.length).toBeGreaterThan(0);
+    expect(noticeWrites[0].verifyResultJson.bookingEligibility.decision).toBe('NEEDS_REVIEW');
   });
 });

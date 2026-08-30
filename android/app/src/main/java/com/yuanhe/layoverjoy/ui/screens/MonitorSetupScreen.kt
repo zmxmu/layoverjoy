@@ -40,6 +40,7 @@ import com.yuanhe.layoverjoy.data.MonitorInput
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
@@ -87,7 +88,7 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
                 target = "%.0f".format(d.airfareTotal * 0.95)
                 planLoaded = true
             }
-            is ApiResult.Err -> error = r.message
+            is ApiResult.Err -> error = apiErrorText(r)
         }
     }
 
@@ -175,7 +176,7 @@ fun MonitorSetupScreen(nav: NavController, planId: String) {
                                     )
                                 }) {
                                     is ApiResult.Ok -> success = true
-                                    is ApiResult.Err -> error = r.message
+                                    is ApiResult.Err -> error = apiErrorText(r)
                                 }
                                 loading = false
                             }

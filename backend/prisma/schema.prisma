@@ -314,6 +314,9 @@ model Notification {
   kind         String                 // PRICE_ALERT | POLICY_CHANGE | ORDER_EVENT | SYSTEM
   title        String
   body         String
+  // 2026-08-30：双语通知（EN 界面不再显示中文存库文案）；缺省时回退 zh。
+  titleEn      String?
+  bodyEn       String?
   deepLink     String?
   planId       String?
   monitorId    String?

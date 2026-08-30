@@ -256,7 +256,16 @@ private fun EligibilityCard(eli: EligibilityDto) {
         badge?.let { (text, color) -> Badge(text, color = color, bg = color.copy(alpha = 0.10f)) }
         a?.let {
             Spacer(Modifier.height(6.dp))
-            Text(it.explanationZh, style = MaterialTheme.typography.labelSmall)
+            // 规则解释仅维护中文；英文界面展示本地化摘要，避免整段中文。
+            val summary = when (eli.status) {
+                "ELIGIBLE" -> L10n.t("elig.summary_eligible")
+                "CONDITIONALLY_ELIGIBLE" -> L10n.t("elig.summary_conditional")
+                "NEEDS_INFO" -> L10n.t("elig.summary_needs_info")
+                "NEEDS_REVIEW" -> L10n.t("elig.summary_needs_review")
+                "INELIGIBLE" -> L10n.t("elig.summary_ineligible")
+                else -> null
+            }
+            Text(if (L10n.current == AppLanguage.EN) summary ?: it.explanationZh else it.explanationZh, style = MaterialTheme.typography.labelSmall)
             Spacer(Modifier.height(4.dp))
             val stay = it.maxStay
             Text(

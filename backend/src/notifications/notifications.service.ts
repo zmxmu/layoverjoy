@@ -9,6 +9,9 @@ export interface NotifyInput {
   kind: 'PRICE_ALERT' | 'POLICY_CHANGE' | 'ORDER_EVENT' | 'SYSTEM';
   title: string;
   body: string;
+  /** 英文文案（可选；EN 界面优先展示，缺省回退中文）。 */
+  titleEn?: string;
+  bodyEn?: string;
   deepLink?: string;
   planId?: string;
   monitorId?: string;
@@ -56,6 +59,8 @@ export class NotificationsService {
         kind: input.kind,
         title: input.title,
         body: input.body,
+        titleEn: input.titleEn,
+        bodyEn: input.bodyEn,
         deepLink: input.deepLink,
         planId: input.planId,
         monitorId: input.monitorId,
@@ -113,7 +118,7 @@ export class NotificationsService {
     }
   }
 
-  async list(userId: string, unreadOnly: boolean, limit = 50) {
+  async list(userId: string, unreadOnly: boolean, limit = 50, lang: 'zh' | 'en' = 'zh') {
     const items = await this.prisma.notification.findMany({
       where: { userId, ...(unreadOnly ? { readAt: null } : {}) },
       orderBy: { createdAt: 'desc' },
@@ -123,8 +128,8 @@ export class NotificationsService {
       notifications: items.map((n) => ({
         id: n.id,
         kind: n.kind,
-        title: n.title,
-        body: n.body,
+        title: lang === 'en' ? (n.titleEn ?? n.title) : n.title,
+        body: lang === 'en' ? (n.bodyEn ?? n.body) : n.body,
         deepLink: n.deepLink,
         planId: n.planId,
         monitorId: n.monitorId,

@@ -31,6 +31,7 @@ import com.yuanhe.layoverjoy.data.LoginRequest
 import com.yuanhe.layoverjoy.data.RegisterRequest
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.LabeledField
 import com.yuanhe.layoverjoy.ui.PrimaryButton
 import com.yuanhe.layoverjoy.ui.i18n.L10n
@@ -114,7 +115,7 @@ fun AuthScreen(appState: AppStateViewModel, onClose: (() -> Unit)? = null, onSuc
                             appState.onAuthDone(email)
                             onSuccess?.invoke()
                         }
-                        is ApiResult.Err -> error = result.message
+                        is ApiResult.Err -> error = apiErrorText(result)
                     }
                     loading = false
                 }

@@ -52,6 +52,7 @@ import com.yuanhe.layoverjoy.data.PlanDetailDto
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LoadingBlock
@@ -113,7 +114,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                     }
                 }
             }
-            is ApiResult.Err -> error = r.message
+            is ApiResult.Err -> error = apiErrorText(r)
         }
     }
 
@@ -300,7 +301,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                         if (e == null) {
                             Text(L10n.t("detail.eligibility_empty"), style = MaterialTheme.typography.bodySmall)
                         } else {
-                            Text(L10n.t("detail.eligibility_status", if (e.status == "ELIGIBLE") L10n.t("detail.eligibility_ok") else e.status), style = MaterialTheme.typography.bodyMedium, color = if (e.status == "ELIGIBLE") BrandPrimary else BrandDanger, fontWeight = FontWeight.SemiBold)
+                            Text(L10n.t("detail.eligibility_status", eligStatusLabel(e.status)), style = MaterialTheme.typography.bodyMedium, color = if (e.status == "ELIGIBLE") BrandPrimary else BrandDanger, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.height(4.dp))
                             Text(L10n.t("detail.eligibility_rule", e.ruleId ?: "-", e.ruleVersion ?: "-"), style = MaterialTheme.typography.labelSmall)
                             Text(L10n.t("detail.eligibility_verified", e.verifiedAt?.take(10) ?: "-"), style = MaterialTheme.typography.labelSmall)
@@ -346,6 +347,16 @@ private fun costKeyText(key: String): String = when (key) {
     "VISA_FEE" -> L10n.t("cost.visa")
     "ACTIVITIES_FOOD" -> L10n.t("cost.activities")
     else -> key
+}
+
+/** 资格状态码 → 本地化文案（不再向用户展示原始枚举码）。 */
+private fun eligStatusLabel(status: String): String = when (status) {
+    "ELIGIBLE" -> L10n.t("detail.eligibility_ok")
+    "CONDITIONALLY_ELIGIBLE" -> L10n.t("elig.badge_conditional")
+    "NEEDS_INFO" -> L10n.t("elig.badge_needs_info")
+    "NEEDS_REVIEW" -> L10n.t("elig.badge_needs_review")
+    "INELIGIBLE" -> L10n.t("elig.badge_ineligible")
+    else -> status
 }
 
 /** v2 丰富解读卡（14 号方案 §5）：城市优势/小行程/便利度/取舍；不渲染任何模型元数据。 */

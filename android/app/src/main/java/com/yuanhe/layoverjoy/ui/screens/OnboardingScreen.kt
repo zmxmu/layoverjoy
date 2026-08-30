@@ -37,6 +37,7 @@ import com.yuanhe.layoverjoy.data.DocumentInput
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.DateField
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
@@ -94,7 +95,7 @@ fun OnboardingScreen(appState: AppStateViewModel) {
             }.getOrNull()
             submitting = false
             if (r is ApiResult.Err && r.code != "DUPLICATE_PASSPORT") {
-                uploadError = r.message
+                uploadError = apiErrorText(r)
                 return@launch
             }
             session.setOnboardingDone(true, country, passportType, visas)

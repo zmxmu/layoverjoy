@@ -116,7 +116,12 @@ export class BookingsService {
     return this.atlas.providerLabel(this.atlas.payment) === 'ATLAS_SANDBOX';
   }
 
-  /** ER-11：Order/Pay 前重评资格；NEEDS_INFO/NEEDS_REVIEW/INELIGIBLE 均阻断。 */
+  /**
+   * ER-11：Order/Pay 前重评资格。
+   * 产品决策（所有者确认）：资格结论一律不阻断下单——
+   * INELIGIBLE/NEEDS_INFO/NEEDS_REVIEW 等均作为风险提示随订单返回，
+   * 是否准许入境最终以边检/领馆/航司实时决定为准（App 展示免责声明）。
+   */
   private async gateEligibility(userId: string, plan: any, legs: any[], stage: 'ORDER' | 'PAY') {
     const profile = await this.users.profileForRules(userId);
     const jurisdiction = plan.hubCountry === 'HK' || plan.hubCountry === 'MO' ? plan.hubCountry : null;
@@ -142,16 +147,7 @@ export class BookingsService {
       },
       { persist: true },
     );
-    const allowed = a.bookingDecision === 'ELIGIBLE' || a.bookingDecision === 'CONDITIONALLY_ELIGIBLE';
-    if (!allowed) {
-      throw new AppError(
-        'ENTRY_ELIGIBILITY_BLOCKED',
-        `入境资格预筛未通过（${a.bookingDecision}）：${a.explanationZh}`,
-        409,
-        false,
-        { stage, decision: a.bookingDecision, missingFacts: a.missingFacts, assessmentId: a.assessmentId },
-      );
-    }
+    void stage;
     return a;
   }
 
@@ -278,26 +274,27 @@ export class BookingsService {
       priceConfirmedAt: new Date(),
     });
 
-    // 2) 预订期资格硬判定（v2 引擎，ER-11）：两段均 Verify 后续程票才算确认；
+    // 2) 预订期资格复核（v2 引擎，ER-11）：两段均 Verify 后续程票才算确认；
     //    搜索期的初筛结果不能直接用于下单。
+    //    产品决策：资格结论不阻断下单，非 ELIGIBLE 一律作为风险提示随订单返回。
     if (plan.hubCountry) {
-      try {
-        await this.gateEligibility(userId, plan, legs, 'ORDER');
-      } catch (e) {
-        if ((e as AppError).code === 'ENTRY_ELIGIBILITY_BLOCKED') {
-          const details = (e as any).details ?? {};
-          await transition('EXPIRED', {
-            verifyResultJson: { ok: false, bookingEligibility: details.decision, reasonCodes: details.missingFacts } as any,
-          });
-          throw new AppError(
-            'BOOKING_ELIGIBILITY_FAILED',
-            '预订期入境资格复核未通过，已停止下单。请更新证件信息后重新搜索。',
-            409,
-            false,
-            { intentId: intent.id, ...details },
-          );
-        }
-        throw e;
+      const elig = await this.gateEligibility(userId, plan, legs, 'ORDER');
+      if (elig.bookingDecision !== 'ELIGIBLE') {
+        const intentNow = await this.prisma.bookingIntent.findUnique({ where: { id: intent.id } });
+        const vr = (intentNow?.verifyResultJson as any) ?? {};
+        await this.prisma.bookingIntent.update({
+          where: { id: intent.id },
+          data: {
+            verifyResultJson: {
+              ...vr,
+              bookingEligibility: {
+                decision: elig.bookingDecision,
+                ruleId: elig.matchedRuleIds[0] ?? null,
+                explanationZh: elig.explanationZh,
+              },
+            } as any,
+          },
+        });
       }
     }
 
@@ -342,7 +339,9 @@ export class BookingsService {
           userId,
           kind: 'ORDER_EVENT',
           title: '部分订单风险：第一段下单失败',
+          titleEn: 'Partial order: leg 1 failed',
           body: '第二段已成功下单，第一段库存发生变化。后续支付已停止，可发起退款收尾处理。',
+          bodyEn: 'Leg 2 was ordered but leg 1 hit an inventory change. Payment stopped; you can close out with a refund.',
           deepLink: `layoverjoy://bookings/${intentId}`,
           planId: plan.id,
           isSimulated: true,
@@ -623,9 +622,13 @@ export class BookingsService {
       userId,
       kind: 'ORDER_EVENT',
       title: sandboxPayment ? '支付已提交' : '预订完成',
+      titleEn: sandboxPayment ? 'Payment submitted' : 'Booking completed',
       body: sandboxPayment
         ? '支付已提交，出票确认后将同步 PNR 与票号信息。'
         : '两段订单均已支付成功，出票确认后将同步行程信息。',
+      bodyEn: sandboxPayment
+        ? 'Payment submitted — PNR and ticket numbers will sync once ticketing is confirmed.'
+        : 'Both legs paid — itinerary details will sync once ticketing is confirmed.',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,
@@ -771,7 +774,9 @@ export class BookingsService {
       userId,
       kind: 'ORDER_EVENT',
       title: '部分订单风险：第二段库存变化',
+      titleEn: 'Partial order: leg 2 inventory changed',
       body: '第二段库存发生变化，后续支付已停止，可发起退款收尾处理。',
+      bodyEn: 'Leg 2 inventory changed. Payment stopped; you can close out with a refund.',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,
@@ -814,7 +819,9 @@ export class BookingsService {
       userId,
       kind: 'ORDER_EVENT',
       title: '退款已完成',
-      body: '退款已完成，将按原路退回，到账时间以支付渠道为准。',
+      titleEn: 'Refund completed',
+      body: '退款已完成，没有发生真实资金交易。',
+      bodyEn: 'Refund completed. This is a simulated refund — no real funds moved.',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,
@@ -852,11 +859,17 @@ export class BookingsService {
       priceConfirmation = {
         previousTotal,
         newTotal,
-        delta: Math.round((newTotal - (previousTotal ?? 0)) * 100) / 100,
+        delta: Math.round((newTotal - (previousTotal ?? 0) * 1) * 100) / 100,
         currency: verify[0]?.currency ?? intent.currency ?? '',
         offerExpiresAt: verify[0]?.expiresAt ?? null,
       };
     }
+    // 预订期资格风险提示（非阻断结论）：Android 在预订页展示，最终决定权在边检/领馆/航司。
+    const be = (intent.verifyResultJson as any)?.bookingEligibility;
+    const eligibilityNotice =
+      be && typeof be === 'object' && typeof be.decision === 'string'
+        ? { decision: be.decision, ruleId: be.ruleId ?? null, explanationZh: be.explanationZh ?? '' }
+        : null;
     return {
       bookingId: intent.id,
       planId: intent.planId,
@@ -874,6 +887,7 @@ export class BookingsService {
       isSandboxPayment: this.paymentIsSandbox(),
       priceIncreased: intent.status === 'PRICE_CONFIRMATION_REQUIRED',
       priceConfirmation,
+      eligibilityNotice,
       orders: orders.map((o: any) => {
         const confirmToken = typeof o.lastProviderCode === 'string' && o.lastProviderCode.startsWith('PAY_CONFIRM:')
           ? o.lastProviderCode.slice('PAY_CONFIRM:'.length)

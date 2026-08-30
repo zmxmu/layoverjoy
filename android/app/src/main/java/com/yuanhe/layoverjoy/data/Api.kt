@@ -146,7 +146,7 @@ interface ApiService {
     @POST("v1/plans/{id}/explanation") suspend fun createExplanation(@Path("id") id: String, @Query("lang") lang: String): retrofit2.Response<ExplanationDto>
 
     // 通知 / 监控
-    @GET("v1/notifications") suspend fun notifications(@Query("unread") unread: String?): retrofit2.Response<NotificationsResponse>
+    @GET("v1/notifications") suspend fun notifications(@Query("unread") unread: String?, @Query("lang") lang: String? = null): retrofit2.Response<NotificationsResponse>
     @PATCH("v1/notifications/{id}/read") suspend fun markRead(@Path("id") id: String): retrofit2.Response<okhttp3.ResponseBody>
     @POST("v1/monitors") suspend fun createMonitor(@Body body: MonitorInput): retrofit2.Response<MonitorCreatedResponse>
     @GET("v1/monitors") suspend fun monitors(@Query("lang") lang: String?): retrofit2.Response<MonitorsResponse>

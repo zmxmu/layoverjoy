@@ -40,6 +40,7 @@ import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.EmptyBlock
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SectionTitle
@@ -66,11 +67,11 @@ fun TripsScreen(nav: NavController) {
         error = null
         when (val m = apiCall { Net.api.monitors(L10n.current.tag) }) {
             is ApiResult.Ok -> monitors = m.data.monitors
-            is ApiResult.Err -> error = m.message
+            is ApiResult.Err -> error = apiErrorText(m)
         }
         when (val b = apiCall { Net.api.bookings() }) {
             is ApiResult.Ok -> bookings = b.data.bookings
-            is ApiResult.Err -> if (error == null) error = b.message
+            is ApiResult.Err -> if (error == null) error = apiErrorText(b)
         }
     }
 

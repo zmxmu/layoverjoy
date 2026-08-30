@@ -9,6 +9,7 @@ import { RuleCatalogLoader } from './catalog-loader';
 import { buildFacts, factsHash, itineraryHash } from './facts';
 import { evalExpression, getFact as getFactsSafe } from './matcher';
 import { aggregate, RuleEval } from './aggregator';
+import { withDescriptionEn } from './requirement-text';
 import { AssessInput, AssessResult, DecisionCode, RuleV2 } from './types';
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -68,6 +69,7 @@ export class EligibilityAssessService {
       return {
         code: req.code,
         descriptionZh: req.descriptionZh,
+        ...withDescriptionEn(req),
         status: (missing.length === 0 ? 'SATISFIED' : inMissingFacts ? 'MISSING' : 'PENDING') as 'SATISFIED' | 'PENDING' | 'MISSING',
       };
     });

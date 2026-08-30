@@ -46,6 +46,7 @@ import com.yuanhe.layoverjoy.data.PlanDetailDto
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
 import com.yuanhe.layoverjoy.ui.ErrorBanner
+import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.InfoBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.LabeledField
@@ -93,7 +94,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
     suspend fun refreshBooking(id: String) {
         when (val r = apiCall { Net.api.booking(id) }) {
             is ApiResult.Ok -> booking = r.data.booking
-            is ApiResult.Err -> error = r.message
+            is ApiResult.Err -> error = apiErrorText(r)
         }
     }
 
@@ -112,12 +113,12 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                         }
                     }
                 }
-                is ApiResult.Err -> error = r.message
+                is ApiResult.Err -> error = apiErrorText(r)
             }
         } else {
             when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
                 is ApiResult.Ok -> detail = r.data
-                is ApiResult.Err -> error = r.message
+                is ApiResult.Err -> error = apiErrorText(r)
             }
         }
     }
@@ -174,6 +175,8 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                     // 确认页依赖方案摘要；详情直达模式不会进入本相位，摘要缺失时直接退出。
                     val dd = d ?: return@Column
                     SectionTitle(L10n.t("booking.confirm_title"))
+                    Spacer(Modifier.height(8.dp))
+                    EligibilityRiskNotice(dd.eligibility?.status)
                     JoyCard {
                         dd.legs.forEach { leg ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
@@ -214,7 +217,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                         phase = 2
                                     }
                                     is ApiResult.Err -> {
-                                        error = r.message
+                                        error = apiErrorText(r)
                                         if (r.code == "PARTIAL_BOOKING") {
                                             notice = L10n.t("booking.partial_notice")
                                             // 后端在错误细节里返回 intentId，用它加载部分订单并进入状态机页。
@@ -244,6 +247,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                         LoadingBlock()
                     } else {
                         val color = bookingStatusColor(b.status)
+                        EligibilityRiskNotice(b.eligibilityNotice?.decision ?: d?.eligibility?.status)
                         SectionTitle(L10n.t("booking.order_status"))
                         JoyCard {
                             Text(bookingStatusText(b.status), style = MaterialTheme.typography.titleMedium, color = color, fontWeight = FontWeight.Bold)
@@ -292,7 +296,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                             when (val r = apiCall { Net.api.confirmPrice(b.bookingId, ConfirmPriceRequest(target, pc?.currency)) }) {
                                                 is ApiResult.Ok -> booking = r.data.booking
                                                 is ApiResult.Err -> {
-                                                    error = r.message
+                                                    error = apiErrorText(r)
                                                     refreshBooking(b.bookingId)
                                                 }
                                             }
@@ -345,7 +349,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                                 when (val r = apiCall { Net.api.pay(b.bookingId, PayRequest(tokens)) }) {
                                                     is ApiResult.Ok -> booking = r.data.booking
                                                     is ApiResult.Err -> {
-                                                        error = r.message
+                                                        error = apiErrorText(r)
                                                         refreshBooking(b.bookingId)
                                                     }
                                                 }
@@ -365,7 +369,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                                 when (val r = apiCall { Net.api.mockPay(b.bookingId) }) {
                                                     is ApiResult.Ok -> booking = r.data.booking
                                                     is ApiResult.Err -> {
-                                                        error = r.message
+                                                        error = apiErrorText(r)
                                                         refreshBooking(b.bookingId)
                                                     }
                                                 }
@@ -389,7 +393,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                         scope.launch {
                                             when (val r = apiCall { Net.api.refreshTicketing(b.bookingId) }) {
                                                 is ApiResult.Ok -> booking = r.data.booking
-                                                is ApiResult.Err -> error = r.message
+                                                is ApiResult.Err -> error = apiErrorText(r)
                                             }
                                             loading = false
                                         }
@@ -456,4 +460,21 @@ private fun RiskCheckItem(checked: Boolean, onChecked: (Boolean) -> Unit) {
             Text(L10n.t("booking.risk4"), style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/**
+ * 入境资格风险提示（非阻断）：仅当状态为需补资料/需人工核对/不适用时展示；
+ * 免签“条件匹配”属正常路径不提示。不阻断下单，最终决定权在边检/领馆/航司。
+ */
+@Composable
+private fun EligibilityRiskNotice(status: String?) {
+    if (status == null) return
+    val label = when (status) {
+        "NEEDS_INFO" -> L10n.t("elig.badge_needs_info")
+        "NEEDS_REVIEW" -> L10n.t("elig.badge_needs_review")
+        "INELIGIBLE" -> L10n.t("elig.badge_ineligible")
+        else -> return
+    }
+    InfoBanner(L10n.t("booking.eligibility_risk", label))
+    Spacer(Modifier.height(10.dp))
 }

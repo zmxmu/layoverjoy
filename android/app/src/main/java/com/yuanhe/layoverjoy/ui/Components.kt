@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.yuanhe.layoverjoy.ui.i18n.L10n
+import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.ui.theme.BrandAccent
 import com.yuanhe.layoverjoy.ui.theme.BrandAmber
 import com.yuanhe.layoverjoy.ui.theme.BrandDanger
@@ -264,6 +265,16 @@ fun DateField(
             DatePicker(state = state)
         }
     }
+}
+
+/**
+ * 后端错误码 → 双语文案。code 是稳定契约（按 code 分支，不按 message）；
+ * 未知码回退 err.generic，**永不直显后端原文**（后端 message 为单语，直显会泄漏语言不一致）。
+ */
+fun apiErrorText(e: ApiResult.Err): String {
+    val key = "err." + e.code.lowercase()
+    val t = L10n.t(key)
+    return if (t == key) L10n.t("err.generic") else t
 }
 
 @Composable
