@@ -85,3 +85,14 @@
 - 结论：3060 档稳态 en≈3–4s；<2s 需更高 GPU 档位（带宽约 2–3 倍）或依赖落库缓存（展示瞬时，仅 Regenerate 付费等待）。演示视频建议录缓存展示或接受 ~4s Regenerate。
 - 坑：shell 中 export 的旧 NOSANA_* 会经 compose `${VAR:-default}` 覆盖 env_file——重建容器前必须 unset（本次曾因此注入旧端点致 503）。
 - 截图：`docs/screenshots/plan-detail-nosana-en.png`（3.8s 版本）。
+
+## NOSANA-FACTGUARD：金额移出 AI 职责 + 输出校验（2026-08-30）
+
+- 问题：3B 模型收到「逐字引用 savings」指令仍把 SGD 改写成 `$134.17`（曼谷详情页实测）。
+- 彻底方案：
+  - 金额/货币完全移出 AI 职责：prompt 禁止提及价格/金额/货币（UI JoyCard 已确定性展示票价差）；userPrompt 不再下发 savings。
+  - 输出校验兜底（09 文档 Zod 校验约定）：summary/highlights/tips 命中 `$|USD|SGD|dollar|美元|美金|欧元|€|¥|元` 判 VALIDATION_ERROR，带 STRICT REMINDER 重试一次，仍失败诚实降级模板。
+  - 顺带修正错误分类：'invalid explanation payload' 归 PARSE_ERROR 而非 NETWORK_ERROR。
+- 城市体验包标签更诚实：`人工精选 · 非实时库存` / `Curated · not live inventory`（回应“是否 mock”：人工维护的真实城市建议，非实时酒店库存）。
+- 验证：BKK/KUL × zh/en 四条重生成全部 provider=NOSANA、零金额表述、2.7–6s；真机当场生成 5.3s 干净输出。
+- 截图：`docs/screenshots/plan-detail-nosana-en.png`。

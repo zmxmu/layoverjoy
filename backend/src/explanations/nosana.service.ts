@@ -7,7 +7,11 @@ export type ExplanationFallbackReason =
   | 'TIMEOUT'
   | 'HTTP_ERROR'
   | 'PARSE_ERROR'
+  | 'VALIDATION_ERROR'
   | 'NETWORK_ERROR';
+
+/** 输出中禁止出现的货币/金额表述（金额由 UI 确定性展示，模型不得改写）。 */
+const MENTION_MONEY = /\$|USD|SGD|dollar|美元|美金|欧元|€|¥|元/;
 
 export interface ExplanationRequest {
   cityNameZh: string;
@@ -124,51 +128,42 @@ export class NosanaService {
     const startedAt = Date.now();
     const deadline = startedAt + env.NOSANA_TIMEOUT_MS;
     const lang = req.lang ?? 'zh';
-    // 票价差文案由后端确定性计算，小模型只能逐字引用，杜绝改写货币/数值。
-    const savings =
-      req.airfareDelta < 0
-        ? lang === 'en'
-          ? `saves about ${Math.abs(req.airfareDelta)} ${req.currency} versus a direct flight`
-          : `相比直飞节省约 ${Math.abs(req.airfareDelta)} ${req.currency}`
-        : req.airfareDelta > 0
-          ? lang === 'en'
-            ? `costs about ${req.airfareDelta} ${req.currency} more than a direct flight`
-            : `相比直飞多花约 ${req.airfareDelta} ${req.currency}`
-          : lang === 'en'
-            ? 'priced on par with a direct flight'
-            : '与直飞价格相当';
-    const systemPrompt =
-      lang === 'en'
-        ? [
-            'You are the LayoverJoy travel experience narrator. Only narrate the structured facts provided; never invent or recompute flights, prices, visa conclusions or order status.',
-            'Output MUST be valid JSON: {"summary": string, "highlights": string[], "tips": string[]}',
-            'Language: English only (never mix other languages); summary within 30 words; highlights exactly 1; tips exactly 1.',
-            'When mentioning the fare difference, use the provided "savings" phrase verbatim.',
-          ].join('\n')
-        : [
-            '你是 LayoverJoy 的旅行体验解说员。只解说已给出的结构化事实，不生成新的航班、价格、签证结论或订单状态。',
-            '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
-            '语言：简体中文；summary 不超过 45 字；highlights 1 条；tips 1 条。',
-            '提及票价差时必须逐字使用提供的 savings 短语。',
-          ].join('\n');
-    // 小模型只负责“解说”，事实由后端确定性计算；输入从简以压低延迟。
+    // 金额/货币是确定性事实（详情页 JoyCard 已展示）；3B 模型曾把 SGD 改写成 $/USD，
+    // 故将其完全移出 AI 职责，并用输出校验兜底（见 MENTION_MONEY 校验）。
     const userPrompt = JSON.stringify({
       city: lang === 'en' ? (req.cityNameEn?.trim() || req.cityNameZh) : req.cityNameZh,
       stayDays: req.stayDays,
       usableHours: req.usableHours,
-      savings,
       joyScore: req.joyScore,
       riskFlags: req.riskFlags,
     });
+    const buildSystemPrompt = (strict: boolean) =>
+      lang === 'en'
+        ? [
+            'You are the LayoverJoy travel experience narrator. Only narrate the travel experience (time, comfort, risks, activities); never invent or recompute flights, prices, visa conclusions or order status.',
+            'NEVER mention prices, costs, savings, amounts or any currency code/symbol — the app displays them elsewhere.',
+            'Output MUST be valid JSON: {"summary": string, "highlights": string[], "tips": string[]}',
+            'Language: English only (never mix other languages); summary within 30 words; highlights exactly 1; tips exactly 1.',
+            ...(strict ? ['STRICT REMINDER: your previous output was rejected for containing a price/amount/currency; remove all of them.'] : []),
+          ].join('\n')
+        : [
+            '你是 LayoverJoy 的旅行体验解说员。只解说旅行体验（时间、舒适度、风险、玩法），不生成新的航班、价格、签证结论或订单状态。',
+            '严禁提及任何价格、费用、节省金额或货币代码/符号——界面其他位置已展示。',
+            '输出必须是合法 JSON：{"summary": string, "highlights": string[], "tips": string[]}',
+            '语言：简体中文；summary 不超过 45 字；highlights 1 条；tips 1 条。',
+            ...(strict ? ['严格提醒：上一次输出因包含价格/金额/货币被拒绝，必须全部移除。'] : []),
+          ].join('\n');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
     // 接口风格自适应：Ollama 原生 /api/chat 优先（可对 qwen3 系关思考，实测 10 倍提速）；
     // 部署若为 vLLM 等非 Ollama 栈（原生接口 404/405）自动改用 OpenAI 兼容 /v1/chat/completions。
     let style: 'native' | 'openai' = 'native';
+    let strict = false;
     for (let attempt = 1; attempt <= 2; attempt++) {
       const budgetMs = deadline - Date.now();
       if (budgetMs < 5000) break;
+      const systemPrompt = buildSystemPrompt(strict);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), budgetMs);
       try {
@@ -210,6 +205,15 @@ export class NosanaService {
           style === 'native' ? (data?.message?.content ?? '') : (data?.choices?.[0]?.message?.content ?? '');
         const parsed = JSON.parse(content);
         if (typeof parsed.summary !== 'string' || !parsed.summary) throw new Error('invalid explanation payload');
+        // 输出校验（09 文档约定）：命中货币/金额表述即判失败，重试一次再降级模板。
+        const texts: unknown[] = [
+          parsed.summary,
+          ...(Array.isArray(parsed.highlights) ? parsed.highlights : []),
+          ...(Array.isArray(parsed.tips) ? parsed.tips : []),
+        ];
+        if (texts.some((t) => typeof t === 'string' && MENTION_MONEY.test(t))) {
+          throw new Error('validation: output mentions money');
+        }
         NosanaService.lastInferenceSucceededAt = new Date().toISOString();
         NosanaService.lastErrorCategory = null;
         return {
@@ -225,12 +229,16 @@ export class NosanaService {
         };
       } catch (e) {
         const aborted = (e as Error).name === 'AbortError';
+        const msg = (e as Error).message ?? '';
         const reason: ExplanationFallbackReason = aborted
           ? 'TIMEOUT'
-          : e instanceof SyntaxError
-            ? 'PARSE_ERROR'
-            : 'NETWORK_ERROR';
+          : msg.startsWith('validation')
+            ? 'VALIDATION_ERROR'
+            : e instanceof SyntaxError || msg.includes('invalid explanation payload')
+              ? 'PARSE_ERROR'
+              : 'NETWORK_ERROR';
         NosanaService.lastErrorCategory = reason;
+        if (reason === 'VALIDATION_ERROR' && attempt === 1) strict = true;
         if (aborted || attempt === 2) {
           this.logger.warn(`Nosana call failed (${(e as Error).message}); falling back to template explanation`);
           return this.templateExplanation(req, reason);
