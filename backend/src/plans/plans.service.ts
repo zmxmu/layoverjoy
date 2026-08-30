@@ -1,10 +1,78 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { NosanaService } from '../explanations/nosana.service';
 import { buildExperienceContext, EXPERIENCE_CATALOG_VERSION, PROMPT_VERSION } from '../explanations/experience-context.builder';
 import { CITY_PACKS, HUB_CATALOG } from '../airports/catalog';
 import { AppError } from '../common/errors';
+
+export interface RequiredDocumentOut {
+  code: string;
+  mandatory: boolean;
+  descriptionZh: string | null;
+  descriptionEn: string | null;
+  factPaths: string[];
+}
+
+/** 已知证件/材料代码的双语名称（旧引擎字符串与 v2 对象共用）。 */
+export const REQUIRED_DOC_I18N: Record<string, { zh: string; en: string }> = {
+  PASSPORT_VALID_6_MONTHS: { zh: '护照剩余有效期至少六个月', en: 'Passport valid for at least six months' },
+  MDAC: { zh: '按要求提交马来西亚数字入境卡（MDAC）', en: 'Submit the Malaysia Digital Arrival Card (MDAC) as required' },
+  ONWARD_TICKET: { zh: '持返程或续程机票', en: 'Hold a return or onward ticket' },
+  CONFIRMED_ONWARD_TICKET: { zh: '持已确认的续程机票', en: 'Hold a confirmed onward ticket' },
+  ACCOMMODATION_OR_ADDRESS: { zh: '准备住宿证明或地址申报', en: 'Provide accommodation or address declaration' },
+  ACCOMMODATION_OR_INVITATION: { zh: '准备住宿、邀请或访问目的证明', en: 'Provide accommodation, invitation or purpose proof' },
+  SUFFICIENT_FUNDS_DECLARATION: { zh: '足够资金申报', en: 'Sufficient funds declaration' },
+  SUFFICIENT_FUNDS: { zh: '按入境要求准备足够旅行资金', en: 'Prepare sufficient travel funds' },
+  PH_TRANSIT_VISA: { zh: '以菲律宾第三国过境须预先取得过境签证', en: 'Philippines transit visa required for third-country transit' },
+};
+
+const docLogger = new Logger('RequiredDocuments');
+
+/**
+ * 统一 requiredDocuments 输出契约：对象数组。
+ * 兼容旧快照（字符串数组）与 v2 快照（对象数组）；单条异常跳过并记录脱敏 warning，
+ * 不得导致整个方案详情接口失败。
+ */
+export function normalizeRequiredDocuments(raw: any): RequiredDocumentOut[] {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) {
+    docLogger.warn(`requiredDocuments: unexpected type ${typeof raw}; normalized to []`);
+    return [];
+  }
+  const out: RequiredDocumentOut[] = [];
+  raw.forEach((item: any, idx: number) => {
+    try {
+      if (typeof item === 'string' && item.trim()) {
+        const code = item.trim();
+        out.push({
+          code,
+          mandatory: true,
+          descriptionZh: REQUIRED_DOC_I18N[code]?.zh ?? null,
+          descriptionEn: REQUIRED_DOC_I18N[code]?.en ?? null,
+          factPaths: [],
+        });
+        return;
+      }
+      if (item && typeof item === 'object' && typeof item.code === 'string' && item.code.trim()) {
+        const code = item.code.trim();
+        const factPaths = Array.isArray(item.factPaths) ? item.factPaths.filter((p: any) => typeof p === 'string') : [];
+        out.push({
+          code,
+          mandatory: item.mandatory === false ? false : true,
+          descriptionZh: typeof item.descriptionZh === 'string' ? item.descriptionZh : (REQUIRED_DOC_I18N[code]?.zh ?? null),
+          descriptionEn: typeof item.descriptionEn === 'string' ? item.descriptionEn : (REQUIRED_DOC_I18N[code]?.en ?? null),
+          factPaths,
+        });
+        return;
+      }
+      docLogger.warn(`requiredDocuments[${idx}]: invalid item type ${item === null ? 'null' : typeof item}; skipped`);
+    } catch (e) {
+      docLogger.warn(`requiredDocuments[${idx}]: normalize failed (${(e as Error).name}); skipped`);
+    }
+  });
+  return out;
+}
 
 /** 语言参数归一化：仅接受 en，其余一律 zh。 */
 export function normLang(lang?: string): 'zh' | 'en' {
@@ -82,9 +150,7 @@ export class PlansService {
             ruleId: eligibility.ruleId,
             ruleVersion: eligibility.ruleVersion,
             reasonCodes: eligibility.reasonCodesJson ?? [],
-            requiredDocuments: ((eligibility.requiredDocsJson as any[]) ?? []).map((r: any) =>
-              typeof r === 'string' ? r : (r?.descriptionZh ?? r?.code ?? JSON.stringify(r)),
-            ),
+            requiredDocuments: normalizeRequiredDocuments(eligibility.requiredDocsJson),
             sourceUrl: eligibility.sourceUrl,
             verifiedAt: eligibility.verifiedAt,
             assessment: eligibility.assessmentJson ?? null,
@@ -107,7 +173,6 @@ export class PlansService {
     };
   }
 
-  /** 生成并保存解释。Nosana 失败时自动降级为模板解释；缓存按语言失效。 */
   /** 详情页顶部一次性体验窗口 + 便利度（无模型参与）。 */
   private buildExperiencePreview(plan: any, offers: any[], eligibilityStatus: string | null) {
     if (!plan?.stopoverCityId || offers.length < 2) return null;

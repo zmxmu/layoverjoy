@@ -328,6 +328,22 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                             Text(L10n.t("detail.eligibility_rule", e.ruleId ?: "-", e.ruleVersion ?: "-"), style = MaterialTheme.typography.labelSmall)
                             Text(L10n.t("detail.eligibility_verified", e.verifiedAt?.take(10) ?: "-"), style = MaterialTheme.typography.labelSmall)
                             if (e.sourceUrl != null) Text(L10n.t("detail.eligibility_source", e.sourceUrl), style = MaterialTheme.typography.labelSmall, color = BrandPrimary)
+                            // 所需旅行证件：语言回退 description → code 本地化 → code；空则不渲染。
+                            if (e.requiredDocuments.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(L10n.t("detail.docs_title"), style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
+                                e.requiredDocuments.forEach { doc ->
+                                    val text =
+                                        if (L10n.current == AppLanguage.EN) doc.descriptionEn ?: doc.descriptionZh
+                                        else doc.descriptionZh ?: doc.descriptionEn
+                                    val label = text ?: L10n.t("doc.code.${doc.code}").takeIf { it != "doc.code.${doc.code}" } ?: doc.code
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("· $label", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                                        if (doc.mandatory) Text(L10n.t("detail.docs_mandatory"), style = MaterialTheme.typography.labelSmall, color = BrandAccent)
+                                    }
+                                }
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))

@@ -149,3 +149,15 @@
 - 测试：vitest 58/58（ease 确定性、validator 拒绝、模板同结构、兴趣影响）；check-i18n 306 keys。
 - 真机：v2 卡完整渲染（headline/优势/抵达日-完整日-离境日/51 分需规划/取舍），UI 无模型元数据，
   Logcat 含脱敏 LayoverJoyAI 行。
+
+## FIX-DOCS：requiredDocuments 统一对象数组契约（2026-08-30）
+
+- 根因：v2 规则引擎快照把 requirements 对象数组写入 requiredDocsJson，Android DTO 原为 List<String>，
+  kotlinx.serialization 在 $.eligibility.requiredDocuments[0] 抛 JsonDecodingException。
+- 正式契约：requiredDocuments 为对象数组 {code, mandatory, descriptionZh, descriptionEn, factPaths}；
+  后端 PlansService.normalizeRequiredDocuments() 归一（null→[]、字符串→对象、对象补默认、无效跳过+脱敏 warning）。
+- Android：RequiredDocumentDto + RequiredDocumentSerializer（string-or-object 兼容，未知字段忽略）。
+- UI：入境资格证据卡内「所需旅行证件」按当前语言显示 description，回退 code 本地化→code，mandatory 显示「必须」，空不渲染。
+- 测试：backend vitest 66/66（含 8 例归一化）；Android JUnit 5/5（对象/字符串/null/混合/未知字段）。
+- Fixture：fixtures/api/plan-detail-required-documents.json（脱敏）。
+- 真机：旧/新方案详情均正常打开，Logcat 0 条 JsonDecodingException；未触碰 Atlas 凭据/搜索/Verify。

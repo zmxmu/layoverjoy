@@ -1,0 +1,45 @@
+{
+  "fixture": "plan-detail-required-documents",
+  "sanitized": true,
+  "notes": "脱敏示例：不含 Access Key / Secret / JWT / 用户邮箱 / 真实证件号码。requiredDocuments 正式契约为对象数组；legacyInputs 展示旧快照形态（后端 normalizeRequiredDocuments 与 Android RequiredDocumentSerializer 均兼容）。",
+  "contract": {
+    "eligibility": {
+      "status": "ELIGIBLE",
+      "ruleId": "CN-ORD-MY-VISA-FREE-2025",
+      "ruleVersion": "2026-08-29.1",
+      "reasonCodes": ["VISA_EXEMPT", "STAY_WITHIN_LIMIT", "ONWARD_TICKET_PENDING_VERIFY"],
+      "requiredDocuments": [
+        {
+          "code": "PASSPORT_VALID_6_MONTHS",
+          "mandatory": true,
+          "descriptionZh": "护照剩余有效期至少六个月",
+          "descriptionEn": "Passport valid for at least six months",
+          "factPaths": ["traveler.passport.expiryDate"]
+        },
+        {
+          "code": "CONFIRMED_ONWARD_TICKET",
+          "mandatory": true,
+          "descriptionZh": "持已确认的续程机票",
+          "descriptionEn": "Hold a confirmed onward ticket",
+          "factPaths": ["documents.onwardTicket.status"]
+        },
+        {
+          "code": "MDAC",
+          "mandatory": true,
+          "descriptionZh": "按要求提交马来西亚数字入境卡（MDAC）",
+          "descriptionEn": "Submit the Malaysia Digital Arrival Card (MDAC) as required",
+          "factPaths": ["documents.arrivalCard.status"]
+        }
+      ],
+      "sourceUrl": "https://malaysiavisa.imi.gov.my/faq/",
+      "verifiedAt": "2026-08-30"
+    }
+  },
+  "legacyInputs": {
+    "stringArray": ["CONFIRMED_ONWARD_TICKET", "ACCOMMODATION_OR_ADDRESS", "SUFFICIENT_FUNDS_DECLARATION"],
+    "null": null,
+    "emptyArray": [],
+    "mixed": ["ONWARD_TICKET", { "code": "MDAC", "mandatory": false }],
+    "unknownFields": [{ "code": "FUTURE_CODE", "mandatory": true, "someFutureField": { "nested": true } }]
+  }
+}

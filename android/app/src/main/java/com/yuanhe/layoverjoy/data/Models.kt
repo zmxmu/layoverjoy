@@ -2,7 +2,19 @@ package com.yuanhe.layoverjoy.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * 与后端 API 契约一一对应的数据模型。
@@ -464,10 +476,56 @@ data class EligibilityDetailDto(
     val ruleId: String? = null,
     val ruleVersion: String? = null,
     val reasonCodes: List<String> = emptyList(),
-    val requiredDocuments: List<String> = emptyList(),
+    val requiredDocuments: List<RequiredDocumentDto> = emptyList(),
     val sourceUrl: String? = null,
     val verifiedAt: String? = null,
 )
+
+/**
+ * 所需旅行证件（统一对象数组契约）。
+ * string-or-object 兼容：旧快照字符串 → code 对象；对象 → 正常解析；未知字段忽略；
+ * 单条异常不得导致详情页崩溃。
+ */
+@Serializable(with = RequiredDocumentSerializer::class)
+data class RequiredDocumentDto(
+    val code: String = "",
+    val mandatory: Boolean = true,
+    val descriptionZh: String? = null,
+    val descriptionEn: String? = null,
+    val factPaths: List<String> = emptyList(),
+)
+
+object RequiredDocumentSerializer : KSerializer<RequiredDocumentDto> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("RequiredDocumentDto")
+
+    override fun deserialize(decoder: Decoder): RequiredDocumentDto {
+        val element = (decoder as JsonDecoder).decodeJsonElement()
+        return when (element) {
+            is JsonPrimitive -> RequiredDocumentDto(code = element.contentOrNull ?: "")
+            is JsonObject -> RequiredDocumentDto(
+                code = element["code"]?.jsonPrimitive?.contentOrNull ?: "",
+                mandatory = element["mandatory"]?.jsonPrimitive?.booleanOrNull ?: true,
+                descriptionZh = element["descriptionZh"]?.jsonPrimitive?.contentOrNull,
+                descriptionEn = element["descriptionEn"]?.jsonPrimitive?.contentOrNull,
+                factPaths = (element["factPaths"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList(),
+            )
+            else -> RequiredDocumentDto()
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: RequiredDocumentDto) {
+        val obj = JsonObject(
+            buildMap {
+                put("code", JsonPrimitive(value.code))
+                put("mandatory", JsonPrimitive(value.mandatory))
+                value.descriptionZh?.let { put("descriptionZh", JsonPrimitive(it)) }
+                value.descriptionEn?.let { put("descriptionEn", JsonPrimitive(it)) }
+                put("factPaths", JsonArray(value.factPaths.map { JsonPrimitive(it) }))
+            },
+        )
+        (encoder as JsonEncoder).encodeJsonElement(obj)
+    }
+}
 
 /** GET /v1/plans/:id 返回扁平结构。 */
 @Serializable
