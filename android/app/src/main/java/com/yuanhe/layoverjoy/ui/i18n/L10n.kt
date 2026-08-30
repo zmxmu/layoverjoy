@@ -77,7 +77,7 @@ object L10n {
         "tab.trips" to "行程",
         "tab.profile" to "我的",
         // 登录/注册
-        "auth.app_name" to "转机的乐趣",
+        "auth.app_name" to "LayoverJoy",
         "auth.tagline" to "把一次中转，变成第二个目的地。",
         "auth.login" to "登录",
         "auth.register" to "注册",
@@ -398,7 +398,7 @@ object L10n {
         "profile.privacy_sub" to "我们不保存什么",
         "profile.privacy_body" to "· 不收集护照号码、姓名与证件照片，只保留签发国家、类型与有效期；\n· Nosana 与 Daytona 只接收脱敏后的方案数据，不包含任何个人身份信息。",
         "profile.about" to "关于",
-        "profile.about_sub" to "转机的乐趣 v{1}",
+        "profile.about_sub" to "LayoverJoy v{1}",
         "profile.logout" to "退出登录",
     )
 
