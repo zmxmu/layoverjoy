@@ -113,6 +113,16 @@ export class PlansService {
     const explanation = await this.prisma.planExplanation.findUnique({ where: { planId: plan.id } });
     const city = this.cityOf(plan.stopoverCityId);
     const pack = plan.stopoverCityId ? CITY_PACKS[plan.stopoverCityId] : undefined;
+    // 基准语义：baseline 的航段数决定 UI 用 nonstop 还是 best-flight 文案。
+    const baselineSnap = plan.baselineDirectOfferSnapshotId
+      ? await this.prisma.flightOfferSnapshot.findUnique({
+          where: { id: plan.baselineDirectOfferSnapshotId },
+          select: { segmentsJson: true },
+        })
+      : null;
+    const baselineSegmentsCount = baselineSnap && Array.isArray(baselineSnap.segmentsJson)
+      ? (baselineSnap.segmentsJson as unknown[]).length
+      : 0;
 
     return {
       planId: plan.id,
@@ -138,9 +148,11 @@ export class PlansService {
           isSimulated: o!.isSimulated,
           sourceProvider: o!.sourceProvider,
           providerOfferId: o!.providerOfferId,
+          segmentsCount: Array.isArray(o!.segmentsJson) ? (o!.segmentsJson as unknown[]).length : 0,
         })),
       airfareTotal: plan.airfareTotal,
       airfareDelta: plan.airfareDelta,
+      baselineSegmentsCount,
       currency: plan.currency,
       costBreakdown: plan.costBreakdownJson,
       joyScore: plan.joyScore,

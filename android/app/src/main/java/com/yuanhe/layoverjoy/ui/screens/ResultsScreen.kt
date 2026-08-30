@@ -41,6 +41,7 @@ import com.yuanhe.layoverjoy.data.PlansResponse
 import com.yuanhe.layoverjoy.data.SearchStatusResponse
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
+import com.yuanhe.layoverjoy.ui.BaselineLabels
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.Routes
@@ -168,13 +169,14 @@ fun ResultsScreen(nav: NavController, runId: String) {
                 plans?.let { p ->
                     item {
                         Spacer(Modifier.height(8.dp))
-                        SectionTitle(L10n.t("results.direct_baseline"))
+                        // 基准语义动态化：单段=Nonstop/直飞，多段=Best flight/最佳基准，未知不宣称直飞。
+                        SectionTitle(L10n.t(BaselineLabels.titleKey(p.directBaseline?.offer?.segmentsCount ?: 0)))
                     }
                     item {
                         val offer = p.directBaseline?.offer
                         JoyCard {
                             if (offer == null) {
-                                Text(L10n.t("results.no_direct"), style = MaterialTheme.typography.bodySmall)
+                                Text(L10n.t(BaselineLabels.noBaselineKey()), style = MaterialTheme.typography.bodySmall)
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -222,11 +224,12 @@ fun PlanCard(plan: PlanDto, context: PlansResponse?, onClick: () -> Unit) {
             Text(fmtPrice(plan.airfareTotal, plan.currency), style = MaterialTheme.typography.titleMedium, color = BrandPrimary, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(8.dp))
             val delta = plan.airfareDelta
+            val bc = plan.baselineSegmentsCount
             Text(
                 when {
-                    delta > 0 -> L10n.t("results.delta_up", "%.0f".format(delta))
-                    delta < 0 -> L10n.t("results.delta_down", "%.0f".format(-delta))
-                    else -> L10n.t("results.delta_flat")
+                    delta > 0 -> L10n.t(BaselineLabels.deltaUpKey(bc), "%.0f".format(delta))
+                    delta < 0 -> L10n.t(BaselineLabels.deltaDownKey(bc), "%.0f".format(-delta))
+                    else -> L10n.t(BaselineLabels.deltaFlatKey(bc))
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = if (delta > 0) BrandAccent else BrandPrimary,

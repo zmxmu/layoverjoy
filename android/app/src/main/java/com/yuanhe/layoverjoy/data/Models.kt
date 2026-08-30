@@ -144,6 +144,8 @@ data class OpportunityDetail(
     val currency: String = "",
     val airfareTotal: Double? = null,
     val directAirfare: Double? = null,
+    // 基准语义：1=nonstop，>1=best flight baseline，0=未知（不得宣称直飞）。
+    val directSegmentsCount: Int = 0,
     val airfareDelta: Double? = null,
     val estimatedTripTotal: Double? = null,
     val joyScore: Int = 0,
@@ -249,6 +251,7 @@ data class OfferDto(
     val currency: String = "SGD",
     val totalPrice: Double = 0.0,
     val priceStatus: String = "current",
+    val segmentsCount: Int = 0,
     val isSimulated: Boolean = true,
     val sourceProvider: String = "ATLAS_SANDBOX",
 )
@@ -287,6 +290,7 @@ data class PlanDto(
     val legs: List<OfferDto?> = emptyList(),
     val airfareTotal: Double = 0.0,
     val airfareDelta: Double = 0.0,
+    val baselineSegmentsCount: Int = 0,
     val currency: String = "SGD",
     val costBreakdown: CostBreakdown? = null,
     val joyScore: Int = 0,
@@ -539,6 +543,7 @@ data class PlanDetailDto(
     val legs: List<OfferDto> = emptyList(),
     val airfareTotal: Double = 0.0,
     val airfareDelta: Double = 0.0,
+    val baselineSegmentsCount: Int = 0,
     val currency: String = "SGD",
     val costBreakdown: CostBreakdown? = null,
     val joyScore: Int = 0,

@@ -79,7 +79,7 @@ export class HomeService {
     const directOffer = await this.prisma.flightOfferSnapshot.findFirst({
       where: { searchRunId: run.id, role: 'DIRECT_BASELINE' },
       orderBy: { capturedAt: 'desc' },
-      select: { totalPrice: true },
+      select: { totalPrice: true, segmentsJson: true },
     });
 
     // 9) 报价过期时间：方案所含 Offer（含直飞基准）中最早的非空 expiresAt。
@@ -115,6 +115,10 @@ export class HomeService {
       currency: best.currency,
       airfareTotal: best.airfareTotal,
       directAirfare: directOffer ? directOffer.totalPrice : null,
+      // 基准语义：1=nonstop，>1=best flight baseline，0=未知（UI 不得宣称直飞）。
+      directSegmentsCount: directOffer && Array.isArray(directOffer.segmentsJson)
+        ? (directOffer.segmentsJson as unknown[]).length
+        : 0,
       airfareDelta: directOffer ? best.airfareDelta : null,
       estimatedTripTotal: typeof costTotal === 'number' ? costTotal : null,
       joyScore: best.joyScore,

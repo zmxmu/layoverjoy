@@ -158,11 +158,13 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
     val prefsRepo = remember { LayoverJoyApp.instance.searchPreferences }
 
     var originSel by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf<LocationSelection?>(null) }
-    // P1-5：灵感卡预填为事件流——搜索页即使已带旧草稿组合，进入/点击后也必须覆盖目的地。
     var destSel by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf<LocationSelection?>(null) }
+    // 恢复必须先于灵感预填完成；否则两个 LaunchedEffect 竞态时，旧缓存会覆盖用户刚点击的城市。
+    var restored by rememberSaveable { mutableStateOf(false) }
+    // P1-5：搜索页即使已带旧草稿，灵感卡的新目的地也必须最后覆盖它。
     val prefill by SearchPrefill.pending.collectAsState()
-    LaunchedEffect(prefill) {
-        prefill?.let { req ->
+    LaunchedEffect(prefill, restored) {
+        if (restored) prefill?.let { req ->
             destSel = LocationSelection(req.cityId, LocationSelectionMode.ALL_AIRPORTS)
             SearchPrefill.consume(req.token)
         }
@@ -180,7 +182,6 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
     var error by remember { mutableStateOf<String?>(null) }
 
     // 恢复只做一次；「建议」文案只在系统推算日期后展示一次，用户动过日期即消失。
-    var restored by rememberSaveable { mutableStateOf(false) }
     var suggestion by rememberSaveable { mutableStateOf<String?>(null) }
     // 用户真实改动计数：自动推算出的日期不反过来污染缓存（§4.3 只保存用户行为）。
     var userEdits by rememberSaveable { mutableIntStateOf(0) }

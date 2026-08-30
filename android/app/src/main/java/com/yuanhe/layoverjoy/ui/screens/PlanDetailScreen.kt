@@ -51,6 +51,7 @@ import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.PlanDetailDto
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.Badge
+import com.yuanhe.layoverjoy.ui.BaselineLabels
 import com.yuanhe.layoverjoy.ui.ErrorBanner
 import com.yuanhe.layoverjoy.ui.apiErrorText
 import com.yuanhe.layoverjoy.ui.InfoBanner
@@ -170,7 +171,7 @@ fun PlanDetailScreen(nav: NavController, planId: String) {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(fmtPrice(d.airfareTotal, d.currency), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(
-                                    if (d.airfareDelta > 0) L10n.t("results.delta_up", "%.0f ${d.currency}".format(d.airfareDelta)) else if (d.airfareDelta < 0) L10n.t("results.delta_down", "%.0f ${d.currency}".format(-d.airfareDelta)) else L10n.t("results.delta_flat"),
+                                    if (d.airfareDelta > 0) L10n.t(BaselineLabels.deltaUpKey(d.baselineSegmentsCount), "%.0f ${d.currency}".format(d.airfareDelta)) else if (d.airfareDelta < 0) L10n.t(BaselineLabels.deltaDownKey(d.baselineSegmentsCount), "%.0f ${d.currency}".format(-d.airfareDelta)) else L10n.t(BaselineLabels.deltaFlatKey(d.baselineSegmentsCount)),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (d.airfareDelta > 0) BrandAccent else BrandPrimary,
                                 )

@@ -46,6 +46,7 @@ import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.data.catalog.LocationCatalog
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.Badge
+import com.yuanhe.layoverjoy.ui.BaselineLabels
 import com.yuanhe.layoverjoy.ui.JoyCard
 import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SectionTitle
@@ -290,8 +291,8 @@ private fun MetricsGrid(o: OpportunityDetail) {
         o.airfareTotal?.let { add(L10n.t("home.opportunity_airfare_total", fmtPrice(it, o.currency))) }
         o.airfareDelta?.let { d ->
             add(
-                if (d >= 0) L10n.t("home.opportunity_more_than_direct", fmtPrice(d, o.currency))
-                else L10n.t("home.opportunity_less_than_direct", fmtPrice(-d, o.currency)),
+                if (d >= 0) L10n.t(BaselineLabels.homeMoreKey(o.directSegmentsCount), fmtPrice(d, o.currency))
+                else L10n.t(BaselineLabels.homeLessKey(o.directSegmentsCount), fmtPrice(-d, o.currency)),
             )
         }
         add(L10n.t("home.opportunity_usable_days", "%.1f".format(o.usableHours / 24)))

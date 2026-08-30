@@ -158,6 +158,8 @@ export class SearchService {
         isSimulated: o.isSimulated,
         sourceProvider: o.sourceProvider,
         providerOfferId: o.providerOfferId,
+        // 基准语义：1=nonstop，>1=best flight baseline；旧快照无 segmentsJson 时返回 0（UI 不得宣称直飞）。
+        segmentsCount: Array.isArray(o.segmentsJson) ? (o.segmentsJson as unknown[]).length : 0,
       };
     };
 
