@@ -83,6 +83,7 @@ export class PlansService {
             requiredDocuments: eligibility.requiredDocsJson ?? [],
             sourceUrl: eligibility.sourceUrl,
             verifiedAt: eligibility.verifiedAt,
+            assessment: eligibility.assessmentJson ?? null,
           }
         : null,
       cityPack: pack

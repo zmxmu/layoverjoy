@@ -90,6 +90,10 @@ data class DocumentInput(
     val passportType: String? = null,
     val visaType: String? = null,
     val entryType: String? = null,
+    val entryCount: String? = null,
+    val verificationMode: String? = null,
+    val issuerCountry: String? = null,
+    val usedBefore: Boolean? = null,
     val remainingEntries: Int? = null,
     val validFrom: String? = null,
     val expiresOn: String? = null,
@@ -291,6 +295,44 @@ data class EligibilityDto(
     val reasonCodes: List<String> = emptyList(),
     val sourceUrl: String? = null,
     val verifiedAt: String? = null,
+    val assessment: AssessmentDto? = null,
+)
+
+@Serializable
+data class AssessmentDto(
+    val searchDecision: String = "",
+    val bookingDecision: String = "",
+    val matchedRuleIds: List<String> = emptyList(),
+    val missingFacts: List<String> = emptyList(),
+    val requirements: List<AssessmentRequirement> = emptyList(),
+    val explanationZh: String = "",
+    val warningsZh: List<String> = emptyList(),
+    val sources: List<AssessmentSource> = emptyList(),
+    val maxStay: AssessmentMaxStay? = null,
+    val entryMode: String? = null,
+    val category: String? = null,
+    val disclaimerZh: String = "",
+)
+
+@Serializable
+data class AssessmentRequirement(
+    val code: String = "",
+    val status: String = "",
+    val descriptionZh: String = "",
+)
+
+@Serializable
+data class AssessmentSource(
+    val sourceId: String = "",
+    val authority: String = "",
+    val url: String = "",
+    val lastCheckedAt: String = "",
+)
+
+@Serializable
+data class AssessmentMaxStay(
+    val value: Int = 0,
+    val unit: String = "DAYS",
 )
 
 @Serializable

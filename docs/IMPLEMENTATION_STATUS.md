@@ -113,3 +113,22 @@
 - 测试：tsc EXIT 0；vitest 14/14；check-i18n 284 keys；Gradle BUILD SUCCESSFUL。
 - 坑：选择结果回填最初用内存 pendingRole，导航 dispose 后丢失导致选到错误角色；改为按角色键
   `location_selection_{ROLE}` 写回 savedStateHandle，地点状态改 rememberSaveable（JSON Saver）。
+
+## ENTRY-RULES-V2：中国普通护照入境规则引擎（13 号方案，2026-08-30）
+
+- 单一事实源：`backend/src/entry-rules/data/cn-ordinary-passport-entry-rules.v2.json`（schema 2.0.0，
+  启动时 `RuleCatalogLoader` 校验+checksum+原子激活；校验失败健康降级，绝不部分激活）。
+- 新表：EntryRuleSet/EntryRuleV2/EntryRuleSource/EligibilityAssessment/EligibilityEvidenceSnapshot；
+  TravelDocument 增 entryCount/verificationMode/issuerCountry/usedBefore；旧 EntryRule 表仅读保留。
+- 引擎：三值逻辑（UNKNOWN→missingFacts→NEEDS_INFO）；HAS_VALID_DOCUMENT（多次/排除C类/剩余期）；
+  ROUTE_MATCHES（A-HK-B 真实第三国、KR 签证国方向、富国岛区域）；负向规则优先（PH 过境 INELIGIBLE 覆盖 14 天）；
+  硬事实失败（护照有效期/累计停留）→INELIGIBLE；临时政策 effectiveTo 零点失效；搜索期仅缺材料/声明时
+  CONDITIONAL+MATERIAL_PENDING_VERIFY，预订至少 NEEDS_REVIEW。
+- API：POST /v1/entry-eligibility/assess（合并证件钱包）、GET assessments/:id、ruleset、
+  admin import/activate/rollback/review-queue。
+- 集成：搜索编排换 v2 预筛（INELIGIBLE 不调 Atlas；NEEDS_REVIEW 不冒充可预订）；Order/Pay 前 BOOKING 重评阻断
+  （BOOKING_ELIGIBILITY_FAILED + EXPIRED 流转保留）；结果页资格卡（徽章/结论/停留上限/材料/依据/法律提示）。
+- 验收：API 三场景（SIN→ICN→LAX 无签 NEEDS_INFO / 有 B1B2 CONDITIONAL+NEEDS_REVIEW / 改 PVG 不命中第三国规则）、
+  PH 过境 INELIGIBLE、SG 互免非 VFTF、HK 真实过境 CONDITIONAL vs 往返 NEEDS_REVIEW、KH 10-10 ELIGIBLE / 10-16 NEEDS_REVIEW。
+- 测试：vitest 41/41（含 T-01~T-12/T-17/T-18/T-23/T-24 子集、Saga 门禁）；check-i18n 300 keys。
+- 真机：SIN→LAX 结果页香港「条件匹配」、曼谷/吉隆坡「证件匹配」+ 法律提示行。

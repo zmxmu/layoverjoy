@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.yuanhe.layoverjoy.data.ApiResult
+import com.yuanhe.layoverjoy.data.EligibilityDto
 import com.yuanhe.layoverjoy.data.Net
 import com.yuanhe.layoverjoy.data.PlanDto
 import com.yuanhe.layoverjoy.data.PlansResponse
@@ -60,6 +61,7 @@ private val FUNNEL_STATUS_KEY = mapOf(
     "ELIGIBLE" to "funnel.eligible",
     "INELIGIBLE" to "funnel.ineligible",
     "NEEDS_INFO" to "funnel.needs_info",
+    "NEEDS_REVIEW" to "funnel.needs_review",
     "NO_INVENTORY" to "funnel.no_inventory",
     "EXPERIENCE_REJECTED" to "funnel.experience_rejected",
     "FAILED" to "funnel.failed",
@@ -230,6 +232,54 @@ fun PlanCard(plan: PlanDto, context: PlansResponse?, onClick: () -> Unit) {
             Spacer(Modifier.weight(1f))
             if (plan.isSimulated) Badge(L10n.t("common.simulated_quote"), color = BrandInkSoft, bg = BrandInkSoft.copy(alpha = 0.08f))
         }
+        context?.eligibility?.firstOrNull { it.cityId == plan.stopoverCityId }?.let { eli ->
+            Spacer(Modifier.height(10.dp))
+            EligibilityCard(eli)
+        }
+    }
+}
+
+/** 资格卡（ER-13）：徽章 + 一句话结论 + 停留上限 + 材料 + 依据 + 法律提示。 */
+@Composable
+private fun EligibilityCard(eli: EligibilityDto) {
+    val a = eli.assessment
+    val badge = when (eli.status) {
+        "ELIGIBLE" -> L10n.t("elig.badge_eligible") to BrandPrimary
+        "CONDITIONALLY_ELIGIBLE" -> L10n.t("elig.badge_conditional") to BrandPrimary
+        "NEEDS_INFO" -> L10n.t("elig.badge_needs_info") to BrandAccent
+        "NEEDS_REVIEW" -> L10n.t("elig.badge_needs_review") to BrandAccent
+        "INELIGIBLE" -> L10n.t("elig.badge_ineligible") to androidx.compose.ui.graphics.Color(0xFFC0392B)
+        else -> null
+    }
+    Column {
+        badge?.let { (text, color) -> Badge(text, color = color, bg = color.copy(alpha = 0.10f)) }
+        a?.let {
+            Spacer(Modifier.height(6.dp))
+            Text(it.explanationZh, style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(4.dp))
+            val stay = it.maxStay
+            Text(
+                if (stay != null && stay.value > 0) {
+                    L10n.t("elig.stay_limit", stay.value, if (stay.unit == "HOURS") L10n.t("common.hours_unit") else L10n.t("common.days_unit_short"))
+                } else {
+                    L10n.t("elig.stay_tbc")
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = BrandInkSoft,
+            )
+            if (it.requirements.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                it.requirements.take(3).forEach { r ->
+                    Text("· ${r.descriptionZh}", style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+                }
+            }
+            it.sources.firstOrNull()?.let { s ->
+                Spacer(Modifier.height(4.dp))
+                Text("${s.authority} · ${s.lastCheckedAt.take(10)}", style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(L10n.t("elig.disclaimer"), style = MaterialTheme.typography.labelSmall, color = BrandInkSoft)
     }
 }
 

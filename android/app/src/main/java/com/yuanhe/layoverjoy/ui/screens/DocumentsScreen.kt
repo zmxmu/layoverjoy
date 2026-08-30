@@ -210,6 +210,10 @@ private fun AddVisaForm(onDone: () -> Unit) {
     var country by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("TOURIST") }
     var expiry by remember { mutableStateOf("") }
+    var validFrom by remember { mutableStateOf("") }
+    var entryCount by remember { mutableStateOf("MULTIPLE") }
+    var verificationMode by remember { mutableStateOf("PASSPORT_STICKER") }
+    var usedBefore by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf<String?>(null) }
 
@@ -227,6 +231,24 @@ private fun AddVisaForm(onDone: () -> Unit) {
         }
         DateField(L10n.t("docs.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2027-06-30")
         Spacer(Modifier.height(8.dp))
+        DateField(L10n.t("docs.valid_from"), validFrom, { validFrom = it.trim() }, placeholder = "2025-01-01")
+        Spacer(Modifier.height(8.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("SINGLE" to "docs.entry_single", "MULTIPLE" to "docs.entry_multiple").forEach { (code, key) ->
+                TextButton(onClick = { entryCount = code }) {
+                    Text("${L10n.t("docs.entry_count")}:${L10n.t(key)}", color = if (entryCount == code) BrandPrimary else BrandInkSoft, fontWeight = if (entryCount == code) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+            listOf("PASSPORT_STICKER" to "docs.mode_sticker", "E_VISA" to "docs.mode_evisa").forEach { (code, key) ->
+                TextButton(onClick = { verificationMode = code }) {
+                    Text("${L10n.t("docs.verification_mode")}:${L10n.t(key)}", color = if (verificationMode == code) BrandPrimary else BrandInkSoft, fontWeight = if (verificationMode == code) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+            TextButton(onClick = { usedBefore = !usedBefore }) {
+                Text("${L10n.t("docs.used_before")}:${if (usedBefore) L10n.t("common.yes") else L10n.t("common.no")}", color = BrandInkSoft)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         ErrorBanner(err)
         Spacer(Modifier.height(8.dp))
         PrimaryButton(
@@ -237,7 +259,7 @@ private fun AddVisaForm(onDone: () -> Unit) {
                 busy = true
                 err = null
                 scope.launch {
-                    when (val r = apiCall { Net.api.addDocument(DocumentInput(kind = "VISA", countryCode = country, visaType = type, expiresOn = expiry)) }) {
+                    when (val r = apiCall { Net.api.addDocument(DocumentInput(kind = "VISA", countryCode = country, visaType = type, expiresOn = expiry, validFrom = validFrom.ifBlank { null }, entryCount = entryCount, verificationMode = verificationMode, usedBefore = usedBefore)) }) {
                         is ApiResult.Ok -> onDone()
                         is ApiResult.Err -> err = r.message
                     }

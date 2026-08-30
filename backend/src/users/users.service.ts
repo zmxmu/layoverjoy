@@ -8,6 +8,10 @@ export interface DocumentInput {
   passportType?: string;
   visaType?: string;
   entryType?: string;
+  entryCount?: string; // SINGLE | DOUBLE | MULTIPLE | NOT_APPLICABLE | UNKNOWN
+  verificationMode?: string; // PASSPORT_STICKER | E_VISA | ONLINE_PORTAL | PHYSICAL_CARD | UNKNOWN
+  issuerCountry?: string;
+  usedBefore?: boolean;
   remainingEntries?: number;
   validFrom?: string;
   expiresOn?: string;
@@ -131,6 +135,10 @@ export class UsersService {
         passportType: input.passportType,
         visaType: input.visaType,
         entryType: input.entryType,
+        entryCount: input.entryCount !== undefined ? input.entryCount : undefined,
+        verificationMode: input.verificationMode !== undefined ? input.verificationMode : undefined,
+        issuerCountry: input.issuerCountry !== undefined ? input.issuerCountry : undefined,
+        usedBefore: input.usedBefore !== undefined ? input.usedBefore : undefined,
         remainingEntries: input.remainingEntries,
         validFrom: input.validFrom !== undefined ? this.toUtcDate(input.validFrom) ?? undefined : undefined,
         expiresOn: input.expiresOn !== undefined ? this.toUtcDate(input.expiresOn) ?? undefined : undefined,
@@ -153,9 +161,23 @@ export class UsersService {
     const visas = docs.filter((d) => d.kind === 'VISA' && d.status !== 'EXPIRED');
     return {
       passport: passport
-        ? { issuingCountry: passport.countryCode, type: passport.passportType || 'ORDINARY', validUntil: passport.expiresOn || undefined }
+        ? { issuingCountry: passport.countryCode, type: passport.passportType || 'ORDINARY', validUntil: passport.expiresOn || undefined, validFrom: passport.validFrom || undefined }
         : undefined,
       visas: visas.map((v) => ({ country: v.countryCode, type: v.visaType || undefined, validUntil: v.expiresOn || undefined, entryType: v.entryType || undefined })),
+      /** v2 规则引擎证件视图（ER-03）：含签发地/次数/载体/是否使用。 */
+      qualifyingDocuments: docs
+        .filter((d) => (d.kind === 'VISA' || d.kind === 'RESIDENCE') && d.status !== 'EXPIRED' && d.status !== 'REVOKED')
+        .map((d) => ({
+          kind: d.kind === 'RESIDENCE' ? 'PERMANENT_RESIDENCE' : d.kind,
+          issuerCountry: (d as any).issuerCountry ?? d.countryCode,
+          visaType: d.visaType || undefined,
+          entryCount: (d as any).entryCount ?? d.entryType ?? undefined,
+          validFrom: d.validFrom || undefined,
+          validUntil: d.expiresOn || undefined,
+          usedBefore: (d as any).usedBefore ?? undefined,
+          verificationMode: (d as any).verificationMode ?? undefined,
+          status: d.status,
+        })),
       residenceCountry: null as string | null,
     };
   }

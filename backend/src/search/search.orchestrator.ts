@@ -4,6 +4,7 @@ import { AtlasService } from '../atlas/atlas.service';
 import { EntryRulesService } from '../entry-rules/entry-rules.service';
 import { UsersService } from '../users/users.service';
 import { candidateHubs, CITY_PACKS, CityEntry, resolveLocation, resolveSelection } from '../airports/catalog';
+import { EligibilityAssessService } from '../entry-rules/v2/assess.service';
 import { buildJoyScore } from '../plans/joy-score';
 import { AppError } from '../common/errors';
 import { FlightOffer } from '../atlas/atlas.types';
@@ -27,7 +28,7 @@ export const SEARCH_BUDGET = {
 
 interface CandidateOutcome {
   city: CityEntry;
-  status: 'ELIGIBLE' | 'NEEDS_INFO' | 'INELIGIBLE' | 'NO_INVENTORY' | 'FAILED' | 'EXPERIENCE_REJECTED' | 'COMPLETED';
+  status: 'ELIGIBLE' | 'NEEDS_INFO' | 'NEEDS_REVIEW' | 'INELIGIBLE' | 'NO_INVENTORY' | 'FAILED' | 'EXPERIENCE_REJECTED' | 'COMPLETED';
   reasonCodes: string[];
   ruleId?: string;
   eligibilitySnapshotId?: string;
@@ -43,6 +44,7 @@ export class SearchOrchestrator {
     private readonly atlas: AtlasService,
     private readonly rules: EntryRulesService,
     private readonly users: UsersService,
+    private readonly assessV2: EligibilityAssessService,
     @Inject(FIELD_CRYPTO) private readonly crypto: FieldCrypto,
   ) {}
 
@@ -277,6 +279,26 @@ export class SearchOrchestrator {
     }
   }
 
+  /** v2 评估快照：状态/规则/材料/来源/完整评估体一并落库，供结果页资格卡渲染。 */
+  private async saveV2Snapshot(runId: string, city: CityEntry, a: any): Promise<string> {
+    const snap = await this.prisma.eligibilitySnapshot.create({
+      data: {
+        searchRunId: runId,
+        cityId: city.cityId,
+        countryCode: city.countryCode,
+        status: a.searchDecision,
+        ruleId: a.matchedRuleIds[0] ?? null,
+        ruleVersion: a.ruleSet?.schemaVersion ?? null,
+        reasonCodesJson: a.missingFacts as any,
+        requiredDocsJson: a.requirements as any,
+        sourceUrl: a.sources?.[0]?.url ?? null,
+        verifiedAt: a.sources?.[0]?.lastCheckedAt ?? null,
+        assessmentJson: a as any,
+      },
+    });
+    return snap.id;
+  }
+
   /** 评估一个候选城市：资格 → 两段搜索 → 组合 → 评分。 */
   private async evaluateHub(
     run: any,
@@ -290,27 +312,38 @@ export class SearchOrchestrator {
     const outcome: CandidateOutcome = { city, status: 'FAILED', reasonCodes: [] };
     outcomes.push(outcome);
 
-    // 1) 资格硬过滤（在调用 Atlas 之前）。搜索期只做初筛：此时第二段尚未 Verify，
-    // 不得谎报 onwardTicketConfirmed；硬判定在预订期（BOOKING 模式）复核。
-    const eligibility = await this.rules.evaluate({
-      travelDate: this.isoDate(run.departureDate),
-      purpose: 'TOURISM',
-      stayDays: Math.max(...stayVariants),
-      passport: profile.passport,
-      visas: profile.visas,
-      destinationCountry: city.countryCode,
-      mode: 'SEARCH_SCREEN',
-    });
-    outcome.ruleId = eligibility.ruleId;
-    if (eligibility.status !== 'ELIGIBLE') {
-      outcome.status = eligibility.status as any;
-      outcome.reasonCodes = eligibility.reasonCodes;
-      outcome.eligibilitySnapshotId = await this.rules.snapshot(run.id, city.cityId, city.countryCode, eligibility);
+    // 1) 资格预筛（v2 规则引擎，ER-10）：INELIGIBLE 不调用 Atlas；NEEDS_REVIEW 仅作探索候选不冒充可预订。
+    const hubCode = city.metroCode ?? city.airports[0].iata;
+    const jurisdiction = city.countryCode === 'HK' || city.countryCode === 'MO' ? city.countryCode : null;
+    const stayDaysMax = Math.max(...stayVariants);
+    const depISO = this.isoDate(run.departureDate);
+    const backISO = this.isoDate(this.addDays(run.departureDate, stayDaysMax));
+    const a = this.assessV2.assess(
+      {
+        userId: run.userId,
+        mode: 'SEARCH',
+        itinerary: {
+          purpose: 'TOURISM',
+          segments: [
+            { from: run.originCode, to: hubCode, departureAt: `${depISO}T02:00:00Z`, arrivalAt: `${depISO}T10:00:00Z` },
+            { from: hubCode, to: run.destinationCode, departureAt: `${backISO}T06:00:00Z`, arrivalAt: `${backISO}T17:00:00Z` },
+          ],
+          stopover: { country: city.countryCode, jurisdiction, airport: hubCode, stayHours: stayDaysMax * 24 },
+          stayDays: stayDaysMax,
+          arrivalDate: depISO,
+        },
+        traveler: { passport: profile.passport, documents: (profile as any).qualifyingDocuments ?? [], history: {} },
+        documents: {},
+      },
+      { persist: false },
+    );
+    outcome.ruleId = a.matchedRuleIds[0];
+    outcome.eligibilitySnapshotId = await this.saveV2Snapshot(run.id, city, a);
+    if (a.searchDecision === 'INELIGIBLE' || a.searchDecision === 'NEEDS_INFO' || a.searchDecision === 'NEEDS_REVIEW') {
+      outcome.status = a.searchDecision === 'INELIGIBLE' ? 'INELIGIBLE' : a.searchDecision === 'NEEDS_INFO' ? 'NEEDS_INFO' : 'NEEDS_REVIEW';
+      outcome.reasonCodes = [...a.matchedRuleIds, ...a.missingFacts];
       return;
     }
-    outcome.eligibilitySnapshotId = await this.rules.snapshot(run.id, city.cityId, city.countryCode, eligibility);
-
-    const hubCode = city.metroCode ?? city.airports[0].iata;
     const useDemo = prefs.demoFixture === true;
 
     for (const stayDays of stayVariants) {

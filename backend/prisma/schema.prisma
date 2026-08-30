@@ -50,7 +50,11 @@ model TravelDocument {
   countryCode      String    // ISO 3166-1 alpha-2
   passportType     String?   // ORDINARY | PUBLIC_AFFAIRS ...
   visaType         String?
-  entryType        String?   // SINGLE | MULTIPLE
+  entryType        String?   // SINGLE | MULTIPLE（旧字段，保留兼容）
+  entryCount       String?   // SINGLE | DOUBLE | MULTIPLE | NOT_APPLICABLE | UNKNOWN
+  verificationMode String?   // PASSPORT_STICKER | E_VISA | ONLINE_PORTAL | PHYSICAL_CARD | UNKNOWN
+  issuerCountry    String?   // 签证/居留签发地
+  usedBefore       Boolean?  // 是否已使用过
   remainingEntries Int?
   validFrom        DateTime? @db.Date
   expiresOn        DateTime? @db.Date
@@ -152,14 +156,96 @@ model EligibilitySnapshot {
   searchRunId       String
   cityId            String
   countryCode       String
-  status            String   // ELIGIBLE | NEEDS_INFO | INELIGIBLE
+  status            String // ELIGIBLE | NEEDS_INFO | INELIGIBLE
   ruleId            String?
   ruleVersion       String?
   reasonCodesJson   Json
   requiredDocsJson  Json?
   sourceUrl         String?
   verifiedAt        String?
+  assessmentJson    Json?
   evaluatedAt       DateTime @default(now())
+}
+
+// ---- v2 规则库（13 号方案 ER-02）：多规则/多版本共存，旧 EntryRule 表仅读保留 ----
+
+model EntryRuleSet {
+  id            String    @id @default(cuid())
+  datasetId     String
+  schemaVersion String
+  asOf          DateTime  @db.Date
+  checksum      String
+  status        String    @default("DRAFT") // DRAFT | ACTIVE | SUPERSEDED
+  importedAt    DateTime  @default(now())
+  activatedAt   DateTime?
+  rules         EntryRuleV2[]
+  sources       EntryRuleSource[]
+
+  @@index([status])
+}
+
+model EntryRuleV2 {
+  id               String       @id @default(cuid())
+  ruleSetId        String
+  ruleId           String
+  version          Int
+  destinationCode  String
+  jurisdictionCode String?
+  category         String
+  status           String
+  priority         Int
+  effectiveFrom    DateTime?    @db.Date
+  effectiveTo      DateTime?    @db.Date
+  ruleJson         Json
+  ruleSet          EntryRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  @@index([ruleSetId, destinationCode])
+  @@index([ruleId])
+}
+
+model EntryRuleSource {
+  id                   String       @id @default(cuid())
+  ruleSetId            String
+  sourceId             String
+  authority            String
+  url                  String
+  tier                 String
+  sourceUpdatedAt      DateTime?    @db.Date
+  lastCheckedAt        DateTime
+  status               String
+  supportsAutoDecision Boolean
+  summaryZh            String?
+  ruleSet              EntryRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  @@index([ruleSetId, sourceId])
+}
+
+model EligibilityAssessment {
+  id                 String                        @id @default(cuid())
+  userId             String
+  destinationCode    String
+  itineraryHash      String
+  factsHash          String
+  ruleSetChecksum    String
+  searchDecision     String
+  bookingDecision    String
+  missingFactsJson   Json
+  matchedRuleIdsJson Json
+  expiresAt          DateTime
+  createdAt          DateTime                      @default(now())
+  evidence           EligibilityEvidenceSnapshot?
+
+  @@index([userId, createdAt])
+}
+
+model EligibilityEvidenceSnapshot {
+  id                           String                @id @default(cuid())
+  assessmentId                 String                @unique
+  normalizedFactsJsonEncrypted String?
+  matchedRulesJson             Json
+  sourceRefsJson               Json
+  resultJson                   Json
+  assessment                   EligibilityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 }
 
 model StopoverPlan {

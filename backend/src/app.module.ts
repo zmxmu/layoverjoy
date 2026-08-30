@@ -5,6 +5,9 @@ import { AtlasModule } from './atlas/atlas.module';
 import { HealthController } from './health.controller';
 import { AirportsController } from './airports/airports.controller';
 import { EntryRulesService } from './entry-rules/entry-rules.service';
+import { EntryEligibilityController } from './entry-rules/entry-eligibility.controller';
+import { RuleCatalogLoader } from './entry-rules/v2/catalog-loader';
+import { EligibilityAssessService } from './entry-rules/v2/assess.service';
 import { SearchOrchestrator } from './search/search.orchestrator';
 import { SearchService } from './search/search.service';
 import { SearchController } from './search/search.controller';
@@ -28,6 +31,7 @@ import { HomeModule } from './home/home.module';
   controllers: [
     HealthController,
     AirportsController,
+    EntryEligibilityController,
     SearchController,
     PlansController,
     NotificationsController,
@@ -40,6 +44,8 @@ import { HomeModule } from './home/home.module';
   ],
   providers: [
     EntryRulesService,
+    RuleCatalogLoader,
+    EligibilityAssessService,
     SearchOrchestrator,
     SearchService,
     PlansService,

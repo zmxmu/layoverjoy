@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://layoverjoy.local/schemas/entry-rule-v2.schema.json",
+  "title": "LayoverJoy Entry Rule Dataset",
+  "description": "用于旅行证件、入境、过境和条件免签资格判断的可版本化规则数据格式。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "dataset",
+    "subject",
+    "policy",
+    "referenceGroups",
+    "sourceDocuments",
+    "verifiedRules",
+    "coverageInventories"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "dataset": { "$ref": "#/$defs/dataset" },
+    "subject": { "$ref": "#/$defs/subject" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "referenceGroups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/referenceGroup" }
+    },
+    "sourceDocuments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourceDocument" }
+    },
+    "verifiedRules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    },
+    "coverageInventories": { "$ref": "#/$defs/coverageInventories" }
+  },
+  "$defs": {
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["datasetId", "nameZh", "asOf", "generatedFor", "legalNoticeZh", "checksum"],
+      "properties": {
+        "datasetId": { "type": "string", "minLength": 1 },
+        "nameZh": { "type": "string", "minLength": 1 },
+        "asOf": { "type": "string", "format": "date" },
+        "generatedFor": { "type": "string" },
+        "legalNoticeZh": { "type": "string", "minLength": 1 },
+        "checksum": { "type": ["string", "null"] }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nationalityCountryCode", "passportIssuingCountryCode", "passportType"],
+      "properties": {
+        "nationalityCountryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "passportIssuingCountryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "passportType": { "type": "string", "enum": ["ORDINARY"] }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultSearchDecision",
+        "defaultBookingDecision",
+        "borderAuthorityIsFinal",
+        "llmMayDecideEligibility",
+        "sourceTierReviewDays",
+        "temporaryRuleSafetyHours"
+      ],
+      "properties": {
+        "defaultSearchDecision": { "$ref": "#/$defs/decisionCode" },
+        "defaultBookingDecision": { "$ref": "#/$defs/decisionCode" },
+        "borderAuthorityIsFinal": { "const": true },
+        "llmMayDecideEligibility": { "const": false },
+        "sourceTierReviewDays": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["A_DESTINATION_AUTHORITY", "B_CHINESE_MFA", "C_OFFICIAL_AGGREGATE"],
+          "properties": {
+            "A_DESTINATION_AUTHORITY": { "type": "integer", "minimum": 1 },
+            "B_CHINESE_MFA": { "type": "integer", "minimum": 1 },
+            "C_OFFICIAL_AGGREGATE": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "temporaryRuleSafetyHours": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "referenceGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groupId", "labelZh", "memberType", "members", "asOf"],
+      "properties": {
+        "groupId": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "labelZh": { "type": "string" },
+        "memberType": { "type": "string", "enum": ["COUNTRY_CODE", "AIRPORT_IATA", "VISA_TYPE"] },
+        "members": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "asOf": { "type": "string", "format": "date" },
+        "sourceIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "sourceDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceId",
+        "authority",
+        "title",
+        "url",
+        "tier",
+        "language",
+        "lastCheckedAt",
+        "status",
+        "supportsAutoDecision"
+      ],
+      "properties": {
+        "sourceId": { "type": "string", "pattern": "^[A-Z0-9_-]+$" },
+        "authority": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "tier": {
+          "type": "string",
+          "enum": ["A_DESTINATION_AUTHORITY", "B_CHINESE_MFA", "C_OFFICIAL_AGGREGATE"]
+        },
+        "language": { "type": "string" },
+        "sourcePublishedAt": { "type": ["string", "null"], "format": "date" },
+        "sourceUpdatedAt": { "type": ["string", "null"], "format": "date" },
+        "lastCheckedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["CURRENT", "STALE", "SUPERSEDED", "PARTIAL"] },
+        "supportsAutoDecision": { "type": "boolean" },
+        "summaryZh": { "type": "string" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ruleId",
+        "version",
+        "titleZh",
+        "destination",
+        "category",
+        "status",
+        "priority",
+        "validity",
+        "match",
+        "decision",
+        "requirements",
+        "warningsZh",
+        "sourceIds",
+        "review"
+      ],
+      "properties": {
+        "ruleId": { "type": "string", "pattern": "^[A-Z0-9_-]+$" },
+        "version": { "type": "integer", "minimum": 1 },
+        "titleZh": { "type": "string" },
+        "destination": { "$ref": "#/$defs/destination" },
+        "category": {
+          "type": "string",
+          "enum": [
+            "MUTUAL_VISA_FREE",
+            "UNILATERAL_VISA_FREE",
+            "VISA_ON_ARRIVAL",
+            "E_VISA",
+            "LANDSIDE_TRANSIT_PERMISSION",
+            "TRANSIT_TOUR_PROGRAM",
+            "CONDITIONAL_VISA_EXEMPTION",
+            "VISA_REQUIRED",
+            "REGIONAL_VISA_FREE"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "TEMPORARY_ACTIVE", "REVIEW_REQUIRED", "EXPIRED", "SUPERSEDED", "NEGATIVE"]
+        },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "validity": { "$ref": "#/$defs/validity" },
+        "match": { "$ref": "#/$defs/expression" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "requirements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requirement" }
+        },
+        "warningsZh": { "type": "array", "items": { "type": "string" } },
+        "sourceIds": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "review": { "$ref": "#/$defs/review" }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["countryCode", "displayNameZh", "displayNameEn"],
+      "properties": {
+        "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "jurisdictionCode": { "type": ["string", "null"] },
+        "displayNameZh": { "type": "string" },
+        "displayNameEn": { "type": "string" },
+        "regions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "entryPorts": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effectiveFrom", "effectiveTo"],
+      "properties": {
+        "effectiveFrom": { "type": ["string", "null"], "format": "date" },
+        "effectiveTo": { "type": ["string", "null"], "format": "date" }
+      }
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all"],
+          "properties": {
+            "all": { "type": "array", "items": { "$ref": "#/$defs/expression" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["any"],
+          "properties": {
+            "any": { "type": "array", "items": { "$ref": "#/$defs/expression" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["not"],
+          "properties": { "not": { "$ref": "#/$defs/expression" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fact", "op", "value"],
+          "properties": {
+            "fact": { "type": "string", "minLength": 1 },
+            "op": {
+              "type": "string",
+              "enum": [
+                "EQ",
+                "NEQ",
+                "IN",
+                "NOT_IN",
+                "EXISTS",
+                "NOT_EXISTS",
+                "GTE",
+                "LTE",
+                "IS_TRUE",
+                "IS_FALSE",
+                "VALID_FOR_DAYS",
+                "HAS_VALID_DOCUMENT",
+                "ROUTE_MATCHES",
+                "DATE_WITHIN_RULE_VALIDITY"
+              ]
+            },
+            "value": {}
+          }
+        }
+      ]
+    },
+    "decisionCode": {
+      "type": "string",
+      "enum": ["ELIGIBLE", "CONDITIONALLY_ELIGIBLE", "NEEDS_INFO", "NEEDS_REVIEW", "INELIGIBLE"]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search", "booking", "entryMode", "maxStay", "manualReviewRequired", "explanationZh"],
+      "properties": {
+        "search": { "$ref": "#/$defs/decisionCode" },
+        "booking": { "$ref": "#/$defs/decisionCode" },
+        "entryMode": { "type": "string" },
+        "maxStay": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["value", "unit", "calculation"],
+              "properties": {
+                "value": { "type": "integer", "minimum": 0 },
+                "unit": { "type": "string", "enum": ["HOURS", "DAYS"] },
+                "calculation": { "type": "string" },
+                "cumulativeLimit": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["days", "windowDays"],
+                  "properties": {
+                    "days": { "type": "integer", "minimum": 1 },
+                    "windowDays": { "type": "integer", "minimum": 1 }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "manualReviewRequired": { "type": "boolean" },
+        "explanationZh": { "type": "string" }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "mandatory", "descriptionZh"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "mandatory": { "type": "boolean" },
+        "descriptionZh": { "type": "string" },
+        "factPaths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verifiedAt", "reviewBy", "owner", "changeTriggers"],
+      "properties": {
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "reviewBy": { "type": "string", "format": "date-time" },
+        "owner": { "type": "string" },
+        "changeTriggers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "coverageInventories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mutualOrdinaryPassport", "legacyMfa2023"],
+      "properties": {
+        "mutualOrdinaryPassport": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/inventoryEntry" }
+        },
+        "legacyMfa2023": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["asOf", "warningZh", "unilateralVisaFree", "visaOnArrival", "visaFreeTransit"],
+          "properties": {
+            "asOf": { "type": "string", "format": "date" },
+            "warningZh": { "type": "string" },
+            "unilateralVisaFree": { "type": "array", "items": { "$ref": "#/$defs/inventoryEntry" } },
+            "visaOnArrival": { "type": "array", "items": { "$ref": "#/$defs/inventoryEntry" } },
+            "visaFreeTransit": { "type": "array", "items": { "$ref": "#/$defs/inventoryEntry" } }
+          }
+        }
+      }
+    },
+    "inventoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["countryCode", "nameZh", "status", "autoDecision", "sourceIds"],
+      "properties": {
+        "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "jurisdictionCode": { "type": ["string", "null"] },
+        "nameZh": { "type": "string" },
+        "effectiveFrom": { "type": ["string", "null"], "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED",
+            "VERIFIED_RULE_AVAILABLE",
+            "REVERIFY_REQUIRED",
+            "SUPERSEDED_BY_MUTUAL",
+            "NOT_APPLICABLE_TO_CN_ORDINARY"
+          ]
+        },
+        "autoDecision": { "type": "boolean" },
+        "sourceIds": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "notesZh": { "type": "string" }
+      }
+    }
+  }
+}

@@ -94,9 +94,19 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
     }),
   };
   const crypto: any = { encrypt: (v: string) => `enc:${v}`, decrypt: (v: string) => v.replace('enc:', '') };
+  const assessV2: any = {
+    assess: vi.fn().mockImplementation(() => ({
+      searchDecision: 'ELIGIBLE',
+      bookingDecision: orderBehavior === 'ELIGIBILITY_FAIL' ? 'NEEDS_INFO' : 'CONDITIONALLY_ELIGIBLE',
+      matchedRuleIds: ['CN_MY_MUTUAL_VISA_FREE'],
+      missingFacts: [],
+      explanationZh: 'test',
+      assessmentId: 'ela_test',
+    })),
+  };
 
-  const service = new BookingsService(prisma, atlas, notifications, rules, users, crypto);
-  return { service, transitions, rules };
+  const service = new BookingsService(prisma, atlas, notifications, rules, users, assessV2, crypto);
+  return { service, transitions, rules, assessV2 };
 }
 
 const input = { planId: 'plan1', riskAckVersion: 1, passengers: [{ givenName: 'WEI', familyName: 'ZHANG' }] };
@@ -137,9 +147,9 @@ describe('双订单 Saga 状态机', () => {
   });
 
   it('预订期资格复核未通过：不下任何订单 -> EXPIRED', async () => {
-    const { service, transitions, rules } = buildService('ELIGIBILITY_FAIL');
+    const { service, transitions, assessV2 } = buildService('ELIGIBILITY_FAIL');
     await expect(service.createComposite('user1', input)).rejects.toMatchObject({ code: 'BOOKING_ELIGIBILITY_FAILED' });
-    expect(rules.evaluate).toHaveBeenCalledWith(expect.objectContaining({ mode: 'BOOKING', onwardTicketConfirmed: true }));
+    expect(assessV2.assess).toHaveBeenCalledWith(expect.objectContaining({ mode: 'BOOKING' }), expect.anything());
     expect(transitions[transitions.length - 1]).toBe('EXPIRED');
     expect(transitions).not.toContain('LEG_B_ORDERING');
   });

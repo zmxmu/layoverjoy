@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EntryRulesService } from '../entry-rules/entry-rules.service';
+import { EligibilityAssessService } from '../entry-rules/v2/assess.service';
 import { UsersService } from '../users/users.service';
 import { AppError } from '../common/errors';
 import { FIELD_CRYPTO } from '../core.module';
@@ -45,8 +46,48 @@ export class BookingsService {
     private readonly notifications: NotificationsService,
     private readonly rules: EntryRulesService,
     private readonly users: UsersService,
+    private readonly assessV2: EligibilityAssessService,
     @Inject(FIELD_CRYPTO) private readonly crypto: FieldCrypto,
   ) {}
+
+  /** ER-11：Order/Pay 前重评资格；NEEDS_INFO/NEEDS_REVIEW/INELIGIBLE 均阻断。 */
+  private async gateEligibility(userId: string, plan: any, legs: any[], stage: 'ORDER' | 'PAY') {
+    const profile = await this.users.profileForRules(userId);
+    const jurisdiction = plan.hubCountry === 'HK' || plan.hubCountry === 'MO' ? plan.hubCountry : null;
+    const first = legs[0];
+    const a = this.assessV2.assess(
+      {
+        userId,
+        mode: 'BOOKING',
+        itinerary: {
+          purpose: 'TOURISM',
+          segments: legs.map((l) => ({
+            from: l.origin,
+            to: l.destination,
+            departureAt: l.departureAt?.toISOString?.() ?? l.departureAt,
+            arrivalAt: l.arrivalAt?.toISOString?.() ?? l.departureAt?.toISOString?.() ?? l.departureAt,
+          })),
+          stopover: { country: plan.hubCountry, jurisdiction, airport: first?.destination, stayHours: plan.stayDays * 24 },
+          stayDays: plan.stayDays,
+          arrivalDate: first?.departureAt ? new Date(first.departureAt).toISOString().slice(0, 10) : undefined,
+        },
+        traveler: { passport: profile.passport, documents: (profile as any).qualifyingDocuments ?? [], history: {} },
+        documents: { onwardTicket: { status: 'CONFIRMED' } },
+      },
+      { persist: true },
+    );
+    const allowed = a.bookingDecision === 'ELIGIBLE' || a.bookingDecision === 'CONDITIONALLY_ELIGIBLE';
+    if (!allowed) {
+      throw new AppError(
+        'ENTRY_ELIGIBILITY_BLOCKED',
+        `入境资格预筛未通过（${a.bookingDecision}）：${a.explanationZh}`,
+        409,
+        false,
+        { stage, decision: a.bookingDecision, missingFacts: a.missingFacts, assessmentId: a.assessmentId },
+      );
+    }
+    return a;
+  }
 
   /** 创建复合订单：Verify 两段 → 依次下单 → PAYMENT_PENDING。 */
   async createComposite(userId: string, input: CompositeOrderInput) {
@@ -147,32 +188,26 @@ export class BookingsService {
       priceConfirmedAt: new Date(),
     });
 
-    // 2) 预订期资格硬判定（BOOKING 模式）：两段均 Verify 后续程票才算确认；
+    // 2) 预订期资格硬判定（v2 引擎，ER-11）：两段均 Verify 后续程票才算确认；
     //    搜索期的初筛结果不能直接用于下单。
     if (plan.hubCountry) {
-      const run = await this.prisma.searchRun.findUnique({ where: { id: plan.searchRunId } });
-      const profile = await this.users.profileForRules(userId);
-      const bookingEligibility = await this.rules.evaluate({
-        travelDate: run ? new Date(run.departureDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-        purpose: 'TOURISM',
-        stayDays: plan.stayDays,
-        passport: profile.passport,
-        visas: profile.visas,
-        destinationCountry: plan.hubCountry,
-        onwardTicketConfirmed: true,
-        mode: 'BOOKING',
-      });
-      if (bookingEligibility.status !== 'ELIGIBLE') {
-        await transition('EXPIRED', {
-          verifyResultJson: { ok: false, bookingEligibility: bookingEligibility.status, reasonCodes: bookingEligibility.reasonCodes } as any,
-        });
-        throw new AppError(
-          'BOOKING_ELIGIBILITY_FAILED',
-          '预订期入境资格复核未通过，已停止下单。请更新证件信息后重新搜索。',
-          409,
-          false,
-          { intentId: intent.id, reasonCodes: bookingEligibility.reasonCodes },
-        );
+      try {
+        await this.gateEligibility(userId, plan, legs, 'ORDER');
+      } catch (e) {
+        if ((e as AppError).code === 'ENTRY_ELIGIBILITY_BLOCKED') {
+          const details = (e as any).details ?? {};
+          await transition('EXPIRED', {
+            verifyResultJson: { ok: false, bookingEligibility: details.decision, reasonCodes: details.missingFacts } as any,
+          });
+          throw new AppError(
+            'BOOKING_ELIGIBILITY_FAILED',
+            '预订期入境资格复核未通过，已停止下单。请更新证件信息后重新搜索。',
+            409,
+            false,
+            { intentId: intent.id, ...details },
+          );
+        }
+        throw e;
       }
     }
 
@@ -273,6 +308,12 @@ export class BookingsService {
     if (!intent) throw AppError.notFound('订单');
     if (intent.status !== 'PAYMENT_PENDING' && intent.status !== 'BOTH_ORDERED') {
       throw new AppError('INVALID_BOOKING_STATE', `当前状态 ${intent.status} 不可支付。`, 409);
+    }
+    // ER-11：Pay 前重评（行程/规则变化会得出不同结论并阻断）。
+    const payPlan = await this.prisma.stopoverPlan.findUnique({ where: { id: intent.planId } });
+    if (payPlan) {
+      const payLegs = await this.prisma.flightOfferSnapshot.findMany({ where: { id: { in: (payPlan.legOfferIdsJson as string[]) ?? [] } }, orderBy: { legNo: 'asc' } });
+      if (payLegs.length) await this.gateEligibility(userId, payPlan, payLegs, 'PAY');
     }
     const orders = await this.prisma.flightOrder.findMany({
       where: { bookingIntentId: intent.id, status: 'CREATED' },

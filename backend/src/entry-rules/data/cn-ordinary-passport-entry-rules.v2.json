@@ -1,0 +1,1408 @@
+{
+  "$schema": "./layoverjoy-entry-rule.schema.json",
+  "schemaVersion": "2.0.0",
+  "dataset": {
+    "datasetId": "layoverjoy-cn-ordinary-passport-entry-rules",
+    "nameZh": "LayoverJoy 中国普通护照入境与过境规则库",
+    "asOf": "2026-08-30",
+    "generatedFor": "LayoverJoy hackathon MVP and Qoder implementation",
+    "legalNoticeZh": "本数据仅用于行程资格预筛，不构成法律、领事或入境保证。边检、领馆、承运人和目的地主管机关的实时决定具有最终效力。缺少事实、来源过期或规则冲突时必须返回 NEEDS_INFO 或 NEEDS_REVIEW，不得推断为可入境。",
+    "checksum": null
+  },
+  "subject": {
+    "nationalityCountryCode": "CN",
+    "passportIssuingCountryCode": "CN",
+    "passportType": "ORDINARY"
+  },
+  "policy": {
+    "defaultSearchDecision": "NEEDS_REVIEW",
+    "defaultBookingDecision": "NEEDS_REVIEW",
+    "borderAuthorityIsFinal": true,
+    "llmMayDecideEligibility": false,
+    "sourceTierReviewDays": {
+      "A_DESTINATION_AUTHORITY": 90,
+      "B_CHINESE_MFA": 120,
+      "C_OFFICIAL_AGGREGATE": 30
+    },
+    "temporaryRuleSafetyHours": 72
+  },
+  "referenceGroups": [
+    {
+      "groupId": "SCHENGEN_CURRENT",
+      "labelZh": "申根区成员",
+      "memberType": "COUNTRY_CODE",
+      "members": ["AT", "BE", "BG", "HR", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IS", "IT", "LV", "LI", "LT", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH"],
+      "asOf": "2026-08-30",
+      "sourceIds": []
+    },
+    {
+      "groupId": "KOREA_APPROVED_EUROPE_32",
+      "labelZh": "韩国第三国过境政策指定的 32 个欧洲国家",
+      "memberType": "COUNTRY_CODE",
+      "members": ["GR", "NL", "NO", "DK", "DE", "LV", "RO", "LU", "LT", "LI", "MT", "BE", "BG", "CY", "SE", "CH", "ES", "SK", "SI", "IS", "IE", "EE", "GB", "AT", "IT", "CZ", "HR", "PT", "PL", "FR", "FI", "HU"],
+      "asOf": "2026-08-30",
+      "sourceIds": ["KR-MOFA-TRANSIT-2025"]
+    },
+    {
+      "groupId": "KOREA_ADVANCED_FOUR",
+      "labelZh": "韩国第三国过境政策指定的四国",
+      "memberType": "COUNTRY_CODE",
+      "members": ["US", "CA", "AU", "NZ"],
+      "asOf": "2026-08-30",
+      "sourceIds": ["KR-MOFA-TRANSIT-2025"]
+    },
+    {
+      "groupId": "MEXICO_QUALIFYING_VISA_ISSUERS",
+      "labelZh": "墨西哥条件免签认可的签证签发地",
+      "memberType": "COUNTRY_CODE",
+      "members": ["US", "CA", "JP", "GB", "AT", "BE", "BG", "HR", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IS", "IT", "LV", "LI", "LT", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH"],
+      "asOf": "2026-08-30",
+      "sourceIds": ["MX-MFA-CONDITIONAL"]
+    }
+  ],
+  "sourceDocuments": [
+    {
+      "sourceId": "CN-MFA-MUTUAL-20260529",
+      "authority": "中华人民共和国外交部领事司",
+      "title": "中外互免签证协定一览表（更新至2026年5月29日）",
+      "url": "https://cs.mfa.gov.cn/gyls/lsgz/fwxx/202504/t20250414_11594222.shtml",
+      "tier": "B_CHINESE_MFA",
+      "language": "zh-CN",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": "2026-05-29",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "确认普通护照互免协定国家和生效日期；具体停留天数仍应查目的地主管机关或协定全文。"
+    },
+    {
+      "sourceId": "CN-MFA-CONVENIENCE-202311",
+      "authority": "中华人民共和国外交部领事司",
+      "title": "持普通护照中国公民前往有关国家和地区入境便利待遇一览表",
+      "url": "https://cs.mfa.gov.cn/zggmcg/cgqz/qzxx_660462/202110/P020231208361019295346.pdf",
+      "tier": "C_OFFICIAL_AGGREGATE",
+      "language": "zh-CN",
+      "sourcePublishedAt": "2023-11-01",
+      "sourceUpdatedAt": "2023-11-01",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "STALE",
+      "supportsAutoDecision": false,
+      "summaryZh": "用于建立覆盖候选清单，不得直接作为自动放行依据；其中多项临时政策已经变化。"
+    },
+    {
+      "sourceId": "HK-IMMD-PRC-TRANSIT",
+      "authority": "香港特别行政区入境事务处",
+      "title": "Entry Arrangements for Mainland, Macao, Taiwan and Overseas Chinese Residents",
+      "url": "https://www.immd.gov.hk/eng/services/visas/overseas-chinese-entry-arrangement.html",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "中国护照持有人真实过境前往或来自第三国/地区，每次可获最多7天停留，需满足正常入境条件、目的地入境资格和已确认续程。"
+    },
+    {
+      "sourceId": "MO-PSP-PRC-TRANSIT",
+      "authority": "澳门特别行政区治安警察局",
+      "title": "内地居民持中国护照过境澳门",
+      "url": "https://www.fsm.gov.mo/PSP/cht/psp_top7_sm_2_1.html",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "zh-HK",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "真实经澳门国际机场往返外国，具备目的地签证和运输凭证时最多停留7天；护照有效期需覆盖拟停留期并额外至少90天。"
+    },
+    {
+      "sourceId": "MY-IMM-MUTUAL-FAQ",
+      "authority": "Immigration Department of Malaysia",
+      "title": "Malaysia-China Mutual Visa Exemption FAQ",
+      "url": "https://malaysiavisa.imi.gov.my/faq/",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "自2025年7月17日起，普通护照短期访问单次最多30天，任意180天累计不超过90天，并要求至少6个月护照有效期和MDAC。"
+    },
+    {
+      "sourceId": "TH-MFA-MUTUAL-2024",
+      "authority": "Ministry of Foreign Affairs, Kingdom of Thailand",
+      "title": "Thailand-China Mutual Visa Exemption Agreement",
+      "url": "https://www.mfa.go.th/en/content/thcn280124?cate=5d5bcb4e15e39c306000683c",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": "2024-01-28",
+      "sourceUpdatedAt": "2024-01-28",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "自2024年3月1日起，单次最多30天，任意180天累计不超过90天；居留、工作、学习、媒体等目的不适用。"
+    },
+    {
+      "sourceId": "SG-ICA-MUTUAL-2024",
+      "authority": "Immigration & Checkpoints Authority Singapore",
+      "title": "Mutual 30-Day Visa-Exemption Arrangement Between Singapore and PRC",
+      "url": "https://www.ica.gov.sg/news-and-publications/newsroom/media-release/mutual-30-day-visa-exemption-arrangement-between-singapore-and-the-people-s-republic-of-china",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": "2024-01-25",
+      "sourceUpdatedAt": "2024-01-25",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "中国普通护照自2024年2月9日起可免签停留最多30天。"
+    },
+    {
+      "sourceId": "SG-ICA-ENTRY-REQUIREMENTS",
+      "authority": "Immigration & Checkpoints Authority Singapore",
+      "title": "Entering Singapore",
+      "url": "https://www.ica.gov.sg/enter-transit-depart/entering-singapore",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "一般入境要求包括至少6个月护照有效期、续程安排、足够资金和抵达前3天内提交SG Arrival Card。"
+    },
+    {
+      "sourceId": "SG-ICA-VFTF",
+      "authority": "Immigration & Checkpoints Authority Singapore",
+      "title": "Visa-Free Transit Facility",
+      "url": "https://www.ica.gov.sg/enter-transit-depart/entering-singapore/visa-free-transit-facility",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "VFTF不适用于持中国普通、外交、公务或公务普通护照者；普通护照应走中新30天互免规则。"
+    },
+    {
+      "sourceId": "KR-MOFA-TRANSIT-2025",
+      "authority": "Ministry of Foreign Affairs, Republic of Korea",
+      "title": "Visa Free Entry for Third Country Transit Passengers",
+      "url": "https://overseas.mofa.go.kr/us-seattle-en/brd/m_23042/view.do?page=1&seq=40",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "持指定国家有效签证或居留并按规定路线经韩国过境者，满足记录、票证和前序停留条件时可按B-2停留最多30天；复杂条件必须人工复核。"
+    },
+    {
+      "sourceId": "PH-BI-OO-2026-001",
+      "authority": "Bureau of Immigration, Republic of the Philippines",
+      "title": "Operations Order No. 2026-001",
+      "url": "https://immigration.gov.ph/wp-content/uploads/2026/01/OPERATIONS-ORDER-No.-2026-%E2%80%93-001.pdf",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": "2026-01-16",
+      "sourceUpdatedAt": "2026-01-16",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "中国公民可在指定机场以旅游或商务目的免签最多14天，但以过境第三国为目的者须预先取得菲律宾过境签证。"
+    },
+    {
+      "sourceId": "ID-IMM-VOA-2026",
+      "authority": "Directorate General of Immigration, Indonesia",
+      "title": "Visa on Arrival Services for Foreign Nationals",
+      "url": "https://ngurahrai.imigrasi.go.id/layanan-wna/",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "id",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": "2026-08-18",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "中国在印尼VoA适用名单中，初次停留30天，可延长一次30天，费用为500,000印尼盾。"
+    },
+    {
+      "sourceId": "NP-IMM-TOURIST-VISA",
+      "authority": "Department of Immigration, Nepal",
+      "title": "Nepal Visa Information",
+      "url": "https://immigration.gov.np/visa-information",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "中国游客可办理免费旅游落地签；旅游停留每个签证年度累计最多150天，首次签发期限仍以现场签注为准。"
+    },
+    {
+      "sourceId": "VN-MOFA-PHUQUOC",
+      "authority": "Ministry of Foreign Affairs, Viet Nam",
+      "title": "Viet Nam Visa Exemption List",
+      "url": "https://mofa.gov.vn/tin-chi-tiet/chi-tiet/danh-muc-mien-thi-thuc-cua-viet-nam-voi-cac-nuoc-57162-172.html",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "vi",
+      "sourcePublishedAt": "2025-06-30",
+      "sourceUpdatedAt": "2025-06-30",
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "外国护照持有人进入富国岛可免签最多30天；可在越南国际口岸过境区停留后续程前往富国岛。"
+    },
+    {
+      "sourceId": "VN-IMM-EVISA",
+      "authority": "Immigration Department, Ministry of Public Security, Viet Nam",
+      "title": "Viet Nam E-Visa",
+      "url": "https://evisa.gov.vn/?option=MO",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "越南电子签证最长90天，可申请单次或多次入境，须从政府指定口岸出入境。"
+    },
+    {
+      "sourceId": "KH-EVISA-TEMP-2026",
+      "authority": "Kingdom of Cambodia e-Visa",
+      "title": "Temporary Visa-Free Policy for Chinese Tourists",
+      "url": "https://www.evisa.gov.kh/?vcode=-14",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "2026年6月15日至10月15日，中国游客可免签14天并多次入境，仍须完成Cambodia e-Arrival。"
+    },
+    {
+      "sourceId": "TR-MFA-VISA-2026",
+      "authority": "Ministry of Foreign Affairs, Republic of Türkiye",
+      "title": "Visa Information for Foreigners",
+      "url": "https://www.mfa.gov.tr/visa-information-for-foreigners.en.mfa",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "自2026年1月2日起，中国普通护照可在任意180天内免签停留最多90天。"
+    },
+    {
+      "sourceId": "BR-MRE-CANTON-2026",
+      "authority": "Consulate-General of Brazil in Guangzhou",
+      "title": "Visa Information",
+      "url": "https://www.gov.br/mre/pt-br/consulado-cantao/EN/visas/info",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": true,
+      "summaryZh": "2026年5月11日至12月31日期间，中国普通护照可因旅游、商务、过境等非就业目的免签，每次及一个移民年度累计最多30天。"
+    },
+    {
+      "sourceId": "MX-MFA-CONDITIONAL",
+      "authority": "Embassy of Mexico",
+      "title": "Visa Exemption with Valid Multiple-Entry Visa or Permanent Residence",
+      "url": "https://embamex.sre.gob.mx/canada/index.php/en/visas-and-services-for-foreigners",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "持美国、加拿大、日本、英国或申根有效多次签证，或认可地区永久居留，可因非有偿短期目的免办墨西哥签证。"
+    },
+    {
+      "sourceId": "PE-GOV-CONDITIONAL",
+      "authority": "Government of Peru",
+      "title": "Visa Frequently Asked Questions",
+      "url": "https://www.gob.pe/institucion/embajada-del-peru-en-singapur/informes-publicaciones/4022248-visa-frequently-asked-questions",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "中国护照持有美国、加拿大、澳大利亚、英国或申根有效签证且入境时剩余至少6个月，或持上述地区永久居留，可免旅游或商务签证。"
+    },
+    {
+      "sourceId": "CO-MFA-CONDITIONAL",
+      "authority": "Ministerio de Relaciones Exteriores de Colombia",
+      "title": "Do I Need a Visa?",
+      "url": "https://www.cancilleria.gov.co/atencion-y-servicio-al-ciudadano/tramites-y-servicios/visa/necesito-un-visa",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "es",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "中国公民持美国或申根居留，或入境时剩余有效期至少180天的美国/申根签证，可按短期访问条件免签。"
+    },
+    {
+      "sourceId": "CL-EMBASSY-BEIJING",
+      "authority": "Embassy of Chile in China",
+      "title": "Visa Exemption for Chinese Citizens Holding US or Canadian Visa",
+      "url": "https://www.chile.gob.cl/beijing/site/artic/20230727/pags/20230727160637.html",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": "2023-07-27",
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "持除C类过境签以外的美国或加拿大签证，或美国绿卡，且剩余有效期至少6个月的中国公民可免旅游签停留最多90天。"
+    },
+    {
+      "sourceId": "PA-EMBASSY-CONDITIONAL",
+      "authority": "Embassy of Panama",
+      "title": "Visas",
+      "url": "https://www.embassyofpanama.org/visas-1",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "持加拿大、美国、澳大利亚、韩国、日本、英国、新加坡或欧盟有效签证/居留可条件免签；一般需3个月护照有效期、500美元资金证明和返程票，停留最多30天。"
+    },
+    {
+      "sourceId": "DO-EMBASSY-CHINA-FAQ",
+      "authority": "Embassy of the Dominican Republic in China",
+      "title": "Preguntas Frecuentes",
+      "url": "https://chn.mirex.gob.do/preguntas-frecuentes/",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "es",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "CURRENT",
+      "supportsAutoDecision": false,
+      "summaryZh": "持欧盟、美国、加拿大或英国有效签证或居留卡，可按旅游卡制度访问多米尼加共和国；停留期限需在出票前复核。"
+    },
+    {
+      "sourceId": "CR-MIGRATION-CIRCULAR",
+      "authority": "Dirección General de Migración y Extranjería de Costa Rica",
+      "title": "Cambios principales de la Circular DG-0018-07-2022-DG-UV",
+      "url": "https://www.migracion.go.cr/Documentos%20compartidos/Visas/Cambios%20principales%20de%20la%20Circular%20DG-0018-07-2022-DG-UV.pdf",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "es",
+      "sourcePublishedAt": "2022-07-01",
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "PARTIAL",
+      "supportsAutoDecision": false,
+      "summaryZh": "持美国或加拿大非C1/C2/C3类有效签证/居留且剩余至少3个月，或满足部分欧洲合法居留条件，可免领事签；具体停留期限需人工复核。"
+    },
+    {
+      "sourceId": "OM-ROP-VISA-EXEMPT",
+      "authority": "Royal Oman Police",
+      "title": "List of Countries Allowed to Enter without Tourist Visa",
+      "url": "https://www.rop.gov.om/english/VisaExempt.aspx",
+      "tier": "A_DESTINATION_AUTHORITY",
+      "language": "en",
+      "sourcePublishedAt": null,
+      "sourceUpdatedAt": null,
+      "lastCheckedAt": "2026-08-30T12:00:00+08:00",
+      "status": "PARTIAL",
+      "supportsAutoDecision": false,
+      "summaryZh": "中国列入无需旅游签证的第一类国家，但页面未完整给出停留天数和全部附加材料，故不得自动判定。"
+    }
+  ],
+  "verifiedRules": [
+    {
+      "ruleId": "CN_MY_MUTUAL_VISA_FREE",
+      "version": 1,
+      "titleZh": "中国普通护照赴马来西亚互免签证",
+      "destination": { "countryCode": "MY", "jurisdictionCode": null, "displayNameZh": "马来西亚", "displayNameEn": "Malaysia", "entryPorts": [] },
+      "category": "MUTUAL_VISA_FREE",
+      "status": "ACTIVE",
+      "priority": 500,
+      "validity": { "effectiveFrom": "2025-07-17", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "traveler.passport.type", "op": "EQ", "value": "ORDINARY" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "MY" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 180 },
+          { "fact": "traveler.history.MY.daysInRollingWindowIncludingTrip", "op": "LTE", "value": 90 },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "BUSINESS", "FAMILY_VISIT", "CULTURAL_EXCHANGE", "PERSONAL", "MEDICAL", "TRANSIT"] }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "MUTUAL_VISA_FREE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "ENTRY_DAY_IS_DAY_1", "cumulativeLimit": { "days": 90, "windowDays": 180 } },
+        "manualReviewRequired": false,
+        "explanationZh": "满足单次30天、180天内累计90天及护照有效期条件时，可按互免安排预筛为可行。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_6_MONTHS", "mandatory": true, "descriptionZh": "入境时护照至少剩余6个月有效期。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "MDAC", "mandatory": true, "descriptionZh": "按官方要求在抵达前规定窗口内提交 Malaysia Digital Arrival Card。", "factPaths": ["documents.arrivalCard.status"] },
+        { "code": "ONWARD_TICKET", "mandatory": true, "descriptionZh": "携带返程或续程机票。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "ACCOMMODATION_OR_INVITATION", "mandatory": true, "descriptionZh": "准备住宿、邀请或访问目的证明。", "factPaths": ["documents.accommodation.status"] }
+      ],
+      "warningsZh": ["最终入境和获准停留期限由马来西亚边检决定。"],
+      "sourceIds": ["MY-IMM-MUTUAL-FAQ", "CN-MFA-MUTUAL-20260529"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["马来西亚移民局FAQ更新", "中新互免协定变化", "MDAC要求变化"] }
+    },
+    {
+      "ruleId": "CN_TH_MUTUAL_VISA_FREE",
+      "version": 1,
+      "titleZh": "中国普通护照赴泰国互免签证",
+      "destination": { "countryCode": "TH", "jurisdictionCode": null, "displayNameZh": "泰国", "displayNameEn": "Thailand", "entryPorts": [] },
+      "category": "MUTUAL_VISA_FREE",
+      "status": "ACTIVE",
+      "priority": 500,
+      "validity": { "effectiveFrom": "2024-03-01", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "traveler.passport.type", "op": "EQ", "value": "ORDINARY" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "TH" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.history.TH.daysInRollingWindowIncludingTrip", "op": "LTE", "value": 90 },
+          { "fact": "itinerary.purpose", "op": "NOT_IN", "value": ["RESIDENCE", "EMPLOYMENT", "STUDY", "MEDIA", "PRIOR_APPROVAL_ACTIVITY"] }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "MUTUAL_VISA_FREE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "PER_ENTRY", "cumulativeLimit": { "days": 90, "windowDays": 180 } },
+        "manualReviewRequired": false,
+        "explanationZh": "短期旅游、商务或过境等用途，满足30/90/180限制时可预筛为可行。"
+      },
+      "requirements": [
+        { "code": "VALID_PASSPORT", "mandatory": true, "descriptionZh": "护照须在整个行程中有效，具体剩余有效期同时遵守承运人要求。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "ONWARD_TICKET", "mandatory": true, "descriptionZh": "准备返程或续程证明。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "ACCOMMODATION", "mandatory": true, "descriptionZh": "准备可核验住宿信息。", "factPaths": ["documents.accommodation.status"] }
+      ],
+      "warningsZh": ["不得将互免用于工作、学习、媒体或其他需预先批准的活动。"],
+      "sourceIds": ["TH-MFA-MUTUAL-2024", "CN-MFA-MUTUAL-20260529"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["泰国外交部互免政策更新", "停留累计规则变化"] }
+    },
+    {
+      "ruleId": "CN_SG_MUTUAL_VISA_FREE",
+      "version": 1,
+      "titleZh": "中国普通护照赴新加坡30天互免签证",
+      "destination": { "countryCode": "SG", "jurisdictionCode": null, "displayNameZh": "新加坡", "displayNameEn": "Singapore", "entryPorts": [] },
+      "category": "MUTUAL_VISA_FREE",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": "2024-02-09", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "traveler.passport.type", "op": "EQ", "value": "ORDINARY" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "SG" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 180 }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "MUTUAL_VISA_FREE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "UP_TO_BORDER_GRANTED_STAY" },
+        "manualReviewRequired": false,
+        "explanationZh": "中国普通护照可按中新互免安排免签访问最多30天。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_6_MONTHS", "mandatory": true, "descriptionZh": "抵达时护照至少剩余6个月有效期。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "SG_ARRIVAL_CARD", "mandatory": true, "descriptionZh": "在抵达日前3天内通过官方渠道提交SG Arrival Card。", "factPaths": ["documents.arrivalCard.status"] },
+        { "code": "ONWARD_TICKET", "mandatory": true, "descriptionZh": "持有效续程或返程安排。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "SUFFICIENT_FUNDS", "mandatory": true, "descriptionZh": "按入境要求准备足够旅行资金。", "factPaths": ["documents.funds.status"] }
+      ],
+      "warningsZh": ["中国普通护照不应套用新加坡VFTF；应使用30天互免路径。", "最终准许停留天数以电子Visit Pass为准。"],
+      "sourceIds": ["SG-ICA-MUTUAL-2024", "SG-ICA-ENTRY-REQUIREMENTS", "SG-ICA-VFTF", "CN-MFA-MUTUAL-20260529"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["ICA互免安排更新", "SG Arrival Card要求变化", "VFTF适用证件变化"] }
+    },
+    {
+      "ruleId": "CN_HK_GENUINE_THIRD_COUNTRY_TRANSIT",
+      "version": 1,
+      "titleZh": "中国普通护照经香港真实过境第三国或地区",
+      "destination": { "countryCode": "CN", "jurisdictionCode": "HK", "displayNameZh": "中国香港", "displayNameEn": "Hong Kong SAR", "entryPorts": ["HKG"] },
+      "category": "LANDSIDE_TRANSIT_PERMISSION",
+      "status": "ACTIVE",
+      "priority": 800,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "traveler.passport.type", "op": "EQ", "value": "ORDINARY" },
+          { "fact": "itinerary.stopover.jurisdiction", "op": "EQ", "value": "HK" },
+          { "fact": "itinerary.route", "op": "ROUTE_MATCHES", "value": { "pattern": "A-HK-B", "requiresAandBDifferent": true, "requiresGenuineTransit": true } },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 7 },
+          { "fact": "documents.destinationEntryPermission.status", "op": "EQ", "value": "VALID" },
+          { "fact": "documents.onwardTicket.status", "op": "EQ", "value": "CONFIRMED" }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "GENUINE_THIRD_COUNTRY_TRANSIT",
+        "maxStay": { "value": 7, "unit": "DAYS", "calculation": "PER_LANDING_SUBJECT_TO_IMMIGRATION" },
+        "manualReviewRequired": true,
+        "explanationZh": "真实前往或来自第三国/地区并具备续程和目的地入境资格时，可按过境安排进入香港最多7天。"
+      },
+      "requirements": [
+        { "code": "GENUINE_THIRD_COUNTRY_ROUTE", "mandatory": true, "descriptionZh": "必须是A→香港→B且A与B不同，不能把往返内地包装成过境。", "factPaths": ["itinerary.route"] },
+        { "code": "DESTINATION_ENTRY_PERMISSION", "mandatory": true, "descriptionZh": "持有最终目的地所需签证、居留或免签资格。", "factPaths": ["documents.destinationEntryPermission.status"] },
+        { "code": "CONFIRMED_ONWARD_TICKET", "mandatory": true, "descriptionZh": "持已确认日期和座位的续程票。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "MAINLAND_EXIT_PREFLIGHT", "mandatory": true, "descriptionZh": "出发前仍需核对内地边检和承运人对护照、续程及目的地材料的要求。", "factPaths": ["documents.carrierPreclearance.status"] }
+      ],
+      "warningsZh": ["该规则不适用于以香港为最终目的地的独立旅行。", "香港入境许可不等于内地边检或航空公司保证放行。"],
+      "sourceIds": ["HK-IMMD-PRC-TRANSIT"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["香港入境处内地居民过境安排更新", "停留天数或续程条件变化"] }
+    },
+    {
+      "ruleId": "CN_MO_GENUINE_THIRD_COUNTRY_TRANSIT",
+      "version": 1,
+      "titleZh": "中国普通护照经澳门国际机场真实过境外国",
+      "destination": { "countryCode": "CN", "jurisdictionCode": "MO", "displayNameZh": "中国澳门", "displayNameEn": "Macao SAR", "entryPorts": ["MFM"] },
+      "category": "LANDSIDE_TRANSIT_PERMISSION",
+      "status": "ACTIVE",
+      "priority": 800,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "traveler.passport.type", "op": "EQ", "value": "ORDINARY" },
+          { "fact": "itinerary.stopover.jurisdiction", "op": "EQ", "value": "MO" },
+          { "fact": "itinerary.route", "op": "ROUTE_MATCHES", "value": { "pattern": "A-MO-B", "requiresForeignEndpoint": true, "requiresMacaoAirportTransportDocument": true } },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 7 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 97 },
+          { "fact": "documents.destinationEntryPermission.status", "op": "EQ", "value": "VALID" }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "GENUINE_THIRD_COUNTRY_TRANSIT",
+        "maxStay": { "value": 7, "unit": "DAYS", "calculation": "SUBJECT_TO_MACAO_BORDER_CONTROL" },
+        "manualReviewRequired": true,
+        "explanationZh": "具备目的地签证及经澳门国际机场往返外国的运输凭证时，可按过境安排最多停留7天。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_STAY_PLUS_90_DAYS", "mandatory": true, "descriptionZh": "护照有效期至少覆盖拟停留期并额外90天。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "DESTINATION_ENTRY_PERMISSION", "mandatory": true, "descriptionZh": "持最终目的地所需签证或其他有效入境许可。", "factPaths": ["documents.destinationEntryPermission.status"] },
+        { "code": "MFM_TRANSPORT_DOCUMENT", "mandatory": true, "descriptionZh": "持使用澳门国际机场往返外国的机票或运输凭证。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "MAINLAND_EXIT_PREFLIGHT", "mandatory": true, "descriptionZh": "核对内地边检和承运人要求。", "factPaths": ["documents.carrierPreclearance.status"] }
+      ],
+      "warningsZh": ["无法证明真实过境可能被拒绝入境。", "该规则不适用于以澳门为最终目的地的独立旅行。"],
+      "sourceIds": ["MO-PSP-PRC-TRANSIT"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["澳门治安警察局过境条件更新", "运输凭证或护照有效期条件变化"] }
+    },
+    {
+      "ruleId": "CN_KR_THIRD_COUNTRY_TRANSIT",
+      "version": 1,
+      "titleZh": "持指定国家签证或居留经韩国第三国过境",
+      "destination": { "countryCode": "KR", "jurisdictionCode": null, "displayNameZh": "韩国", "displayNameEn": "Republic of Korea", "entryPorts": [] },
+      "category": "LANDSIDE_TRANSIT_PERMISSION",
+      "status": "ACTIVE",
+      "priority": 850,
+      "validity": { "effectiveFrom": "2023-04-30", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.stopover.country", "op": "EQ", "value": "KR" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "issuerGroupsAnyOf": ["KOREA_ADVANCED_FOUR", "KOREA_APPROVED_EUROPE_32"], "kinds": ["VISA", "PERMANENT_RESIDENCE", "REENTRY_PERMIT"] } },
+          { "fact": "itinerary.route", "op": "ROUTE_MATCHES", "value": { "program": "KR_THIRD_COUNTRY_TRANSIT", "qualifyingCountryMustBeEndpointOrImmediateOrigin": true, "priorThirdCountryStopoverMaxDays": 3, "noReturnToPreviousTransitPoint": true } },
+          { "fact": "documents.onwardTicket.status", "op": "EQ", "value": "CONFIRMED" },
+          { "fact": "traveler.history.KR.deniedEntryWithin3Years", "op": "IS_FALSE", "value": false },
+          { "fact": "traveler.history.KR.seriousImmigrationViolation", "op": "IS_FALSE", "value": false }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "B2_THIRD_COUNTRY_TRANSIT",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "B2_MAXIMUM_SUBJECT_TO_ROUTE_AND_BORDER" },
+        "manualReviewRequired": true,
+        "explanationZh": "只有签证/居留签发地、签证载体、路线方向、前序停留和历史记录全部满足时才可能适用。"
+      },
+      "requirements": [
+        { "code": "QUALIFYING_VISA_OR_RESIDENCE", "mandatory": true, "descriptionZh": "美国、加拿大、新西兰及指定欧洲国家通常要求护照贴纸签证；澳大利亚签证需可通过VEVO验证，英国eVisa须可在线验证。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "ROUTE_DIRECTION_CHECK", "mandatory": true, "descriptionZh": "路线必须前往指定签证国，或从该国离境后经韩国返回本国/第三国。", "factPaths": ["itinerary.route"] },
+        { "code": "CONFIRMED_ONWARD_WITHIN_30_DAYS", "mandatory": true, "descriptionZh": "持30天内离境的已确认续程机票。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "IMMIGRATION_HISTORY_DECLARATION", "mandatory": true, "descriptionZh": "申报近3年拒绝入境、罚款、驱逐或非法滞留情况。", "factPaths": ["traveler.history.KR"] }
+      ],
+      "warningsZh": ["韩国使领馆通常不对个人具体路线预先作最终资格认定。", "此规则不得仅凭持有美国签证就放行，路线必须同时满足。"],
+      "sourceIds": ["KR-MOFA-TRANSIT-2025"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["韩国法务部或外交部更新第三国过境计划", "认可签证载体变化", "欧洲32国名单变化"] }
+    },
+    {
+      "ruleId": "CN_KR_ICN_TRANSIT_TOUR",
+      "version": 1,
+      "titleZh": "仁川机场政府认可过境观光项目",
+      "destination": { "countryCode": "KR", "jurisdictionCode": null, "displayNameZh": "韩国仁川", "displayNameEn": "Incheon, Republic of Korea", "entryPorts": ["ICN"] },
+      "category": "TRANSIT_TOUR_PROGRAM",
+      "status": "ACTIVE",
+      "priority": 700,
+      "validity": { "effectiveFrom": "2023-05-15", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.stopover.airport", "op": "EQ", "value": "ICN" },
+          { "fact": "itinerary.stayHours", "op": "LTE", "value": 72 },
+          { "fact": "documents.onwardTicket.status", "op": "EQ", "value": "CONFIRMED" },
+          { "fact": "documents.recognizedTransitTour.status", "op": "EQ", "value": "CONFIRMED" }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "B2_RECOGNIZED_TRANSIT_TOUR",
+        "maxStay": { "value": 72, "unit": "HOURS", "calculation": "WITHIN_THREE_DAYS_AND_PROGRAM_LIMITS" },
+        "manualReviewRequired": true,
+        "explanationZh": "不满足第三国签证过境规则的乘客，也可能在参加政府认可过境观光项目时于规定区域短暂停留。"
+      },
+      "requirements": [
+        { "code": "RECOGNIZED_TRANSIT_TOUR_BOOKING", "mandatory": true, "descriptionZh": "必须参加韩国政府认可并有导游管理的过境观光项目。", "factPaths": ["documents.recognizedTransitTour.status"] },
+        { "code": "ICN_ONWARD_TICKET", "mandatory": true, "descriptionZh": "持从仁川机场离境的已确认续程票。", "factPaths": ["documents.onwardTicket.status"] }
+      ],
+      "warningsZh": ["这不是自由独立入境72小时政策；活动区域、时段和资格受过境观光项目约束。"],
+      "sourceIds": ["KR-MOFA-TRANSIT-2025"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["仁川机场过境观光项目规则变化", "排除国籍名单变化"] }
+    },
+    {
+      "ruleId": "CN_PH_TRANSIT_VISA_REQUIRED",
+      "version": 1,
+      "titleZh": "中国公民以菲律宾为第三国过境点须预办过境签证",
+      "destination": { "countryCode": "PH", "jurisdictionCode": null, "displayNameZh": "菲律宾", "displayNameEn": "Philippines", "entryPorts": [] },
+      "category": "VISA_REQUIRED",
+      "status": "NEGATIVE",
+      "priority": 1000,
+      "validity": { "effectiveFrom": "2026-01-16", "effectiveTo": "2027-01-15" },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.stopover.country", "op": "EQ", "value": "PH" },
+          { "fact": "itinerary.purpose", "op": "EQ", "value": "TRANSIT" }
+        ]
+      },
+      "decision": {
+        "search": "INELIGIBLE",
+        "booking": "INELIGIBLE",
+        "entryMode": "TRANSIT_VISA_REQUIRED",
+        "maxStay": null,
+        "manualReviewRequired": true,
+        "explanationZh": "菲律宾2026年14天便利明确排除前往第三国的过境旅客；需在入境前取得菲律宾过境签证。"
+      },
+      "requirements": [
+        { "code": "PH_TRANSIT_VISA", "mandatory": true, "descriptionZh": "如计划以菲律宾为中转停留地，须预先取得适当菲律宾过境签证。", "factPaths": ["traveler.visas"] }
+      ],
+      "warningsZh": ["不得把第三国中转行程错误套用14天旅游/商务免签。"],
+      "sourceIds": ["PH-BI-OO-2026-001"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-15T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["菲律宾Operations Order续期或修改", "过境旅客条款变化"] }
+    },
+    {
+      "ruleId": "CN_PH_TEMP_14_DAY_VISITOR",
+      "version": 1,
+      "titleZh": "中国公民菲律宾指定机场14天临时免签访问",
+      "destination": { "countryCode": "PH", "jurisdictionCode": null, "displayNameZh": "菲律宾", "displayNameEn": "Philippines", "entryPorts": ["MNL", "CEB"] },
+      "category": "UNILATERAL_VISA_FREE",
+      "status": "TEMPORARY_ACTIVE",
+      "priority": 750,
+      "validity": { "effectiveFrom": "2026-01-16", "effectiveTo": "2027-01-15" },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "PH" },
+          { "fact": "itinerary.entryAirport", "op": "IN", "value": ["MNL", "CEB"] },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "BUSINESS"] },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 14 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 180 }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "TEMPORARY_14_DAY_VISITOR",
+        "maxStay": { "value": 14, "unit": "DAYS", "calculation": "NON_EXTENDIBLE_NON_CONVERTIBLE" },
+        "manualReviewRequired": true,
+        "explanationZh": "仅适用于从马尼拉NAIA或宿务麦克坦机场以旅游/商务目的入境的短期访客，不适用于第三国过境。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_6_MONTHS_BEYOND_STAY", "mandatory": true, "descriptionZh": "护照有效期至少超过拟停留期6个月。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "CONFIRMED_HOTEL", "mandatory": true, "descriptionZh": "持可核验酒店预订。", "factPaths": ["documents.accommodation.status"] },
+        { "code": "RETURN_OR_ONWARD_TICKET", "mandatory": true, "descriptionZh": "持返程或赴下一国家的已确认机票。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "ETRAVEL", "mandatory": true, "descriptionZh": "完成菲律宾eTravel登记。", "factPaths": ["documents.arrivalCard.status"] }
+      ],
+      "warningsZh": ["该便利不可延期、不可转换身份。", "LayoverJoy的多日中转产品默认不推荐此规则，除非行程法律目的明确为旅游/商务并完成人工复核。"],
+      "sourceIds": ["PH-BI-OO-2026-001"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-15T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["菲律宾临时政策续期", "指定机场或允许目的变化"] }
+    },
+    {
+      "ruleId": "CN_ID_VISA_ON_ARRIVAL",
+      "version": 1,
+      "titleZh": "中国普通护照印度尼西亚落地签",
+      "destination": { "countryCode": "ID", "jurisdictionCode": null, "displayNameZh": "印度尼西亚", "displayNameEn": "Indonesia", "entryPorts": [] },
+      "category": "VISA_ON_ARRIVAL",
+      "status": "ACTIVE",
+      "priority": 500,
+      "validity": { "effectiveFrom": "2024-01-09", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "ID" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "GOVERNMENT_VISIT", "BUSINESS_MEETING", "PURCHASING", "MEETING", "TRANSIT"] },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 180 }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "VISA_ON_ARRIVAL_OR_EVOA",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "INITIAL_STAY_EXTENDIBLE_ONCE_FOR_30_DAYS" },
+        "manualReviewRequired": false,
+        "explanationZh": "中国护照在印尼VoA名单中，可落地办理或预办e-VoA，初次最多停留30天。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_6_MONTHS", "mandatory": true, "descriptionZh": "护照至少剩余6个月有效期。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "RETURN_OR_ONWARD_TICKET", "mandatory": true, "descriptionZh": "持返程或续程票。", "factPaths": ["documents.onwardTicket.status"] },
+        { "code": "VOA_FEE", "mandatory": true, "descriptionZh": "准备缴纳当前官方VoA费用；价格变化须在出发前重查。", "factPaths": ["documents.visaFeeAcknowledged"] }
+      ],
+      "warningsZh": ["仅可从官方指定口岸办理，Qoder须维护允许口岸表并在出票前复核。", "不得从事与访问许可不符的工作。"],
+      "sourceIds": ["ID-IMM-VOA-2026"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["印尼VoA国家名单更新", "费用、口岸或允许活动变化"] }
+    },
+    {
+      "ruleId": "CN_NP_GRATIS_VISA_ON_ARRIVAL",
+      "version": 1,
+      "titleZh": "中国游客尼泊尔免费旅游落地签",
+      "destination": { "countryCode": "NP", "jurisdictionCode": null, "displayNameZh": "尼泊尔", "displayNameEn": "Nepal", "entryPorts": [] },
+      "category": "VISA_ON_ARRIVAL",
+      "status": "ACTIVE",
+      "priority": 500,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "NP" },
+          { "fact": "itinerary.purpose", "op": "EQ", "value": "TOURISM" },
+          { "fact": "traveler.history.NP.daysInVisaYearIncludingTrip", "op": "LTE", "value": 150 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 180 }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "GRATIS_TOURIST_VISA_ON_ARRIVAL",
+        "maxStay": { "value": 150, "unit": "DAYS", "calculation": "CUMULATIVE_MAX_PER_VISA_YEAR; INITIAL_GRANT_AS_STAMPED" },
+        "manualReviewRequired": false,
+        "explanationZh": "中国游客可申请免费旅游落地签；实际首次签发期限以入境签注为准，年度累计不得超过150天。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_6_MONTHS", "mandatory": true, "descriptionZh": "护照至少剩余6个月有效期。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "ARRIVAL_CARD_AND_ONLINE_FORM", "mandatory": true, "descriptionZh": "填写入境卡和官方旅游签申请表。", "factPaths": ["documents.arrivalCard.status"] }
+      ],
+      "warningsZh": ["免费指签证费减免，不代表免办签证手续。", "首次获批天数由移民官签发，不应把150天当作自动获批停留期。"],
+      "sourceIds": ["NP-IMM-TOURIST-VISA"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["尼泊尔落地签限制名单变化", "中国公民gratis政策变化"] }
+    },
+    {
+      "ruleId": "CN_VN_PHU_QUOC_REGIONAL_VISA_FREE",
+      "version": 1,
+      "titleZh": "越南富国岛区域免签",
+      "destination": { "countryCode": "VN", "jurisdictionCode": null, "displayNameZh": "越南富国岛", "displayNameEn": "Phu Quoc, Viet Nam", "regions": ["PHU_QUOC"], "entryPorts": ["PQC"] },
+      "category": "REGIONAL_VISA_FREE",
+      "status": "ACTIVE",
+      "priority": 650,
+      "validity": { "effectiveFrom": "2014-03-10", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.region", "op": "EQ", "value": "PHU_QUOC" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "itinerary.route", "op": "ROUTE_MATCHES", "value": { "program": "VN_PHU_QUOC_ONLY", "noMainlandVietnamLandsideEntryWithoutVisa": true } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "PHU_QUOC_REGIONAL_VISA_FREE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "PHU_QUOC_REGION_ONLY" },
+        "manualReviewRequired": true,
+        "explanationZh": "行程局限于富国岛且符合入境路径时，可免签停留最多30天。"
+      },
+      "requirements": [
+        { "code": "PHU_QUOC_ONLY_ITINERARY", "mandatory": true, "descriptionZh": "在越南境内的活动范围必须符合富国岛区域免签要求。", "factPaths": ["itinerary.route"] },
+        { "code": "TRANSIT_ZONE_CONTINUITY", "mandatory": true, "descriptionZh": "如经越南其他国际口岸续程富国岛，不得在没有签证时擅自进入越南大陆。", "factPaths": ["itinerary.segments"] }
+      ],
+      "warningsZh": ["计划离开富国岛进入越南大陆时，应改用有效越南电子签证或其他签证。"],
+      "sourceIds": ["VN-MOFA-PHUQUOC"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["越南富国岛区域免签变化", "允许转机口岸或活动范围变化"] }
+    },
+    {
+      "ruleId": "CN_VN_E_VISA",
+      "version": 1,
+      "titleZh": "中国普通护照越南电子签证路径",
+      "destination": { "countryCode": "VN", "jurisdictionCode": null, "displayNameZh": "越南", "displayNameEn": "Viet Nam", "entryPorts": [] },
+      "category": "E_VISA",
+      "status": "ACTIVE",
+      "priority": 300,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "VN" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 90 }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_INFO",
+        "entryMode": "E_VISA_REQUIRED_BEFORE_TRAVEL",
+        "maxStay": { "value": 90, "unit": "DAYS", "calculation": "AS_GRANTED_ON_SINGLE_OR_MULTIPLE_ENTRY_E_VISA" },
+        "manualReviewRequired": false,
+        "explanationZh": "可通过越南官方电子签证路径解决大陆地区停留，但出票前必须确认电子签证覆盖日期、次数和入出境口岸。"
+      },
+      "requirements": [
+        { "code": "APPROVED_E_VISA", "mandatory": true, "descriptionZh": "取得有效越南电子签证。", "factPaths": ["traveler.visas"] },
+        { "code": "DESIGNATED_E_VISA_PORTS", "mandatory": true, "descriptionZh": "入境和离境口岸必须在官方电子签证允许清单内。", "factPaths": ["itinerary.entryAirport", "itinerary.exitAirport"] }
+      ],
+      "warningsZh": ["申请费即使拒签通常不退。", "不得仅凭已提交申请进入Order/Pay。"],
+      "sourceIds": ["VN-IMM-EVISA"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["越南电子签证期限、费用或口岸变化"] }
+    },
+    {
+      "ruleId": "CN_KH_TEMP_14_DAY_VISA_FREE",
+      "version": 1,
+      "titleZh": "柬埔寨2026年中国游客临时14天免签",
+      "destination": { "countryCode": "KH", "jurisdictionCode": null, "displayNameZh": "柬埔寨", "displayNameEn": "Cambodia", "entryPorts": [] },
+      "category": "UNILATERAL_VISA_FREE",
+      "status": "TEMPORARY_ACTIVE",
+      "priority": 900,
+      "validity": { "effectiveFrom": "2026-06-15", "effectiveTo": "2026-10-15" },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "KH" },
+          { "fact": "itinerary.purpose", "op": "EQ", "value": "TOURISM" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 14 },
+          { "fact": "itinerary.arrivalDate", "op": "DATE_WITHIN_RULE_VALIDITY", "value": true }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "TEMPORARY_TOURIST_VISA_FREE",
+        "maxStay": { "value": 14, "unit": "DAYS", "calculation": "ARRIVAL_MUST_BE_WITHIN_EFFECTIVE_WINDOW" },
+        "manualReviewRequired": false,
+        "explanationZh": "仅当抵达日期位于临时政策有效窗口且用途为旅游时适用。"
+      },
+      "requirements": [
+        { "code": "CAMBODIA_E_ARRIVAL", "mandatory": true, "descriptionZh": "通过柬埔寨官方渠道完成e-Arrival。", "factPaths": ["documents.arrivalCard.status"] },
+        { "code": "TEMPORARY_POLICY_RECHECK", "mandatory": true, "descriptionZh": "出票前72小时内重新核验政策仍有效。", "factPaths": ["assessment.sourceCheckedAt"] }
+      ],
+      "warningsZh": ["2026年10月15日后必须自动失效，禁止依赖静态缓存继续推荐。"],
+      "sourceIds": ["KH-EVISA-TEMP-2026"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-09-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["柬埔寨临时政策提前结束、续期或口岸限制变化"] }
+    },
+    {
+      "ruleId": "CN_TR_UNILATERAL_VISA_FREE_90_180",
+      "version": 1,
+      "titleZh": "中国普通护照赴土耳其90/180免签",
+      "destination": { "countryCode": "TR", "jurisdictionCode": null, "displayNameZh": "土耳其", "displayNameEn": "Türkiye", "entryPorts": [] },
+      "category": "UNILATERAL_VISA_FREE",
+      "status": "ACTIVE",
+      "priority": 500,
+      "validity": { "effectiveFrom": "2026-01-02", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "TR" },
+          { "fact": "traveler.history.TR.daysInRollingWindowIncludingTrip", "op": "LTE", "value": 90 }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "UNILATERAL_VISA_FREE",
+        "maxStay": { "value": 90, "unit": "DAYS", "calculation": "CUMULATIVE", "cumulativeLimit": { "days": 90, "windowDays": 180 } },
+        "manualReviewRequired": false,
+        "explanationZh": "自2026年1月2日起，中国普通护照可按90/180规则短期免签。"
+      },
+      "requirements": [
+        { "code": "VALID_PASSPORT", "mandatory": true, "descriptionZh": "护照有效期和空白页满足土耳其及承运人实时要求。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "ONWARD_AND_ACCOMMODATION", "mandatory": true, "descriptionZh": "准备续程、住宿和旅行目的证明。", "factPaths": ["documents.onwardTicket.status", "documents.accommodation.status"] }
+      ],
+      "warningsZh": ["免签不允许就业，入境官仍可要求补充材料。"],
+      "sourceIds": ["TR-MFA-VISA-2026"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-11-28T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["土耳其外交部中国护照政策变化"] }
+    },
+    {
+      "ruleId": "CN_BR_TEMP_30_DAY_VISA_FREE",
+      "version": 1,
+      "titleZh": "巴西2026年中国普通护照临时30天免签",
+      "destination": { "countryCode": "BR", "jurisdictionCode": null, "displayNameZh": "巴西", "displayNameEn": "Brazil", "entryPorts": [] },
+      "category": "UNILATERAL_VISA_FREE",
+      "status": "TEMPORARY_ACTIVE",
+      "priority": 900,
+      "validity": { "effectiveFrom": "2026-05-11", "effectiveTo": "2026-12-31" },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "BR" },
+          { "fact": "itinerary.arrivalDate", "op": "DATE_WITHIN_RULE_VALIDITY", "value": true },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.history.BR.daysInMigrationYearIncludingTrip", "op": "LTE", "value": 30 },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "BUSINESS", "TRANSIT", "ARTISTIC", "SPORTS"] }
+        ]
+      },
+      "decision": {
+        "search": "ELIGIBLE",
+        "booking": "CONDITIONALLY_ELIGIBLE",
+        "entryMode": "TEMPORARY_VISA_FREE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "NON_EXTENDIBLE_AND_MAX_30_DAYS_PER_MIGRATION_YEAR" },
+        "manualReviewRequired": false,
+        "explanationZh": "抵达日期、旅行目的和移民年度累计停留均满足时，可按临时免签预筛。"
+      },
+      "requirements": [
+        { "code": "TEMPORARY_POLICY_RECHECK", "mandatory": true, "descriptionZh": "出票前72小时内重新核验巴西政策未提前变化。", "factPaths": ["assessment.sourceCheckedAt"] },
+        { "code": "NO_REMUNERATED_WORK", "mandatory": true, "descriptionZh": "旅行不得包含有偿工作。", "factPaths": ["itinerary.purpose"] }
+      ],
+      "warningsZh": ["该政策目前仅确认至2026年12月31日，跨期行程不得自动判定。"],
+      "sourceIds": ["BR-MRE-CANTON-2026"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-09-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["巴西临时免签续期、终止或累计计算变化"] }
+    },
+    {
+      "ruleId": "CN_MX_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持指定多次签证或永久居留赴墨西哥条件免签",
+      "destination": { "countryCode": "MX", "jurisdictionCode": null, "displayNameZh": "墨西哥", "displayNameEn": "Mexico", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "MX" },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "BUSINESS", "TRANSIT", "NON_REMUNERATED"] },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "anyOf": [ { "kind": "VISA", "issuerGroup": "MEXICO_QUALIFYING_VISA_ISSUERS", "multipleEntry": true }, { "kind": "PERMANENT_RESIDENCE", "issuers": ["US", "CA", "JP", "GB", "CH", "CL", "CO", "PE"] } ] } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_VISA_OR_PERMANENT_RESIDENCE",
+        "maxStay": { "value": 180, "unit": "DAYS", "calculation": "MAXIMUM_VISITOR_CATEGORY;_ACTUAL_DAYS_GRANTED_AT_ENTRY" },
+        "manualReviewRequired": true,
+        "explanationZh": "只有符合签发地、有效性和多次入境属性的签证，或认可永久居留，才可作为墨西哥免签依据。"
+      },
+      "requirements": [
+        { "code": "ORIGINAL_QUALIFYING_DOCUMENT", "mandatory": true, "descriptionZh": "携带可由承运人和边检验证的有效多次签证或永久居留原件/电子凭证。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "ONWARD_FUNDS_PURPOSE", "mandatory": true, "descriptionZh": "准备续程、资金和访问目的证明。", "factPaths": ["documents.onwardTicket.status", "documents.funds.status"] }
+      ],
+      "warningsZh": ["持美国C类等不满足目的/入境次数的签证不能仅凭国家字段判定。", "实际获准停留天数由墨西哥移民官决定。"],
+      "sourceIds": ["MX-MFA-CONDITIONAL"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["墨西哥认可签证或居留名单变化", "多次入境要求变化"] }
+    },
+    {
+      "ruleId": "CN_PE_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持指定签证或永久居留赴秘鲁条件免签",
+      "destination": { "countryCode": "PE", "jurisdictionCode": null, "displayNameZh": "秘鲁", "displayNameEn": "Peru", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "PE" },
+          { "fact": "itinerary.purpose", "op": "IN", "value": ["TOURISM", "BUSINESS"] },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "anyOf": [ { "kind": "VISA", "issuers": ["US", "CA", "AU", "GB"], "orIssuerGroup": "SCHENGEN_CURRENT", "minimumValidityDaysAtEntry": 180 }, { "kind": "PERMANENT_RESIDENCE", "issuers": ["US", "CA", "AU", "GB"], "orIssuerGroup": "SCHENGEN_CURRENT" } ] } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_VISA_OR_PERMANENT_RESIDENCE",
+        "maxStay": { "value": 180, "unit": "DAYS", "calculation": "SOURCE_STAY_WORDING_REQUIRES_MANUAL_CONFIRMATION" },
+        "manualReviewRequired": true,
+        "explanationZh": "签证须来自认可地区且入境时剩余至少6个月；永久居留路径不套用签证剩余期字段。"
+      },
+      "requirements": [
+        { "code": "QUALIFYING_DOCUMENT_VALIDITY", "mandatory": true, "descriptionZh": "核验签发地、文件类型和入境日剩余有效期。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "PERU_PREFLIGHT_REVIEW", "mandatory": true, "descriptionZh": "因官方页面对累计停留表述需结合个案，在出票前完成人工复核。", "factPaths": ["assessment.manualReview.status"] }
+      ],
+      "warningsZh": ["不得把已过期或入境日剩余不足6个月的签证视为合格。"],
+      "sourceIds": ["PE-GOV-CONDITIONAL"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["秘鲁认可文件或最短有效期变化", "停留计算口径变化"] }
+    },
+    {
+      "ruleId": "CN_CO_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持美国或申根签证/居留赴哥伦比亚条件免签",
+      "destination": { "countryCode": "CO", "jurisdictionCode": null, "displayNameZh": "哥伦比亚", "displayNameEn": "Colombia", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "CO" },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "anyOf": [ { "kind": "RESIDENCE", "issuers": ["US"], "orIssuerGroup": "SCHENGEN_CURRENT" }, { "kind": "VISA", "issuers": ["US"], "orIssuerGroup": "SCHENGEN_CURRENT", "minimumValidityDaysAtEntry": 180 } ] } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_US_OR_SCHENGEN_DOCUMENT",
+        "maxStay": null,
+        "manualReviewRequired": true,
+        "explanationZh": "美国或申根居留可作为条件；签证路径要求入境时至少剩余180天有效期。"
+      },
+      "requirements": [
+        { "code": "QUALIFYING_DOCUMENT_VALIDITY", "mandatory": true, "descriptionZh": "核验原始签证/居留文件及剩余有效期。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "COLOMBIA_STAY_REVIEW", "mandatory": true, "descriptionZh": "在预订前由当前官方规则确定访问类别和获准停留上限。", "factPaths": ["assessment.manualReview.status"] }
+      ],
+      "warningsZh": ["规则库不应在缺少当前访问类别停留上限时生成确定天数。"],
+      "sourceIds": ["CO-MFA-CONDITIONAL"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["哥伦比亚5488号决议或签证页面变化"] }
+    },
+    {
+      "ruleId": "CN_CL_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持美国或加拿大签证赴智利条件免签",
+      "destination": { "countryCode": "CL", "jurisdictionCode": null, "displayNameZh": "智利", "displayNameEn": "Chile", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "CL" },
+          { "fact": "itinerary.purpose", "op": "EQ", "value": "TOURISM" },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "anyOf": [ { "kind": "VISA", "issuers": ["US", "CA"], "excludedVisaTypes": ["C", "C1", "C2", "C3"], "minimumValidityDaysAtEntry": 180 }, { "kind": "PERMANENT_RESIDENCE", "issuers": ["US"], "minimumValidityDaysAtEntry": 180 } ] } },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 90 }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_US_OR_CANADA_DOCUMENT",
+        "maxStay": { "value": 90, "unit": "DAYS", "calculation": "TOURIST_MAXIMUM" },
+        "manualReviewRequired": true,
+        "explanationZh": "美国或加拿大签证须非C类过境签并在入境时剩余至少6个月，或持符合条件的美国绿卡。"
+      },
+      "requirements": [
+        { "code": "NON_TRANSIT_QUALIFYING_VISA", "mandatory": true, "descriptionZh": "美国/加拿大签证不得为C类过境签。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "VALIDITY_6_MONTHS", "mandatory": true, "descriptionZh": "合格文件入境时至少剩余6个月有效期。", "factPaths": ["traveler.qualifyingDocuments"] }
+      ],
+      "warningsZh": ["免签仅限旅游，不得从事有偿工作。"],
+      "sourceIds": ["CL-EMBASSY-BEIJING"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["智利驻华使馆条件免签要求变化"] }
+    },
+    {
+      "ruleId": "CN_PA_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持指定国家签证或居留赴巴拿马条件免签",
+      "destination": { "countryCode": "PA", "jurisdictionCode": null, "displayNameZh": "巴拿马", "displayNameEn": "Panama", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 600,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "PA" },
+          { "fact": "itinerary.stayDays", "op": "LTE", "value": 30 },
+          { "fact": "traveler.passport.validUntil", "op": "VALID_FOR_DAYS", "value": 90 },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "kinds": ["VISA", "RESIDENCE"], "issuers": ["CA", "US", "AU", "KR", "JP", "GB", "SG"], "orIssuerGroup": "SCHENGEN_CURRENT", "mustBeUsedBefore": false } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_VISA_OR_RESIDENCE",
+        "maxStay": { "value": 30, "unit": "DAYS", "calculation": "MAXIMUM_UNDER_CONDITIONAL_EXEMPTION" },
+        "manualReviewRequired": true,
+        "explanationZh": "认可国家或地区的有效签证/居留可作为条件免签依据；2024修改后不再机械要求签证曾被使用。"
+      },
+      "requirements": [
+        { "code": "PASSPORT_VALID_3_MONTHS", "mandatory": true, "descriptionZh": "护照至少剩余3个月有效期。", "factPaths": ["traveler.passport.validUntil"] },
+        { "code": "FUNDS_500_USD", "mandatory": true, "descriptionZh": "准备至少500美元或等值资金证明。", "factPaths": ["documents.funds.status"] },
+        { "code": "RETURN_TICKET", "mandatory": true, "descriptionZh": "持返程或续程票。", "factPaths": ["documents.onwardTicket.status"] }
+      ],
+      "warningsZh": ["不得继续使用旧版资料中的‘签证必须已使用且剩余6个月’作为硬条件；应以当前法令和使馆页面为准。"],
+      "sourceIds": ["PA-EMBASSY-CONDITIONAL"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["巴拿马认可国家名单、资金或护照条件变化"] }
+    },
+    {
+      "ruleId": "CN_DO_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持欧美加英签证或居留赴多米尼加共和国条件免签",
+      "destination": { "countryCode": "DO", "jurisdictionCode": null, "displayNameZh": "多米尼加共和国", "displayNameEn": "Dominican Republic", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "ACTIVE",
+      "priority": 550,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "DO" },
+          { "fact": "itinerary.purpose", "op": "EQ", "value": "TOURISM" },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "kinds": ["VISA", "RESIDENCE"], "issuers": ["US", "CA", "GB"], "orIssuerGroup": "SCHENGEN_CURRENT" } }
+        ]
+      },
+      "decision": {
+        "search": "CONDITIONALLY_ELIGIBLE",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "QUALIFYING_VISA_OR_RESIDENCE_PLUS_TOURIST_CARD",
+        "maxStay": null,
+        "manualReviewRequired": true,
+        "explanationZh": "认可签证或居留可免领事签，但仍需满足旅游卡、护照和入境材料要求。"
+      },
+      "requirements": [
+        { "code": "QUALIFYING_VISA_OR_RESIDENCE", "mandatory": true, "descriptionZh": "持欧盟、美国、加拿大或英国有效签证/居留。", "factPaths": ["traveler.qualifyingDocuments"] },
+        { "code": "TOURIST_CARD_OR_INCLUDED_TAX", "mandatory": true, "descriptionZh": "确认旅游卡或机票税费安排。", "factPaths": ["documents.touristCard.status"] },
+        { "code": "STAY_LIMIT_MANUAL_REVIEW", "mandatory": true, "descriptionZh": "出票前从官方实时页面确认允许停留天数。", "factPaths": ["assessment.manualReview.status"] }
+      ],
+      "warningsZh": ["护照有效期临时豁免与核心签证条件是两件事，不得混为一条永久规则。"],
+      "sourceIds": ["DO-EMBASSY-CHINA-FAQ"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-10-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["多米尼加旅游卡或认可文件要求变化"] }
+    },
+    {
+      "ruleId": "CN_CR_CONDITIONAL_VISA_EXEMPTION",
+      "version": 1,
+      "titleZh": "持美国、加拿大或部分欧洲签证/居留赴哥斯达黎加条件免签",
+      "destination": { "countryCode": "CR", "jurisdictionCode": null, "displayNameZh": "哥斯达黎加", "displayNameEn": "Costa Rica", "entryPorts": [] },
+      "category": "CONDITIONAL_VISA_EXEMPTION",
+      "status": "REVIEW_REQUIRED",
+      "priority": 400,
+      "validity": { "effectiveFrom": "2022-07-01", "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "CR" },
+          { "fact": "traveler.qualifyingDocuments", "op": "HAS_VALID_DOCUMENT", "value": { "anyOf": [ { "kind": "VISA_OR_RESIDENCE", "issuers": ["US", "CA"], "excludedVisaTypes": ["C1", "C2", "C3"], "minimumValidityDaysAtEntry": 90 }, { "kind": "MULTIPLE_ENTRY_LEGAL_STAY_OR_RESIDENCE", "issuers": ["CH", "GB", "NO", "IS"], "orIssuerGroup": "SCHENGEN_CURRENT", "minimumValidityDaysAtEntry": 90 } ] } }
+        ]
+      },
+      "decision": {
+        "search": "NEEDS_REVIEW",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "CONDITIONAL_CONSULAR_VISA_WAIVER",
+        "maxStay": null,
+        "manualReviewRequired": true,
+        "explanationZh": "官方圆函确认了部分替代文件路径，但来源日期较早且停留分组复杂，必须先复核当前原文。"
+      },
+      "requirements": [
+        { "code": "CURRENT_CIRCULAR_REVIEW", "mandatory": true, "descriptionZh": "由规则维护人员确认现行签证分组、停留期和文件类别。", "factPaths": ["assessment.manualReview.status"] }
+      ],
+      "warningsZh": ["美国C1/C2/C3过境签不应作为免签依据。", "在未更新到当前官方圆函前只可展示为待复核候选。"],
+      "sourceIds": ["CR-MIGRATION-CIRCULAR"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-09-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["哥斯达黎加签证分组或圆函更新"] }
+    },
+    {
+      "ruleId": "CN_OM_CATEGORY_CONFIRMED_DETAILS_REVIEW",
+      "version": 1,
+      "titleZh": "中国公民赴阿曼免旅游签类别已确认但细节待复核",
+      "destination": { "countryCode": "OM", "jurisdictionCode": null, "displayNameZh": "阿曼", "displayNameEn": "Oman", "entryPorts": [] },
+      "category": "UNILATERAL_VISA_FREE",
+      "status": "REVIEW_REQUIRED",
+      "priority": 200,
+      "validity": { "effectiveFrom": null, "effectiveTo": null },
+      "match": {
+        "all": [
+          { "fact": "traveler.passport.issuingCountry", "op": "EQ", "value": "CN" },
+          { "fact": "itinerary.destination.country", "op": "EQ", "value": "OM" }
+        ]
+      },
+      "decision": {
+        "search": "NEEDS_REVIEW",
+        "booking": "NEEDS_REVIEW",
+        "entryMode": "TOURIST_VISA_EXEMPT_CATEGORY_CONFIRMED",
+        "maxStay": null,
+        "manualReviewRequired": true,
+        "explanationZh": "阿曼皇家警察页面确认中国在免旅游签名单内，但未从同一官方页面确认完整停留天数和材料，故不能自动放行。"
+      },
+      "requirements": [
+        { "code": "OMAN_CURRENT_DETAILS_REVIEW", "mandatory": true, "descriptionZh": "在出票前核验当前允许停留天数、酒店、返程票、保险和资金要求。", "factPaths": ["assessment.manualReview.status"] }
+      ],
+      "warningsZh": ["不得直接套用2023年汇总中的旧条件。"],
+      "sourceIds": ["OM-ROP-VISA-EXEMPT", "CN-MFA-CONVENIENCE-202311"],
+      "review": { "verifiedAt": "2026-08-30T12:00:00+08:00", "reviewBy": "2026-09-29T12:00:00+08:00", "owner": "ENTRY_RULES_EDITOR", "changeTriggers": ["阿曼皇家警察补充或修改免签细则"] }
+    }
+  ],
+  "coverageInventories": {
+    "mutualOrdinaryPassport": [
+      { "countryCode": "AL", "jurisdictionCode": null, "nameZh": "阿尔巴尼亚", "effectiveFrom": "2023-03-18", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认；具体天数和目的需查目的地规则。" },
+      { "countryCode": "AE", "jurisdictionCode": null, "nameZh": "阿联酋", "effectiveFrom": "2018-01-16", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认；停留期限曾有调整，须复核。" },
+      { "countryCode": "AZ", "jurisdictionCode": null, "nameZh": "阿塞拜疆", "effectiveFrom": "2025-07-16", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "AG", "jurisdictionCode": null, "nameZh": "安提瓜和巴布达", "effectiveFrom": "2024-05-11", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "BB", "jurisdictionCode": null, "nameZh": "巴巴多斯", "effectiveFrom": "2017-06-01", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "BS", "jurisdictionCode": null, "nameZh": "巴哈马", "effectiveFrom": "2014-02-12", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "BY", "jurisdictionCode": null, "nameZh": "白俄罗斯", "effectiveFrom": "2018-08-10", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "BA", "jurisdictionCode": null, "nameZh": "波斯尼亚和黑塞哥维那", "effectiveFrom": "2018-05-29", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "DM", "jurisdictionCode": null, "nameZh": "多米尼克", "effectiveFrom": "2022-09-19", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "FJ", "jurisdictionCode": null, "nameZh": "斐济", "effectiveFrom": "2015-03-14", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "GD", "jurisdictionCode": null, "nameZh": "格林纳达", "effectiveFrom": "2015-06-10", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "GE", "jurisdictionCode": null, "nameZh": "格鲁吉亚", "effectiveFrom": "2024-05-28", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "旧单方面免签已被互免协定覆盖。" },
+      { "countryCode": "KZ", "jurisdictionCode": null, "nameZh": "哈萨克斯坦", "effectiveFrom": "2023-11-10", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "QA", "jurisdictionCode": null, "nameZh": "卡塔尔", "effectiveFrom": "2018-12-21", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "MV", "jurisdictionCode": null, "nameZh": "马尔代夫", "effectiveFrom": "2022-05-20", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "MY", "jurisdictionCode": null, "nameZh": "马来西亚", "effectiveFrom": "2025-07-17", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["MY-IMM-MUTUAL-FAQ", "CN-MFA-MUTUAL-20260529"], "notesZh": "详见CN_MY_MUTUAL_VISA_FREE。" },
+      { "countryCode": "MU", "jurisdictionCode": null, "nameZh": "毛里求斯", "effectiveFrom": "2013-10-31", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "WS", "jurisdictionCode": null, "nameZh": "萨摩亚", "effectiveFrom": "2025-04-02", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "RS", "jurisdictionCode": null, "nameZh": "塞尔维亚", "effectiveFrom": "2017-01-15", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "SC", "jurisdictionCode": null, "nameZh": "塞舌尔", "effectiveFrom": "2013-06-26", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "SM", "jurisdictionCode": null, "nameZh": "圣马力诺", "effectiveFrom": "1985-07-22", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "陆路进入通常还涉及申根入境条件，必须结合路线判断。" },
+      { "countryCode": "SR", "jurisdictionCode": null, "nameZh": "苏里南", "effectiveFrom": "2021-05-01", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "SB", "jurisdictionCode": null, "nameZh": "所罗门群岛", "effectiveFrom": "2024-12-28", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "TH", "jurisdictionCode": null, "nameZh": "泰国", "effectiveFrom": "2024-03-01", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["TH-MFA-MUTUAL-2024", "CN-MFA-MUTUAL-20260529"], "notesZh": "详见CN_TH_MUTUAL_VISA_FREE。" },
+      { "countryCode": "TO", "jurisdictionCode": null, "nameZh": "汤加", "effectiveFrom": "2016-08-19", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" },
+      { "countryCode": "UZ", "jurisdictionCode": null, "nameZh": "乌兹别克斯坦", "effectiveFrom": "2025-06-01", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "旧10天入境便利已被新互免协定覆盖。" },
+      { "countryCode": "SG", "jurisdictionCode": null, "nameZh": "新加坡", "effectiveFrom": "2024-02-09", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["SG-ICA-MUTUAL-2024", "CN-MFA-MUTUAL-20260529"], "notesZh": "详见CN_SG_MUTUAL_VISA_FREE。" },
+      { "countryCode": "AM", "jurisdictionCode": null, "nameZh": "亚美尼亚", "effectiveFrom": "2020-01-19", "status": "AGREEMENT_CONFIRMED_DETAILS_REVIEW_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "互免协定已确认。" }
+    ],
+    "legacyMfa2023": {
+      "asOf": "2023-11-01",
+      "warningZh": "以下三张清单用于覆盖发现和后续维护排期，来源虽为中国外交部官方汇总，但已明显过期。除存在VERIFIED_RULE_AVAILABLE的国家外，全部禁止自动判定为可入境；必须先取得目的地主管机关当前原文并建立详细规则。",
+      "unilateralVisaFree": [
+        { "countryCode": "OM", "jurisdictionCode": null, "nameZh": "阿曼", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311", "OM-ROP-VISA-EXEMPT"], "notesZh": "类别已由阿曼官方确认，细节仍待复核。" },
+        { "countryCode": "KR", "jurisdictionCode": "JEJU", "nameZh": "韩国济州及特定项目", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311", "KR-MOFA-TRANSIT-2025"], "notesZh": "仅特定区域、团体或过境项目，不是韩国全境普通免签。" },
+        { "countryCode": "UZ", "jurisdictionCode": null, "nameZh": "乌兹别克斯坦", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311", "CN-MFA-MUTUAL-20260529"], "notesZh": "改按2025年互免协定维护。" },
+        { "countryCode": "IR", "jurisdictionCode": null, "nameZh": "伊朗", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "VN", "jurisdictionCode": "PHU_QUOC", "nameZh": "越南富国岛", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["VN-MOFA-PHUQUOC"], "notesZh": "详见富国岛区域规则。" },
+        { "countryCode": "GE", "jurisdictionCode": null, "nameZh": "格鲁吉亚", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "改按互免协定维护。" },
+        { "countryCode": "TH", "jurisdictionCode": null, "nameZh": "泰国", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["TH-MFA-MUTUAL-2024"], "notesZh": "2023临时政策已失效，改按互免协定。" },
+        { "countryCode": "MY", "jurisdictionCode": null, "nameZh": "马来西亚", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["MY-IMM-MUTUAL-FAQ"], "notesZh": "2023临时政策已被2025互免协定替代。" },
+        { "countryCode": "GA", "jurisdictionCode": null, "nameZh": "加蓬", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MA", "jurisdictionCode": null, "nameZh": "摩洛哥", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MZ", "jurisdictionCode": null, "nameZh": "莫桑比克", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "TN", "jurisdictionCode": null, "nameZh": "突尼斯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "可能依赖酒店或旅行社凭证。" },
+        { "countryCode": "ZM", "jurisdictionCode": null, "nameZh": "赞比亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "RE", "jurisdictionCode": "REUNION", "nameZh": "留尼汪", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "通常依赖认可旅行社行程凭证，不可视为法国本土或申根免签。" },
+        { "countryCode": "AO", "jurisdictionCode": null, "nameZh": "安哥拉", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "BJ", "jurisdictionCode": null, "nameZh": "贝宁", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "AG", "jurisdictionCode": null, "nameZh": "安提瓜和巴布达", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "改按互免协定。" },
+        { "countryCode": "HT", "jurisdictionCode": null, "nameZh": "海地", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "需同时考虑安全和实际航线可用性。" },
+        { "countryCode": "KN", "jurisdictionCode": null, "nameZh": "圣基茨和尼维斯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "LC", "jurisdictionCode": null, "nameZh": "圣卢西亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "JM", "jurisdictionCode": null, "nameZh": "牙买加", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "FM", "jurisdictionCode": null, "nameZh": "密克罗尼西亚联邦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "NU", "jurisdictionCode": null, "nameZh": "纽埃", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "实际入境常受新西兰转机签证影响。" },
+        { "countryCode": "WS", "jurisdictionCode": null, "nameZh": "萨摩亚", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "改按互免协定。" },
+        { "countryCode": "PF", "jurisdictionCode": "FRENCH_POLYNESIA", "nameZh": "法属波利尼西亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "通常依赖认可旅行社凭证，不等同法国或申根免签。" },
+        { "countryCode": "KI", "jurisdictionCode": null, "nameZh": "基里巴斯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" }
+      ],
+      "visaOnArrival": [
+        { "countryCode": "OM", "jurisdictionCode": null, "nameZh": "阿曼", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311", "OM-ROP-VISA-EXEMPT"], "notesZh": "当前更可能按免旅游签路径，细节待复核。" },
+        { "countryCode": "AZ", "jurisdictionCode": null, "nameZh": "阿塞拜疆", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "改按互免协定。" },
+        { "countryCode": "BH", "jurisdictionCode": null, "nameZh": "巴林", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "TL", "jurisdictionCode": null, "nameZh": "东帝汶", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "KH", "jurisdictionCode": null, "nameZh": "柬埔寨", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["KH-EVISA-TEMP-2026"], "notesZh": "临时免签期内优先匹配详细规则；期满后须重查VoA。" },
+        { "countryCode": "LA", "jurisdictionCode": null, "nameZh": "老挝", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "LB", "jurisdictionCode": null, "nameZh": "黎巴嫩", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史上对以色列出入境记录存在条件，必须复核。" },
+        { "countryCode": "MY", "jurisdictionCode": null, "nameZh": "马来西亚", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["MY-IMM-MUTUAL-FAQ"], "notesZh": "改按互免协定。" },
+        { "countryCode": "BD", "jurisdictionCode": null, "nameZh": "孟加拉国", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "目的和邀请条件可能不同。" },
+        { "countryCode": "NP", "jurisdictionCode": null, "nameZh": "尼泊尔", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["NP-IMM-TOURIST-VISA"], "notesZh": "详见免费旅游落地签规则。" },
+        { "countryCode": "SA", "jurisdictionCode": null, "nameZh": "沙特阿拉伯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "需核验当前eVisa/VoA资格和保险要求。" },
+        { "countryCode": "TH", "jurisdictionCode": null, "nameZh": "泰国", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["TH-MFA-MUTUAL-2024"], "notesZh": "改按互免协定。" },
+        { "countryCode": "TM", "jurisdictionCode": null, "nameZh": "土库曼斯坦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史上需邀请方预先批准。" },
+        { "countryCode": "BN", "jurisdictionCode": null, "nameZh": "文莱", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "SY", "jurisdictionCode": null, "nameZh": "叙利亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "不应作为MVP自动推荐中转地。" },
+        { "countryCode": "IQ", "jurisdictionCode": null, "nameZh": "伊拉克", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "不应作为MVP自动推荐中转地。" },
+        { "countryCode": "ID", "jurisdictionCode": null, "nameZh": "印度尼西亚", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["ID-IMM-VOA-2026"], "notesZh": "详见VoA规则。" },
+        { "countryCode": "JO", "jurisdictionCode": null, "nameZh": "约旦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "VN", "jurisdictionCode": null, "nameZh": "越南", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": true, "sourceIds": ["VN-IMM-EVISA", "VN-MOFA-PHUQUOC"], "notesZh": "普通大陆行程优先eVisa，富国岛有区域免签。" },
+        { "countryCode": "EG", "jurisdictionCode": null, "nameZh": "埃及", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "可能依赖邀请、旅行社或资金条件。" },
+        { "countryCode": "AO", "jurisdictionCode": null, "nameZh": "安哥拉", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "BW", "jurisdictionCode": null, "nameZh": "博茨瓦纳", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "BI", "jurisdictionCode": null, "nameZh": "布隆迪", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "GQ", "jurisdictionCode": null, "nameZh": "赤道几内亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "CV", "jurisdictionCode": null, "nameZh": "佛得角", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "DJ", "jurisdictionCode": null, "nameZh": "吉布提", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "ZW", "jurisdictionCode": null, "nameZh": "津巴布韦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "KM", "jurisdictionCode": null, "nameZh": "科摩罗", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "RW", "jurisdictionCode": null, "nameZh": "卢旺达", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MG", "jurisdictionCode": null, "nameZh": "马达加斯加", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MR", "jurisdictionCode": null, "nameZh": "毛里塔尼亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "NG", "jurisdictionCode": null, "nameZh": "尼日利亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史上可能需预批准。" },
+        { "countryCode": "SL", "jurisdictionCode": null, "nameZh": "塞拉利昂", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "ST", "jurisdictionCode": null, "nameZh": "圣多美和普林西比", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "SO", "jurisdictionCode": null, "nameZh": "索马里", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "不应作为MVP自动推荐中转地。" },
+        { "countryCode": "TZ", "jurisdictionCode": null, "nameZh": "坦桑尼亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "TN", "jurisdictionCode": null, "nameZh": "突尼斯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "CY", "jurisdictionCode": null, "nameZh": "塞浦路斯人道紧急情形", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "不是普通旅游落地签，不可推荐。" },
+        { "countryCode": "SV", "jurisdictionCode": null, "nameZh": "萨尔瓦多", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史规则依赖指定国家签证。" },
+        { "countryCode": "JM", "jurisdictionCode": null, "nameZh": "牙买加", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史规则可能需预批准。" },
+        { "countryCode": "BO", "jurisdictionCode": null, "nameZh": "玻利维亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "CK", "jurisdictionCode": null, "nameZh": "库克群岛", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "须同时计算新西兰转机要求。" },
+        { "countryCode": "PW", "jurisdictionCode": null, "nameZh": "帕劳", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "VU", "jurisdictionCode": null, "nameZh": "瓦努阿图", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" }
+      ],
+      "visaFreeTransit": [
+        { "countryCode": "OM", "jurisdictionCode": null, "nameZh": "阿曼", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "AZ", "jurisdictionCode": null, "nameZh": "阿塞拜疆", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "优先按互免协定。" },
+        { "countryCode": "BH", "jurisdictionCode": null, "nameZh": "巴林", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "KR", "jurisdictionCode": null, "nameZh": "韩国", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": false, "sourceIds": ["KR-MOFA-TRANSIT-2025"], "notesZh": "存在第三国签证过境和仁川过境观光两类详细规则，均为条件性。" },
+        { "countryCode": "KH", "jurisdictionCode": null, "nameZh": "柬埔寨", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "临时免签与普通过境需分别判断。" },
+        { "countryCode": "LB", "jurisdictionCode": null, "nameZh": "黎巴嫩", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "BD", "jurisdictionCode": null, "nameZh": "孟加拉国", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "SA", "jurisdictionCode": null, "nameZh": "沙特阿拉伯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "航空公司stopover visa产品可能有专属条件。" },
+        { "countryCode": "LK", "jurisdictionCode": null, "nameZh": "斯里兰卡", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "历史规则可能限同一航班或列明中转。" },
+        { "countryCode": "UZ", "jurisdictionCode": null, "nameZh": "乌兹别克斯坦", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "优先按互免协定。" },
+        { "countryCode": "SG", "jurisdictionCode": null, "nameZh": "新加坡VFTF", "status": "NOT_APPLICABLE_TO_CN_ORDINARY", "autoDecision": false, "sourceIds": ["SG-ICA-VFTF", "SG-ICA-MUTUAL-2024"], "notesZh": "中国普通护照明确不走VFTF，改按30天互免。" },
+        { "countryCode": "IR", "jurisdictionCode": null, "nameZh": "伊朗", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "JO", "jurisdictionCode": null, "nameZh": "约旦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "VN", "jurisdictionCode": null, "nameZh": "越南", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311", "VN-IMM-EVISA"], "notesZh": "过境规则与入境游玩不同；陆侧停留通常应先取得eVisa或匹配富国岛规则。" },
+        { "countryCode": "ET", "jurisdictionCode": null, "nameZh": "埃塞俄比亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "TG", "jurisdictionCode": null, "nameZh": "多哥", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "GA", "jurisdictionCode": null, "nameZh": "加蓬", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "KE", "jurisdictionCode": null, "nameZh": "肯尼亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MR", "jurisdictionCode": null, "nameZh": "毛里塔尼亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "MA", "jurisdictionCode": null, "nameZh": "摩洛哥", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "SN", "jurisdictionCode": null, "nameZh": "塞内加尔", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "ZM", "jurisdictionCode": null, "nameZh": "赞比亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "AT", "jurisdictionCode": null, "nameZh": "奥地利", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "PL", "jurisdictionCode": null, "nameZh": "波兰", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "CH", "jurisdictionCode": null, "nameZh": "瑞士", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "CY", "jurisdictionCode": null, "nameZh": "塞浦路斯", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "SK", "jurisdictionCode": null, "nameZh": "斯洛伐克", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "ES", "jurisdictionCode": null, "nameZh": "西班牙", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "HU", "jurisdictionCode": null, "nameZh": "匈牙利", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "IT", "jurisdictionCode": null, "nameZh": "意大利", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "申根机场过境签与入境签须分别核验。" },
+        { "countryCode": "HT", "jurisdictionCode": null, "nameZh": "海地", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "NI", "jurisdictionCode": null, "nameZh": "尼加拉瓜", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "JM", "jurisdictionCode": null, "nameZh": "牙买加", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "AR", "jurisdictionCode": null, "nameZh": "阿根廷", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "GY", "jurisdictionCode": null, "nameZh": "圭亚那", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "CL", "jurisdictionCode": null, "nameZh": "智利", "status": "VERIFIED_RULE_AVAILABLE", "autoDecision": false, "sourceIds": ["CL-EMBASSY-BEIJING"], "notesZh": "如入境游玩，优先检查持美国/加拿大签证条件免签规则。" },
+        { "countryCode": "PG", "jurisdictionCode": null, "nameZh": "巴布亚新几内亚", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "CK", "jurisdictionCode": null, "nameZh": "库克群岛", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "须同时计算新西兰转机要求。" },
+        { "countryCode": "FM", "jurisdictionCode": null, "nameZh": "密克罗尼西亚联邦", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "待目的地官方复核。" },
+        { "countryCode": "NU", "jurisdictionCode": null, "nameZh": "纽埃", "status": "REVERIFY_REQUIRED", "autoDecision": false, "sourceIds": ["CN-MFA-CONVENIENCE-202311"], "notesZh": "须同时计算新西兰转机要求。" },
+        { "countryCode": "WS", "jurisdictionCode": null, "nameZh": "萨摩亚", "status": "SUPERSEDED_BY_MUTUAL", "autoDecision": false, "sourceIds": ["CN-MFA-MUTUAL-20260529"], "notesZh": "优先按互免协定。" }
+      ]
+    }
+  }
+}
