@@ -143,6 +143,8 @@ model FlightOfferSnapshot {
   priceStatus           String?   // current | reference
   isSimulated           Boolean   @default(true)
   baggageJson           Json?
+  // 2026-08-30 验收修复：原样保存上游完整航段（多段联程不可重建字段），供一致性校验与审计。
+  segmentsJson          Json?
   rawHash               String?
   capturedAt            DateTime  @default(now())
   expiresAt             DateTime?
@@ -317,6 +319,9 @@ model Notification {
   // 2026-08-30：双语通知（EN 界面不再显示中文存库文案）；缺省时回退 zh。
   titleEn      String?
   bodyEn       String?
+  // 结构化事件：展示时按当前语言渲染；旧数据允许兼容回退 title/body。
+  messageKey   String?
+  paramsJson   Json?
   deepLink     String?
   planId       String?
   monitorId    String?

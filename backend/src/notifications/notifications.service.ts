@@ -12,6 +12,9 @@ export interface NotifyInput {
   /** 英文文案（可选；EN 界面优先展示，缺省回退中文）。 */
   titleEn?: string;
   bodyEn?: string;
+  /** P1-7：结构化事件键 + 参数；展示时按当前语言渲染，旧数据兼容回退 title/body。 */
+  messageKey?: string;
+  params?: Record<string, unknown>;
   deepLink?: string;
   planId?: string;
   monitorId?: string;
@@ -19,6 +22,57 @@ export interface NotifyInput {
   sendEmail?: boolean;
   /** false 时不写入 App 内通知箱（渠道开关必须被尊重，不能强制双发）。 */
   sendApp?: boolean;
+}
+
+/**
+ * P1-7：结构化通知文案目录（zh/en）。展示时按当前语言渲染；
+ * 旧数据无 messageKey 时兼容回退 titleEn/bodyEn → title/body。
+ */
+const NOTIFICATION_TEXT: Record<string, { zh: [string, string]; en: [string, string] }> = {
+  'booking.leg1_failed': {
+    zh: ['部分订单风险：第一段下单失败', '第二段已成功下单，第一段库存发生变化。后续支付已停止，可发起退款收尾处理。'],
+    en: ['Partial order: leg 1 failed', 'Leg 2 was ordered but leg 1 hit an inventory change. Payment stopped; you can close out with a refund.'],
+  },
+  'booking.leg2_inventory': {
+    zh: ['部分订单风险：第二段库存变化', '第二段库存发生变化，后续支付已停止，可发起退款收尾处理。'],
+    en: ['Partial order: leg 2 inventory changed', 'Leg 2 inventory changed. Payment stopped; you can close out with a refund.'],
+  },
+  'booking.payment_submitted': {
+    zh: ['支付已提交', '支付已提交，出票确认后将同步 PNR 与票号信息。'],
+    en: ['Payment submitted', 'Payment submitted — PNR and ticket numbers will sync once ticketing is confirmed.'],
+  },
+  'booking.completed': {
+    zh: ['预订完成', '两段订单均已支付成功，出票确认后将同步行程信息。'],
+    en: ['Booking completed', 'Both legs paid — itinerary details will sync once ticketing is confirmed.'],
+  },
+  'booking.refund_completed': {
+    zh: ['退款已完成', '退款已完成，没有发生真实资金交易。'],
+    en: ['Refund completed', 'Refund completed. This is a simulated refund — no real funds moved.'],
+  },
+  'monitor.price_target': {
+    zh: ['好价提醒：目标票价已到达', '{route} 当前两段合计约 {total} {currency}，达到你设置的目标价 {target} {currency}。价格随时可能变化，以验价结果为准。'],
+    en: ['Price alert: target fare reached', '{route} now totals about {total} {currency}, hitting your target {target} {currency}. Prices can change; verification is authoritative.'],
+  },
+  'monitor.joyscore_target': {
+    zh: ['体验分目标已达成', '方案 JoyScore {score} 达到你设置的 {target}，可查看详情并预订。'],
+    en: ['JoyScore target reached', 'Plan JoyScore {score} reached your target {target}. View details and book.'],
+  },
+};
+
+function fill(template: string, params: Record<string, unknown>): string {
+  return template.replace(/\{(\w+)\}/g, (m, k) => (params[k] !== undefined ? String(params[k]) : m));
+}
+
+function renderNotification(lang: 'zh' | 'en', n: { title: string; body: string; titleEn: string | null; bodyEn: string | null; messageKey: string | null; paramsJson: unknown }): { title: string; body: string } {
+  const params = (n.paramsJson ?? {}) as Record<string, unknown>;
+  if (n.messageKey && NOTIFICATION_TEXT[n.messageKey]) {
+    const [t, b] = NOTIFICATION_TEXT[n.messageKey][lang];
+    return { title: fill(t, params), body: fill(b, params) };
+  }
+  if (lang === 'en' && (n.titleEn || n.bodyEn)) {
+    return { title: n.titleEn ?? n.title, body: n.bodyEn ?? n.body };
+  }
+  return { title: n.title, body: n.body };
 }
 
 /**
@@ -61,6 +115,8 @@ export class NotificationsService {
         body: input.body,
         titleEn: input.titleEn,
         bodyEn: input.bodyEn,
+        messageKey: input.messageKey,
+        paramsJson: (input.params ?? null) as any,
         deepLink: input.deepLink,
         planId: input.planId,
         monitorId: input.monitorId,
@@ -125,18 +181,22 @@ export class NotificationsService {
       take: limit,
     });
     return {
-      notifications: items.map((n) => ({
-        id: n.id,
-        kind: n.kind,
-        title: lang === 'en' ? (n.titleEn ?? n.title) : n.title,
-        body: lang === 'en' ? (n.bodyEn ?? n.body) : n.body,
-        deepLink: n.deepLink,
-        planId: n.planId,
-        monitorId: n.monitorId,
-        isSimulated: n.isSimulated,
-        readAt: n.readAt?.toISOString() ?? null,
-        createdAt: n.createdAt.toISOString(),
-      })),
+      notifications: items.map((n) => {
+        // P1-7：结构化事件按当前语言渲染；messageKey 优先，其次 titleEn/bodyEn，最后回退 zh 存库文案。
+        const rendered = renderNotification(lang, n);
+        return {
+          id: n.id,
+          kind: n.kind,
+          title: rendered.title,
+          body: rendered.body,
+          deepLink: n.deepLink,
+          planId: n.planId,
+          monitorId: n.monitorId,
+          isSimulated: n.isSimulated,
+          readAt: n.readAt?.toISOString() ?? null,
+          createdAt: n.createdAt.toISOString(),
+        };
+      }),
     };
   }
 

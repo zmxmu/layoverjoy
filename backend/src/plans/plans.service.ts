@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma.service';
 import { NosanaService } from '../explanations/nosana.service';
 import { buildExperienceContext, EXPERIENCE_CATALOG_VERSION, PROMPT_VERSION } from '../explanations/experience-context.builder';
 import { CITY_PACKS, HUB_CATALOG } from '../airports/catalog';
+import { validatePlanSnapshotConsistency } from '../search/search.orchestrator';
 import { AppError } from '../common/errors';
 import { REQUIREMENT_EN } from '../entry-rules/v2/requirement-text';
 
@@ -102,6 +103,9 @@ export class PlansService {
 
     const legIds = (plan.legOfferIdsJson as string[]) ?? [];
     const offers = await this.prisma.flightOfferSnapshot.findMany({ where: { id: { in: legIds } } });
+    // P0-2：打开详情前校验快照与本次搜索一致；不一致拒绝展示并要求重新搜索。
+    const run = await this.prisma.searchRun.findUnique({ where: { id: plan.searchRunId } });
+    if (run) validatePlanSnapshotConsistency(run, plan, offers);
     const offerMap = new Map<string, (typeof offers)[number]>(offers.map((o) => [o.id, o]));
     const eligibility = plan.eligibilitySnapshotId
       ? await this.prisma.eligibilitySnapshot.findUnique({ where: { id: plan.eligibilitySnapshotId } })

@@ -53,6 +53,21 @@ export class MeController {
     private readonly users: UsersService,
   ) {}
 
+  /** P1-4：onboarding 完成时原子写入护照 + 选中签证（事务；签证为空允许跳过）。 */
+  @Post('onboarding')
+  async onboarding(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { passport: { countryCode: string; passportType?: string; expiresOn?: string }; visas?: string[] },
+  ) {
+    if (!body?.passport?.countryCode || !/^[A-Z]{2}$/.test(body.passport.countryCode)) {
+      throw AppError.validation(['passport.countryCode']);
+    }
+    return this.users.completeOnboarding(user.userId, {
+      passport: body.passport,
+      visas: body.visas ?? [],
+    });
+  }
+
   @Get()
   async me(@CurrentUser() user: AuthUser) {
     const u = await this.prisma.user.findUnique({ where: { id: user.userId } });

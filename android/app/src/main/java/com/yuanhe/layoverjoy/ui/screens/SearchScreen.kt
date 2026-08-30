@@ -32,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -157,9 +158,14 @@ fun SearchScreen(nav: NavController, appState: AppStateViewModel) {
     val prefsRepo = remember { LayoverJoyApp.instance.searchPreferences }
 
     var originSel by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf<LocationSelection?>(null) }
-    // 首页灵感卡点击后的一次性预填（cityId，取走即清空）。
-    var destSel by rememberSaveable(stateSaver = SelectionSaver) {
-        mutableStateOf(SearchPrefill.takeDestinationCityId()?.let { LocationSelection(it, LocationSelectionMode.ALL_AIRPORTS) })
+    // P1-5：灵感卡预填为事件流——搜索页即使已带旧草稿组合，进入/点击后也必须覆盖目的地。
+    var destSel by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf<LocationSelection?>(null) }
+    val prefill by SearchPrefill.pending.collectAsState()
+    LaunchedEffect(prefill) {
+        prefill?.let { req ->
+            destSel = LocationSelection(req.cityId, LocationSelectionMode.ALL_AIRPORTS)
+            SearchPrefill.consume(req.token)
+        }
     }
     // 出发日期以 ISO 文本保存（yyyy-MM-dd，与后端契约一致），`rememberSaveable` 直接支持。
     var departIso by rememberSaveable { mutableStateOf("") }

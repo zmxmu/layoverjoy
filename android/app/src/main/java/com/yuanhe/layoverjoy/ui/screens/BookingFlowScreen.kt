@@ -53,6 +53,7 @@ import com.yuanhe.layoverjoy.ui.LabeledField
 import com.yuanhe.layoverjoy.ui.LoadingBlock
 import com.yuanhe.layoverjoy.ui.PrimaryButton
 import com.yuanhe.layoverjoy.ui.SecondaryButton
+import com.yuanhe.layoverjoy.ui.Routes
 import com.yuanhe.layoverjoy.ui.SectionTitle
 import com.yuanhe.layoverjoy.ui.bookingStatusColor
 import com.yuanhe.layoverjoy.ui.bookingStatusText
@@ -90,6 +91,8 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    // P0-3：报价过期/快照不一致时引导重新搜索（不得盲目重复 Order）。
+    var researchCode by remember { mutableStateOf<String?>(null) }
 
     suspend fun refreshBooking(id: String) {
         when (val r = apiCall { Net.api.booking(id) }) {
@@ -113,12 +116,18 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                         }
                     }
                 }
-                is ApiResult.Err -> error = apiErrorText(r)
+                is ApiResult.Err -> {
+                    error = apiErrorText(r)
+                    researchCode = if (r.code == "PLAN_SNAPSHOT_MISMATCH" || r.code == "OFFER_EXPIRED") r.code else null
+                }
             }
         } else {
             when (val r = apiCall { Net.api.planDetail(planId, L10n.current.tag) }) {
                 is ApiResult.Ok -> detail = r.data
-                is ApiResult.Err -> error = apiErrorText(r)
+                is ApiResult.Err -> {
+                    error = apiErrorText(r)
+                    researchCode = if (r.code == "PLAN_SNAPSHOT_MISMATCH" || r.code == "OFFER_EXPIRED") r.code else null
+                }
             }
         }
     }
@@ -146,6 +155,10 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(8.dp))
             ErrorBanner(error)
+            if (researchCode != null) {
+                Spacer(Modifier.height(8.dp))
+                SecondaryButton(L10n.t("booking.research_again"), onClick = { nav.navigate(Routes.SEARCH) })
+            }
             notice?.let { Spacer(Modifier.height(8.dp)); InfoBanner(it) }
             Spacer(Modifier.height(8.dp))
 
@@ -218,6 +231,7 @@ fun BookingFlowScreen(nav: NavController, planId: String, initialBookingId: Stri
                                     }
                                     is ApiResult.Err -> {
                                         error = apiErrorText(r)
+                                        researchCode = if (r.code == "OFFER_EXPIRED" || r.code == "PLAN_SNAPSHOT_MISMATCH") r.code else null
                                         if (r.code == "PARTIAL_BOOKING") {
                                             notice = L10n.t("booking.partial_notice")
                                             // 后端在错误细节里返回 intentId，用它加载部分订单并进入状态机页。

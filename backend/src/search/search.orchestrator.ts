@@ -7,7 +7,7 @@ import { CITY_PACKS, CityEntry, rankHubsForRoute, resolveLocation, resolveSelect
 import { EligibilityAssessService } from '../entry-rules/v2/assess.service';
 import { buildJoyScore } from '../plans/joy-score';
 import { AppError } from '../common/errors';
-import { FlightOffer } from '../atlas/atlas.types';
+import { FlightOffer, FlightSearchInput } from '../atlas/atlas.types';
 import { loadEnv } from '../config/env';
 import { FIELD_CRYPTO } from '../core.module';
 import { FieldCrypto } from '../common/crypto';
@@ -172,7 +172,7 @@ export class SearchOrchestrator {
 
   /** 搜索包装：区分 Sandbox 无库存与其他错误；演示 Fixture 回退仅在用户显式触发时允许。 */
   private async safeSearch(
-    input: { origin: string; destination: string; departDate: string; currency?: string },
+    input: FlightSearchInput,
     allowDemoFallback: boolean,
   ): Promise<{ offers: FlightOffer[]; label: 'ATLAS_SANDBOX' | 'MOCK'; fallbackUsed?: boolean }> {
     try {
@@ -200,15 +200,7 @@ export class SearchOrchestrator {
 
   /** 端点搜索码：AIRPORT→指定机场；ALL_AIRPORTS→[城市码/默认机场, …受控展开≤3]。 */
   private endpointCodes(run: any, side: 'origin' | 'destination'): string[] {
-    const prefs: any = run.preferencesJson ?? {};
-    const sel = side === 'origin' ? prefs.originLocation : prefs.destinationLocation;
-    if (sel?.cityId) {
-      const r = resolveSelection(sel);
-      if (r.ok) {
-        return r.value.mode === 'AIRPORT' ? [r.value.primaryCode] : [r.value.primaryCode, ...r.value.expansionCodes.filter((c) => c !== r.value.primaryCode)];
-      }
-    }
-    return [side === 'origin' ? run.originCode : run.destinationCode];
+    return endpointCodesForRun(run, side);
   }
 
   /**
@@ -230,7 +222,11 @@ export class SearchOrchestrator {
         if (pairs >= maxPairs) return { best: null, label };
         if (consume() > SEARCH_BUDGET.maxSearchCalls) return { best: null, label };
         pairs += 1;
-        const r = await this.safeSearch({ origin: a, destination: b, departDate, currency: 'SGD' }, useDemo);
+        // 多机场城市以机场集合匹配上游路由（同城市异机场不被误杀）。
+        const r = await this.safeSearch(
+          { origin: a, destination: b, departDate, currency: 'SGD', originAirports: aCodes, destinationAirports: bCodes },
+          useDemo,
+        );
         label = r.label;
         const best = this.bestBookable(r.offers);
         if (best) return { best, label };
@@ -271,6 +267,7 @@ export class SearchOrchestrator {
         // 契约：Sandbox/Mock 快照必须 isSimulated=true，生产接入前不存在其他来源
         isSimulated: true,
         baggageJson: (offer.baggageJson ?? null) as any,
+        segmentsJson: (offer.segments ?? null) as any,
         rawHash: this.atlas.rawHash(offer),
         // 上游 expireTime 优先；无有效期的（Mock）保留 30 分钟兼容窗口。
         expiresAt: offer.expiresAt ? new Date(offer.expiresAt) : new Date(Date.now() + 30 * 60 * 1000),
@@ -500,6 +497,47 @@ export class SearchOrchestrator {
       }
     }
   }
+}
+
+/**
+ * 方案快照一致性校验（P0-2）：首页/详情/监控/预订必须引用同一 user-scoped、search-scoped、
+ * immutable 快照。打开详情/下单前校验 origin、hub、finalDestination 与两段 offer；
+ * 不一致则拒绝展示并要求重新搜索（PLAN_SNAPSHOT_MISMATCH）。
+ */
+export function validatePlanSnapshotConsistency(run: any, plan: any, legs: any[]): void {
+  const originCodes = endpointCodesForRun(run, 'origin');
+  const destCodes = endpointCodesForRun(run, 'destination');
+  const leg1 = legs.find((l) => l.legNo === 1);
+  const leg2 = legs.find((l) => l.legNo === 2);
+  const mismatch =
+    !leg1 ||
+    !leg2 ||
+    leg1.searchRunId !== run.id ||
+    leg2.searchRunId !== run.id ||
+    !originCodes.includes(leg1.origin) ||
+    !destCodes.includes(leg2.destination) ||
+    leg1.destination !== plan.hubAirport ||
+    leg2.origin !== plan.hubAirport;
+  if (mismatch) {
+    throw new AppError('PLAN_SNAPSHOT_MISMATCH', '方案快照与本次搜索不一致，请重新搜索。', 409, false, {
+      requiresResearch: true,
+      planId: plan.id,
+      searchRunId: run.id,
+    });
+  }
+}
+
+/** 端点搜索码（导出供 plans/bookings 一致性校验复用）：AIRPORT→指定机场；ALL_AIRPORTS→受控展开≤3。 */
+export function endpointCodesForRun(run: any, side: 'origin' | 'destination'): string[] {
+  const prefs: any = run.preferencesJson ?? {};
+  const sel = side === 'origin' ? prefs.originLocation : prefs.destinationLocation;
+  if (sel?.cityId) {
+    const r = resolveSelection(sel);
+    if (r.ok) {
+      return r.value.mode === 'AIRPORT' ? [r.value.primaryCode] : [r.value.primaryCode, ...r.value.expansionCodes.filter((c) => c !== r.value.primaryCode)];
+    }
+  }
+  return [side === 'origin' ? run.originCode : run.destinationCode];
 }
 
 export function isRedEye(iso: string): boolean {

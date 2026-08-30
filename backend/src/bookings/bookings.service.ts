@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { AtlasService } from '../atlas/atlas.service';
 import { RedisService } from '../redis.service';
@@ -12,6 +12,7 @@ import { FIELD_CRYPTO } from '../core.module';
 import { FieldCrypto, maskLast4 } from '../common/crypto';
 import { PaymentResult } from '../atlas/atlas.types';
 import { loadEnv } from '../config/env';
+import { validatePlanSnapshotConsistency } from '../search/search.orchestrator';
 
 export interface CompositeOrderInput {
   planId: string;
@@ -166,13 +167,31 @@ export class BookingsService {
     });
     if (legs.length === 0) throw AppError.notFound('航段报价');
 
+    // P0-2：下单前校验快照与本次搜索一致（同一 user/search-scoped immutable 快照）。
+    const runForCheck = await this.prisma.searchRun.findUnique({ where: { id: plan.searchRunId } });
+    if (runForCheck) validatePlanSnapshotConsistency(runForCheck, plan, legs);
+    // P0-3 脱敏预检日志：只记快照 id / rid hash / expiresAt / 阶段，不记完整 token。
+    for (const leg of legs) {
+      this.logger.log(
+        `event=booking_preflight stage=VERIFY_BEFORE_ORDER plan=${plan.id.slice(-8)} snapshot=${leg.id.slice(-8)} ` +
+          `rid=${createHash('sha256').update(leg.providerOfferId).digest('hex').slice(0, 8)} expiresAt=${leg.expiresAt?.toISOString() ?? 'none'}`,
+      );
+    }
+
     // 报价过期门禁（AGENTS.md §8）：上游 expireTime 已过的报价不得 Verify/Order/Pay。
     const now = new Date();
     const expiredLegs = legs.filter((l) => l.expiresAt && l.expiresAt.getTime() <= now.getTime());
     if (expiredLegs.length > 0) {
-      throw new AppError('OFFER_EXPIRED', '航班报价已过期，请返回结果页重新搜索。', 409, false, {
+      for (const leg of expiredLegs) {
+        this.logger.warn(
+          `event=booking_preflight stage=OFFER_EXPIRED plan=${plan.id.slice(-8)} snapshot=${leg.id.slice(-8)} ` +
+            `rid=${createHash('sha256').update(leg.providerOfferId).digest('hex').slice(0, 8)} expiredAt=${leg.expiresAt?.toISOString()}`,
+        );
+      }
+      throw new AppError('OFFER_EXPIRED', '航班报价已过期，请重新搜索并确认新价格后再预订。', 409, false, {
         planId: plan.id,
         expiredLegs: expiredLegs.map((l) => l.legNo),
+        requiresResearch: true,
       });
     }
 
@@ -342,6 +361,7 @@ export class BookingsService {
           titleEn: 'Partial order: leg 1 failed',
           body: '第二段已成功下单，第一段库存发生变化。后续支付已停止，可发起退款收尾处理。',
           bodyEn: 'Leg 2 was ordered but leg 1 hit an inventory change. Payment stopped; you can close out with a refund.',
+          messageKey: 'booking.leg1_failed',
           deepLink: `layoverjoy://bookings/${intentId}`,
           planId: plan.id,
           isSimulated: true,
@@ -629,6 +649,7 @@ export class BookingsService {
       bodyEn: sandboxPayment
         ? 'Payment submitted — PNR and ticket numbers will sync once ticketing is confirmed.'
         : 'Both legs paid — itinerary details will sync once ticketing is confirmed.',
+      messageKey: sandboxPayment ? 'booking.payment_submitted' : 'booking.completed',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,
@@ -777,6 +798,7 @@ export class BookingsService {
       titleEn: 'Partial order: leg 2 inventory changed',
       body: '第二段库存发生变化，后续支付已停止，可发起退款收尾处理。',
       bodyEn: 'Leg 2 inventory changed. Payment stopped; you can close out with a refund.',
+      messageKey: 'booking.leg2_inventory',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,
@@ -822,6 +844,7 @@ export class BookingsService {
       titleEn: 'Refund completed',
       body: '退款已完成，没有发生真实资金交易。',
       bodyEn: 'Refund completed. This is a simulated refund — no real funds moved.',
+      messageKey: 'booking.refund_completed',
       deepLink: `layoverjoy://bookings/${intent.id}`,
       planId: intent.planId,
       isSimulated: true,

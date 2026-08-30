@@ -176,7 +176,16 @@ export class MonitorsService {
 
     // JoyScore 条件：方案创建时已确定性计算，直接对比，不伪装成实时监测。
     if (rule.minJoyScore !== null && plan.joyScore >= rule.minJoyScore) {
-      await this.sendAlert(rule, plan, `方案 JoyScore ${plan.joyScore} 达到你设置的 ${rule.minJoyScore}，可查看详情并预订。`, '体验分目标已达成', `Plan JoyScore ${plan.joyScore} reached your target ${rule.minJoyScore}. View details and book.`, 'JoyScore target reached');
+      await this.sendAlert(
+        rule,
+        plan,
+        `方案 JoyScore ${plan.joyScore} 达到你设置的 ${rule.minJoyScore}，可查看详情并预订。`,
+        '体验分目标已达成',
+        `Plan JoyScore ${plan.joyScore} reached your target ${rule.minJoyScore}. View details and book.`,
+        'JoyScore target reached',
+        'monitor.joyscore_target',
+        { score: plan.joyScore, target: rule.minJoyScore },
+      );
       return { reason: `JOY_SCORE_REACHED:${plan.joyScore}` };
     }
 
@@ -212,6 +221,8 @@ export class MonitorsService {
         '好价提醒：目标票价已到达',
         `${rule.routeLabel} now totals about ${currentTotal} ${plan.currency}, hitting your target ${rule.targetAirfare} ${plan.currency}. Prices can change; verification is authoritative.`,
         'Price alert: target fare reached',
+        'monitor.price_target',
+        { route: rule.routeLabel, total: currentTotal, target: rule.targetAirfare, currency: plan.currency },
       );
       this.logger.log(`monitor ${rule.id} triggered for ${city?.cityNameZh ?? plan.stopoverCityId}: ${currentTotal}`);
       return { reason: `PRICE_TARGET_REACHED:${currentTotal}` };
@@ -220,7 +231,16 @@ export class MonitorsService {
   }
 
   /** 按用户渠道开关投递提醒（关闭的渠道不发送，不产生假状态）。 */
-  private async sendAlert(rule: any, plan: any, body: string, title: string, bodyEn?: string, titleEn?: string) {
+  private async sendAlert(
+    rule: any,
+    plan: any,
+    body: string,
+    title: string,
+    bodyEn?: string,
+    titleEn?: string,
+    messageKey?: string,
+    params?: Record<string, unknown>,
+  ) {
     await this.notifications.notify({
       userId: rule.userId,
       kind: 'PRICE_ALERT',
@@ -228,6 +248,8 @@ export class MonitorsService {
       body,
       titleEn,
       bodyEn,
+      messageKey,
+      params,
       deepLink: `layoverjoy://plans/${plan.id}`,
       planId: plan.id,
       monitorId: rule.id,

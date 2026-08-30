@@ -1,5 +1,7 @@
 package com.yuanhe.layoverjoy.ui
 
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -215,15 +217,18 @@ fun DateField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    focusRequester: FocusRequester? = null,
+    errorText: String? = null,
 ) {
     var showPicker by remember { mutableStateOf(false) }
     Column(modifier = modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = BrandInkSoft)
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
+            modifier = (focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).fillMaxWidth(),
+            isError = errorText != null,
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
             placeholder = { Text(placeholder, color = BrandInkSoft.copy(alpha = 0.6f)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
@@ -240,6 +245,11 @@ fun DateField(
                 unfocusedContainerColor = BrandSurface,
             ),
         )
+        // P1-6：必填错误明示在字段下方（可访问文本）。
+        if (errorText != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(errorText, style = MaterialTheme.typography.labelSmall, color = BrandDanger)
+        }
     }
     if (showPicker) {
         // 已输入的合法日期作为初始选中项，否则默认今天；有效期不早于今天可选。

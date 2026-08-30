@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'crypto';
+import { Logger } from '@nestjs/common';
 import { AppError } from '../common/errors';
 import {
   CreateOrderInput,
@@ -30,6 +31,7 @@ import {
  */
 export class SandboxAtlasProvider implements FlightProvider {
   readonly name = 'ATLAS_SANDBOX';
+  private readonly logger = new Logger('AtlasSandbox');
 
   constructor(
     private readonly baseUrl: string,
@@ -172,17 +174,30 @@ export class SandboxAtlasProvider implements FlightProvider {
     for (const r of routings) {
       const routingIdentifier = r?.routingIdentifier;
       if (!routingIdentifier) continue;
-      const firstSeg = Array.isArray(r?.fromSegments) ? r.fromSegments[0] : undefined;
+      // 上游对请求 OD 可能返回多段联程路由（如 SIN→SHA 请求返回 SIN→PUS→PVG）。
+      // 必须用「首段出发 + 末段到达」作为整条路由的 origin/destination，禁止截断首段当直飞。
+      const segs: any[] = Array.isArray(r?.fromSegments) ? r.fromSegments : [];
+      if (segs.length === 0) continue;
+      const firstSeg = segs[0];
+      const lastSeg = segs[segs.length - 1];
+      const origin = firstSeg?.depAirport ?? input.origin;
+      const destination = lastSeg?.arrAirport ?? input.destination;
+      // 严格 OD 过滤（城市机场集合级）：只接受属于本次请求出发/目的机场集合的路由，
+      // 防止上游测试路由污染直飞基准与单腿快照（P0-1/P0-2 根因）；
+      // 多机场城市（SHA/PVG）以集合匹配，避免同城市异机场被误杀。
+      const okOrigins = input.originAirports?.length ? input.originAirports : [input.origin];
+      const okDests = input.destinationAirports?.length ? input.destinationAirports : [input.destination];
+      if (!okOrigins.includes(origin) || !okDests.includes(destination)) continue;
       offers.push({
-        // routingIdentifier 是后续 Verify/Order 的报价标识
+        // routingIdentifier 是后续 Verify/Order 的报价标识（原样保存，不合成不截断）
         providerOfferId: String(routingIdentifier),
         routingIdentifier: String(routingIdentifier),
-        origin: firstSeg?.depAirport ?? input.origin,
-        destination: firstSeg?.arrAirport ?? input.destination,
+        origin,
+        destination,
         departureAt: this.parseSandboxTime(firstSeg?.depTime) ?? '',
-        arrivalAt: this.parseSandboxTime(firstSeg?.arrTime) ?? '',
+        arrivalAt: this.parseSandboxTime(lastSeg?.arrTime) ?? '',
         carrier: firstSeg?.carrier,
-        flightNumber: firstSeg?.flightNumber,
+        flightNumber: segs.length > 1 ? `${firstSeg?.flightNumber ?? ''}+${segs.length - 1}` : firstSeg?.flightNumber,
         currency: r?.currency || input.currency || 'SGD',
         totalPrice: this.routingTotalPrice(r, adults),
         priceStatus: 'current',
@@ -190,6 +205,15 @@ export class SandboxAtlasProvider implements FlightProvider {
         // 上游报价有效期：过期后不得 Verify/Order/Pay（AGENTS.md §8）
         expiresAt: this.parseExpireTime(r?.expireTime),
         baggageJson: Array.isArray(r?.ancillarySupported) ? r.ancillarySupported : undefined,
+        // 完整航段原样保留（不可重建字段），供详情/审计与一致性校验使用。
+        segments: segs.map((s: any) => ({
+          depAirport: s?.depAirport,
+          arrAirport: s?.arrAirport,
+          carrier: s?.carrier,
+          flightNumber: s?.flightNumber,
+          depTime: s?.depTime,
+          arrTime: s?.arrTime,
+        })),
         raw: r,
       });
     }
@@ -207,8 +231,16 @@ export class SandboxAtlasProvider implements FlightProvider {
 
   async verify(offerIdentifier: string): Promise<VerifiedOffer> {
     const { status, json } = await this.post('/verify.do', { routingIdentifier: offerIdentifier });
-    if (status !== 200) this.mapHttpError(status, json, 'VERIFY');
-    if (json?.status !== 0) this.mapBusinessError(json, 'VERIFY');
+    // 脱敏诊断日志：只记 routingIdentifier 的 sha256-8 与上游 status/code，不记完整 token。
+    const ridHash = createHash('sha256').update(String(offerIdentifier)).digest('hex').slice(0, 8);
+    if (status !== 200) {
+      this.logger.warn(`event=atlas_verify stage=VERIFY rid=${ridHash} upstreamHttp=${status} code=${json?.code ?? json?.errorCode ?? 'HTTP_' + status}`);
+      this.mapHttpError(status, json, 'VERIFY');
+    }
+    if (json?.status !== 0) {
+      this.logger.warn(`event=atlas_verify stage=VERIFY rid=${ridHash} upstreamStatus=${json?.status} msg=${String(json?.msg ?? '').slice(0, 120)}`);
+      this.mapBusinessError(json, 'VERIFY');
+    }
 
     const routing = json?.routing ?? {};
     const priceChange = json?.priceChange ?? {};

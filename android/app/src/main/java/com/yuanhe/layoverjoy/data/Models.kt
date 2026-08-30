@@ -683,6 +683,16 @@ data class PayRequest(val paymentConfirmationIds: List<String> = emptyList())
 @Serializable
 data class ConfirmPriceRequest(val acceptedTotal: Double, val currency: String? = null)
 
+// P1-4：onboarding 原子持久化请求/响应。
+@Serializable
+data class OnboardingPassportInput(val countryCode: String, val passportType: String? = null, val expiresOn: String? = null)
+
+@Serializable
+data class OnboardingRequest(val passport: OnboardingPassportInput, val visas: List<String> = emptyList())
+
+@Serializable
+data class OnboardingResult(val passportId: String? = null, val passportCreated: Boolean = false, val visasCreated: Int = 0)
+
 @Serializable
 data class BookingsResponse(val bookings: List<BookingDto> = emptyList())
 

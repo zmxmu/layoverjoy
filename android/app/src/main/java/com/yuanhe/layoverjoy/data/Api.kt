@@ -130,6 +130,8 @@ interface ApiService {
     @GET("v1/home/opportunity") suspend fun homeOpportunity(): retrofit2.Response<HomeOpportunityResponse>
     @GET("v1/me/documents") suspend fun documents(): retrofit2.Response<DocumentsResponse>
     @POST("v1/me/documents") suspend fun addDocument(@Body body: DocumentInput): retrofit2.Response<IdResponse>
+    // P1-4：onboarding 完成时原子写入护照 + 选中签证。
+    @POST("v1/me/onboarding") suspend fun completeOnboarding(@Body body: OnboardingRequest): retrofit2.Response<OnboardingResult>
     @PATCH("v1/me/documents/{id}") suspend fun updateDocument(@Path("id") id: String, @Body body: DocumentInput): retrofit2.Response<IdResponse>
     @DELETE("v1/me/documents/{id}") suspend fun deleteDocument(@Path("id") id: String): retrofit2.Response<okhttp3.ResponseBody>
 

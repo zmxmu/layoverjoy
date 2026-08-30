@@ -11,6 +11,9 @@ export interface FlightSearchInput {
   adults?: number;
   currency?: string;
   airlines?: string[];
+  /** 多机场城市：可接受的出发/到达机场集合（默认仅 input.origin/destination）。 */
+  originAirports?: string[];
+  destinationAirports?: string[];
 }
 
 export interface FlightOffer {
@@ -28,6 +31,15 @@ export interface FlightOffer {
   bookable: boolean;
   /** 上游报价有效期（Atlas Search 响应 `expireTime`）；过期后不得 Verify/Order/Pay。 */
   expiresAt?: string; // ISO
+  /** 完整航段（原样保留上游不可重建字段：多段联程的首末段、各段承运人/时刻）。 */
+  segments?: Array<{
+    depAirport?: string;
+    arrAirport?: string;
+    carrier?: string;
+    flightNumber?: string;
+    depTime?: string;
+    arrTime?: string;
+  }>;
   baggageJson?: unknown;
   raw?: unknown; // 脱敏后的原始结构（仅服务端）
 }

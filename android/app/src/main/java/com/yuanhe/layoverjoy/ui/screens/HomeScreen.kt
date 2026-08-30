@@ -150,7 +150,7 @@ fun HomeScreen(nav: NavController, appState: AppStateViewModel) {
             // 灵感即可行动：点击预填目的地并进入探索页（未登录则先登录再回跳）；
             // 城市与国家名称均来自随包城市目录，不携带任何本地虚构数据。
             JoyCard(modifier = Modifier.padding(vertical = 6.dp).clickable {
-                SearchPrefill.destinationCityId = city.cityId
+                SearchPrefill.request(city.cityId)
                 guardedNavigate(nav, appState, Routes.SEARCH)
             }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

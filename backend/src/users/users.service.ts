@@ -147,6 +147,50 @@ export class UsersService {
     return { id: updated.id };
   }
 
+  /**
+   * P1-4：onboarding 完成时原子持久化护照 + 选中签证（单一事务）。
+   * 幂等：已存在的 ACTIVE 护照/同国家签证跳过；签证列表为空时允许跳过（只写护照）。
+   */
+  async completeOnboarding(
+    userId: string,
+    input: { passport: { countryCode: string; passportType?: string; expiresOn?: string }; visas: string[] },
+  ) {
+    const visas = (input.visas ?? []).filter((c) => /^[A-Z]{2}$/.test(c));
+    return this.prisma.$transaction(async (tx) => {
+      const existingPassport = await tx.travelDocument.findFirst({
+        where: { userId, kind: 'PASSPORT', deletedAt: null, status: 'ACTIVE' },
+      });
+      let passportId: string | null = existingPassport?.id ?? null;
+      let passportCreated = false;
+      if (!existingPassport) {
+        const p = await tx.travelDocument.create({
+          data: {
+            userId,
+            kind: 'PASSPORT',
+            countryCode: input.passport.countryCode,
+            passportType: input.passport.passportType ?? 'ORDINARY',
+            expiresOn: this.toUtcDate(input.passport.expiresOn) ?? undefined,
+            isPrimary: true,
+          },
+        });
+        passportId = p.id;
+        passportCreated = true;
+      }
+      let visasCreated = 0;
+      for (const code of visas) {
+        const exists = await tx.travelDocument.findFirst({
+          where: { userId, kind: 'VISA', countryCode: code, deletedAt: null },
+        });
+        if (exists) continue;
+        await tx.travelDocument.create({
+          data: { userId, kind: 'VISA', countryCode: code, isPrimary: false },
+        });
+        visasCreated += 1;
+      }
+      return { passportId, passportCreated, visasCreated };
+    });
+  }
+
   async deleteDocument(userId: string, id: string) {
     const doc = await this.prisma.travelDocument.findFirst({ where: { id, userId, deletedAt: null } });
     if (!doc) throw AppError.notFound('证件');

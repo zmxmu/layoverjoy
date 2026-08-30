@@ -3,6 +3,8 @@ package com.yuanhe.layoverjoy.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.requestFocus
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -35,6 +37,8 @@ import com.yuanhe.layoverjoy.LayoverJoyApp
 import com.yuanhe.layoverjoy.data.ApiResult
 import com.yuanhe.layoverjoy.data.DocumentInput
 import com.yuanhe.layoverjoy.data.Net
+import com.yuanhe.layoverjoy.data.OnboardingPassportInput
+import com.yuanhe.layoverjoy.data.OnboardingRequest
 import com.yuanhe.layoverjoy.data.apiCall
 import com.yuanhe.layoverjoy.ui.AppStateViewModel
 import com.yuanhe.layoverjoy.ui.apiErrorText
@@ -81,20 +85,26 @@ fun OnboardingScreen(appState: AppStateViewModel) {
     var acceptRedEye by remember { mutableStateOf(true) }
     var submitting by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
+    // P1-6：护照有效期必填错误明示 + 聚焦。
+    var expiryError by remember { mutableStateOf<String?>(null) }
+    val expiryFocus = remember { FocusRequester() }
 
-    /** 将最小证件信息（国家/类型/有效期）同步到后端资格引擎；失败时明示错误，不静默通过。 */
+    /** 将最小证件信息（国家/类型/有效期）+ 选中签证原子同步到后端；失败时明示错误，不静默通过。 */
     fun finishOnboarding(country: String, passportType: String, visas: List<String>) {
         submitting = true
         scope.launch {
             val r = runCatching {
                 apiCall {
-                    Net.api.addDocument(
-                        DocumentInput(kind = "PASSPORT", countryCode = country, passportType = passportType, expiresOn = expiry, isPrimary = true),
+                    Net.api.completeOnboarding(
+                        OnboardingRequest(
+                            passport = OnboardingPassportInput(countryCode = country, passportType = passportType, expiresOn = expiry.ifBlank { null }),
+                            visas = visas,
+                        ),
                     )
                 }
             }.getOrNull()
             submitting = false
-            if (r is ApiResult.Err && r.code != "DUPLICATE_PASSPORT") {
+            if (r is ApiResult.Err) {
                 uploadError = apiErrorText(r)
                 return@launch
             }
@@ -124,12 +134,31 @@ fun OnboardingScreen(appState: AppStateViewModel) {
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    DateField(L10n.t("ob.expiry_label"), expiry, { expiry = it.trim() }, placeholder = "2032-01-01")
+                    DateField(
+                        L10n.t("ob.expiry_label"),
+                        expiry,
+                        { expiry = it.trim(); expiryError = null },
+                        placeholder = "2032-01-01",
+                        focusRequester = expiryFocus,
+                        errorText = expiryError,
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
                 InfoBanner(L10n.t("ob.security_banner"))
                 Spacer(Modifier.height(24.dp))
-                PrimaryButton(L10n.t("common.next"), onClick = { if (expiry.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) step = 1 })
+                PrimaryButton(
+                    L10n.t("common.next"),
+                    onClick = {
+                        if (expiry.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+                            expiryError = null
+                            step = 1
+                        } else {
+                            // P1-6：空/非法有效期 → 明确必填错误并聚焦字段。
+                            expiryError = L10n.t("ob.expiry_required")
+                            expiryFocus.requestFocus()
+                        }
+                    },
+                )
             }
             1 -> {
                 Text(L10n.t("ob.step2_title"), style = MaterialTheme.typography.titleLarge)

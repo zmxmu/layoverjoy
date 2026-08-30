@@ -15,6 +15,7 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
         id: 'plan1',
         searchRunId: 'run1',
         hubCountry: 'MY',
+        hubAirport: 'KUL',
         stayDays: 2,
         airfareTotal: 100,
         currency: 'SGD',
@@ -24,8 +25,8 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
     },
     flightOfferSnapshot: {
       findMany: vi.fn().mockResolvedValue([
-        { id: 'snap1', legNo: 1, providerOfferId: 'offer-1', origin: 'SIN', destination: 'KUL', departureAt: new Date(), totalPrice: 50 },
-        { id: 'snap2', legNo: 2, providerOfferId: 'offer-2', origin: 'KUL', destination: 'SIN', departureAt: new Date(), totalPrice: 50 },
+        { id: 'snap1', legNo: 1, searchRunId: 'run1', providerOfferId: 'offer-1', origin: 'SIN', destination: 'KUL', departureAt: new Date(), totalPrice: 50 },
+        { id: 'snap2', legNo: 2, searchRunId: 'run1', providerOfferId: 'offer-2', origin: 'KUL', destination: 'SIN', departureAt: new Date(), totalPrice: 50 },
       ]),
     },
     bookingIntent: {
@@ -50,7 +51,7 @@ function buildService(orderBehavior: 'ALL_OK' | 'LEG1_FAILS' | 'LEG2_FAILS' | 'E
     },
     flightOrder: { create: vi.fn().mockResolvedValue({}) },
     auditEvent: { create: vi.fn().mockResolvedValue({}) },
-    searchRun: { findUnique: vi.fn().mockResolvedValue({ departureDate: new Date('2026-09-15') }) },
+    searchRun: { findUnique: vi.fn().mockResolvedValue({ id: 'run1', originCode: 'SIN', destinationCode: 'SIN', preferencesJson: null, departureDate: new Date('2026-09-15') }) },
   };
 
   const atlas: any = {
