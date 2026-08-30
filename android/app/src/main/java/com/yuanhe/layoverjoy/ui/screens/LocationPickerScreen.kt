@@ -81,11 +81,15 @@ fun locationSubtitle(city: CatalogCity, sel: LocationSelection): String {
 
 private fun returnSelection(context: android.content.Context, nav: NavController, sel: LocationSelection, role: String) {
     LocationCatalog.record(context, sel)
-    nav.previousBackStackEntry?.savedStateHandle?.set(
+    // 结果直写搜索页 handle，并从任意层级（picker/洲/国家）一步回到搜索页。
+    // 旧实现写 previousBackStackEntry 且只 pop 一层：深层浏览链下结果写错 handle、
+    // 且只回到 picker，表现为“选完城市自动返回上一页且选择丢失”。
+    val target = runCatching { nav.getBackStackEntry(Routes.SEARCH) }.getOrNull()
+    (target?.savedStateHandle ?: nav.previousBackStackEntry?.savedStateHandle)?.set(
         "location_selection_$role",
         resultJson.encodeToString(LocationSelection.serializer(), sel),
     )
-    nav.popBackStack()
+    if (!nav.popBackStack(Routes.SEARCH, false)) nav.popBackStack()
 }
 
 /** 地点选择页：搜索 + 最近 + 热门 + 洲浏览；多机场消歧与机场 Bottom Sheet。 */
